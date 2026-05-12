@@ -1,0 +1,187 @@
+/* ============================================================
+   Rinascita Monteforte — Admin Panel Styles
+   Mobile-first, functional dashboard
+   ============================================================ */
+
+html, body { margin: 0; background: #000; color: var(--fg-1); font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
+*, *::before, *::after { box-sizing: border-box; }
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select { font-family: inherit; cursor: pointer; }
+
+/* ── Login page ─────────────────────────────────────────────── */
+.adm-login {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px;
+  background: #000;
+}
+.adm-login-box {
+  width: 100%; max-width: 380px;
+  background: #0a0a0a; border: 1px solid var(--border-1); border-radius: 16px;
+  padding: 32px 28px;
+}
+.adm-login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+.adm-login-logo img { width: 44px; height: 44px; border-radius: 8px; border: 1px solid var(--border-brand); object-fit: cover; }
+.adm-login-logo-text { font-family: var(--font-display); font-size: 18px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; }
+.adm-login-logo-sub { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--brand-green); margin-top: 2px; }
+.adm-login-title { font-family: var(--font-display); font-size: 28px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; margin: 0 0 6px; }
+.adm-login-sub { font-size: 13px; color: var(--fg-3); margin: 0 0 24px; }
+.adm-login-error { background: rgba(255,61,61,0.1); border: 1px solid rgba(255,61,61,0.4); border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #FF3D3D; margin-bottom: 16px; }
+.adm-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.adm-label { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-3); }
+.adm-input { background: #141414; border: 1px solid var(--border-1); border-radius: 6px; color: #fff; font-size: 15px; padding: 12px 14px; outline: none; width: 100%; transition: border-color 200ms; }
+.adm-input:focus { border-color: var(--brand-green); box-shadow: 0 0 0 3px rgba(0,230,118,0.1); }
+.adm-btn { width: 100%; padding: 14px; background: var(--brand-green); color: #000; font-family: var(--font-display); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; border: 0; border-radius: 6px; cursor: pointer; min-height: 48px; margin-top: 8px; transition: all 200ms; }
+.adm-btn:hover { background: var(--brand-green-bright); }
+.adm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.adm-btn-danger { background: transparent; border: 1px solid rgba(255,61,61,0.5); color: #FF3D3D; }
+.adm-btn-danger:hover { background: rgba(255,61,61,0.1); }
+.adm-btn-sm { font-size: 12px; padding: 8px 14px; min-height: 36px; width: auto; }
+.adm-btn-ghost { background: transparent; border: 1px solid var(--border-1); color: var(--fg-2); }
+.adm-btn-ghost:hover { border-color: var(--border-strong); color: #fff; }
+.adm-btn-secondary { background: transparent; border: 1px solid var(--brand-green); color: var(--brand-green); }
+.adm-btn-secondary:hover { background: var(--accent-bg); }
+
+/* ── Admin layout ───────────────────────────────────────────── */
+.adm-app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.adm-topbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-1);
+}
+.adm-topbar-left { display: flex; align-items: center; gap: 10px; }
+.adm-topbar-title { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; color: #fff; }
+.adm-badge { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--brand-green); color: #000; font-weight: 700; }
+.adm-logout { font-size: 13px; color: var(--fg-3); background: transparent; border: 1px solid var(--border-1); border-radius: 6px; padding: 7px 12px; cursor: pointer; transition: all 150ms; }
+.adm-logout:hover { color: #FF3D3D; border-color: rgba(255,61,61,0.4); }
+
+/* Tab navigation */
+.adm-tabs-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-bottom: 1px solid var(--border-subtle); background: #050505; }
+.adm-tabs-wrap::-webkit-scrollbar { display: none; }
+.adm-tabs { display: flex; min-width: max-content; padding: 0 12px; }
+.adm-tab {
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 14px 16px; background: transparent; border: 0; color: var(--fg-3);
+  white-space: nowrap; border-bottom: 2px solid transparent; cursor: pointer;
+  transition: all 150ms; display: flex; align-items: center; gap: 7px;
+}
+.adm-tab:hover { color: var(--fg-1); }
+.adm-tab.on { color: var(--brand-green); border-bottom-color: var(--brand-green); }
+
+/* Main content */
+.adm-main { padding: 20px 16px; flex: 1; }
+
+/* ── Sections & cards ───────────────────────────────────────── */
+.adm-section-title { font-family: var(--font-display); font-size: 26px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; margin: 0 0 4px; }
+.adm-section-sub { font-size: 13px; color: var(--fg-3); margin: 0 0 20px; }
+
+.adm-card { background: #0a0a0a; border: 1px solid var(--border-1); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.adm-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 8px; }
+.adm-card-title { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; }
+.adm-card-body { padding: 16px; }
+.adm-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.adm-empty { padding: 32px; text-align: center; color: var(--fg-3); font-size: 14px; }
+
+/* ── Items list ─────────────────────────────────────────────── */
+.adm-item-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--border-subtle);
+}
+.adm-item-row:last-child { border-bottom: 0; }
+.adm-item-row-body { flex: 1; min-width: 0; }
+.adm-item-title { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.04em; text-transform: uppercase; color: #fff; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.adm-item-meta { font-size: 12px; color: var(--fg-3); }
+.adm-item-actions { display: flex; gap: 6px; flex: none; }
+
+/* ── Forms (modal style) ────────────────────────────────────── */
+.adm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; display: flex; align-items: flex-end; }
+.adm-modal {
+  background: #0d0d0d; border: 1px solid var(--border-1); border-radius: 16px 16px 0 0;
+  width: 100%; max-height: 90vh; overflow-y: auto;
+  padding: 20px 16px 32px;
+  animation: slideUpModal 250ms var(--ease-sport);
+}
+@keyframes slideUpModal { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.adm-modal-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; margin: 0 0 20px; }
+.adm-form { display: flex; flex-direction: column; gap: 14px; }
+.adm-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.adm-form-group { display: flex; flex-direction: column; gap: 6px; }
+.adm-textarea { background: #141414; border: 1px solid var(--border-1); border-radius: 6px; color: #fff; font-size: 14px; padding: 10px 12px; outline: none; width: 100%; resize: vertical; min-height: 80px; transition: border-color 200ms; }
+.adm-textarea:focus { border-color: var(--brand-green); }
+.adm-select { background: #141414; border: 1px solid var(--border-1); border-radius: 6px; color: #fff; font-size: 14px; padding: 12px 14px; outline: none; width: 100%; appearance: none; cursor: pointer; }
+.adm-select:focus { border-color: var(--brand-green); }
+.adm-checkbox-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; }
+.adm-checkbox-row input { width: 18px; height: 18px; accent-color: var(--brand-green); cursor: pointer; }
+.adm-form-actions { display: flex; gap: 10px; padding-top: 8px; }
+.adm-form-actions .adm-btn { margin-top: 0; flex: 1; }
+
+/* ── Live section ───────────────────────────────────────────── */
+.adm-live-board {
+  background: linear-gradient(135deg, #0a0a0a 0%, #061008 50%, #0a0a0a 100%);
+  border: 1px solid var(--border-brand);
+  border-radius: 16px;
+  padding: 20px 16px;
+  box-shadow: var(--glow-green);
+  margin-bottom: 20px;
+}
+.adm-live-score-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.adm-live-team-box { text-align: center; flex: 1; }
+.adm-live-team-short { font-family: var(--font-display); font-size: 36px; letter-spacing: 0.06em; color: #fff; }
+.adm-live-team-name { font-size: 11px; color: var(--fg-3); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; }
+.adm-live-score-center { font-family: var(--font-display); font-size: 64px; letter-spacing: 0.04em; color: #fff; text-align: center; line-height: 1; }
+.adm-live-score-center i { font-style: normal; color: var(--brand-green); margin: 0 6px; }
+.adm-live-min-badge { text-align: center; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-green); margin-bottom: 20px; }
+.adm-live-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.adm-live-goal-btn { padding: 16px; background: #0a0a0a; border: 1px solid var(--border-brand); border-radius: 10px; color: #fff; font-family: var(--font-display); font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 180ms; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.adm-live-goal-btn:hover { background: rgba(0,230,118,0.08); }
+.adm-live-goal-btn .sub { font-size: 10px; color: var(--fg-3); letter-spacing: 0.14em; }
+.adm-live-event-btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.adm-live-ev-btn { padding: 12px 8px; background: #141414; border: 1px solid var(--border-1); border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 18px; transition: all 150ms; border: 0; }
+.adm-live-ev-btn span { font-size: 10px; color: var(--fg-3); letter-spacing: 0.1em; text-transform: uppercase; font-family: var(--font-display); }
+.adm-live-ev-btn:hover { background: #1f1f1f; }
+.adm-events-log { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border-1); display: flex; flex-direction: column; gap: 6px; }
+.adm-ev-row { display: grid; grid-template-columns: 40px 20px 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 4px 0; }
+.adm-ev-row .min { font-family: var(--font-mono); color: var(--brand-green); font-size: 12px; }
+.adm-ev-del { background: transparent; border: 0; color: var(--fg-3); cursor: pointer; font-size: 16px; padding: 4px; }
+.adm-ev-del:hover { color: #FF3D3D; }
+
+/* ── Status badges ──────────────────────────────────────────── */
+.adm-status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; font-family: var(--font-display); }
+.adm-status.live { background: rgba(255,61,61,0.15); color: #FF3D3D; border: 1px solid rgba(255,61,61,0.4); }
+.adm-status.live .dot { width: 6px; height: 6px; border-radius: 999px; background: #FF3D3D; animation: pulse 1.2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.adm-status.ft { background: rgba(0,230,118,0.1); color: var(--brand-green); border: 1px solid var(--border-brand); }
+.adm-status.sch { background: #141414; color: var(--fg-3); border: 1px solid var(--border-subtle); }
+
+/* ── Success toast ──────────────────────────────────────────── */
+.adm-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--brand-green); color: #000; font-family: var(--font-display);
+  font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 10px 20px; border-radius: 999px; z-index: 200;
+  animation: toastIn 200ms, toastOut 300ms 1.8s forwards;
+  white-space: nowrap;
+}
+@keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+@keyframes toastOut { to { opacity:0; transform: translateX(-50%) translateY(10px); } }
+
+/* ── Crest mini ─────────────────────────────────────────────── */
+.adm-crest { width: 32px; height: 32px; border-radius: 999px; background: #1a1a1a; border: 1.5px solid; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 11px; flex: none; }
+
+/* ── Desktop refinements ────────────────────────────────────── */
+@media (min-width: 700px) {
+  .adm-main { padding: 24px 24px; max-width: 900px; margin: 0 auto; }
+  .adm-overlay { align-items: center; justify-content: center; }
+  .adm-modal { border-radius: 16px; max-width: 560px; width: 100%; max-height: 85vh; }
+  .adm-live-btns { grid-template-columns: repeat(4, 1fr); }
+}
+
+@media (min-width: 900px) {
+  .adm-topbar { padding: 14px 32px; }
+  .adm-tabs { padding: 0 24px; }
+}
