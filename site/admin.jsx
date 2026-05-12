@@ -1061,10 +1061,20 @@ function AdminApp() {
   const [data, setData] = useState(() => rmGetAllData());
   const [toast, setToast] = useState(null);
 
-  function handleSave(newData, msg) {
-    rmSaveData(newData);
+  useEffect(() => {
+    async function sync() {
+      const remoteData = await rmLoadData();
+      if (remoteData) {
+        setData(rmMergeDefaults(remoteData));
+      }
+    }
+    sync();
+  }, []);
+
+  async function handleSave(newData, msg) {
     setData(newData);
     if (msg) setToast(msg);
+    await rmSaveData(newData);
   }
 
   function logout() {

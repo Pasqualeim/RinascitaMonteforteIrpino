@@ -68,15 +68,25 @@ assets/
 | Striscia | Messaggi ticker verde in cima al sito |
 | Settings | Cambio username/password, reset dati a default |
 
-## Flusso dati (localStorage)
+## Flusso dati (Supabase + localStorage fallback)
 
 ```
-Admin modifica → rmSaveData() → localStorage["rm_data_v2"]
-                                          ↓
-Sito pubblico → rmGetAllData() ogni 30s ← localStorage["rm_data_v2"]
+Admin salva → rmSaveData() → localStorage["rm_data_v2"] (immediato)
+                           → Supabase: site_data WHERE id=1 UPDATE content (async)
+
+Sito pubblico → rmLoadData() ogni 30s:
+  1. Prova Supabase site_data.content
+  2. Se fallisce → localStorage["rm_data_v2"]
+  3. Se entrambi vuoti → DEFAULT_* hardcodati in data.js
 ```
 
-Struttura oggetto salvato:
+**Supabase progetto:** `jummgmhkapvvibicnqos` ("Rinascita Cup") — `eu-west-1` — `ACTIVE_HEALTHY`
+**URL:** `https://jummgmhkapvvibicnqos.supabase.co`
+**Tabella:** `site_data` — colonne: `id bigint PK`, `content jsonb`, `updated_at timestamptz`
+**Riga dati:** sempre `id=1` (upsert su riga singola)
+**RLS:** SELECT/UPDATE/INSERT aperte al ruolo `public` (anon key sufficiente)
+
+Struttura `content` jsonb:
 ```js
 {
   teams, standings_a, standings_o40, standings_jr,
@@ -88,7 +98,8 @@ Struttura oggetto salvato:
 }
 ```
 
-Se `rm_data_v2` non esiste in localStorage → usa dati default hardcodati in `data.js`.
+**Nota:** `content={}` al primo avvio è normale. App usa default finché admin non salva.
+**Note MCP:** il MCP locale (`mcp__supabase__*`) punta al progetto sbagliato ("Blockbuster rewind" — INACTIVE). Usare sempre `mcp__claude_ai_Supabase__*` con `project_id=jummgmhkapvvibicnqos`.
 
 ## Variabili CSS principali
 

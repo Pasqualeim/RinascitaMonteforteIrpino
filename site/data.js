@@ -129,8 +129,15 @@ const DEFAULT_STRIP_ITEMS = [
 
 // ── Persistence ─────────────────────────────────────────────
 const RM_STORAGE_KEY = 'rm_data_v2';
+const SUPABASE_URL = 'https://jummgmhkapvvibicnqos.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1bW1nbWhrYXB2dmliaWNucW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDMzMTUsImV4cCI6MjA5NDE3OTMxNX0.9kTpjZFC1FdH7pz_mU15YidkV7j24mD0P-KxKxqxCqM';
 
-function rmLoadData() {
+let _supabase = null;
+if (window.supabase) {
+  _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+function rmLoadLocal() {
   try {
     const raw = localStorage.getItem(RM_STORAGE_KEY);
     if (raw) return JSON.parse(raw);
@@ -138,14 +145,48 @@ function rmLoadData() {
   return null;
 }
 
-function rmSaveData(data) {
-  data.updated_at = new Date().toISOString();
-  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(data));
+async function rmLoadData() {
+  if (!_supabase) return rmLoadLocal();
+  try {
+    const { data, error } = await _supabase
+      .from('site_data')
+      .select('content')
+      .eq('id', 1)
+      .single();
+    
+    if (error) throw error;
+    if (data && data.content && Object.keys(data.content).length > 0) {
+      localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(data.content));
+      return data.content;
+    }
+  } catch(e) {
+    console.warn('Errore caricamento da Supabase, uso cache locale:', e);
+  }
+  return rmLoadLocal();
 }
 
-// Merge saved data with defaults (admin can update individual sections)
-function rmGetAllData() {
-  const saved = rmLoadData();
+async function rmSaveData(data) {
+  data.updated_at = new Date().toISOString();
+  // Salva in locale immediatamente
+  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(data));
+  
+  // Salva in Supabase
+  if (_supabase) {
+    try {
+      const { error } = await _supabase
+        .from('site_data')
+        .update({ content: data, updated_at: data.updated_at })
+        .eq('id', 1);
+      
+      if (error) throw error;
+    } catch(e) {
+      console.error('Errore salvataggio su Supabase:', e);
+    }
+  }
+}
+
+// Merge saved data with defaults
+function rmMergeDefaults(saved) {
   return {
     teams:            saved?.teams            || DEFAULT_TEAMS,
     standings_a:      saved?.standings_a      || DEFAULT_STANDINGS_A,
@@ -164,28 +205,16 @@ function rmGetAllData() {
   };
 }
 
-// Load and expose to window
-const _d = rmGetAllData();
-const TEAMS            = _d.teams;
-const T                = Object.fromEntries(TEAMS.map(t => [t.short, t]));
-const STANDINGS_A      = _d.standings_a;
-const STANDINGS_O40    = _d.standings_o40;
-const STANDINGS_JR     = _d.standings_jr;
-const LIVE_MATCH       = _d.live_match;
-const MATCHES_TODAY    = _d.matches_today;
-const MATCHES_GIORNATA = _d.matches_giornata;
-const SCORERS          = _d.scorers;
-const NEWS             = _d.news;
-const EVENTS           = _d.events;
-const HONORS           = _d.honors;
-const SPONSORS         = _d.sponsors;
-const STRIP_ITEMS      = _d.strip_items;
+function rmGetAllData() {
+  const saved = rmLoadLocal();
+  return rmMergeDefaults(saved);
+}
 
+// Load and expose to window
+const _initialData = rmGetAllData();
 Object.assign(window, {
-  TEAMS, T, STANDINGS_A, STANDINGS_O40, STANDINGS_JR,
-  LIVE_MATCH, MATCHES_TODAY, MATCHES_GIORNATA, SCORERS,
-  NEWS, EVENTS, HONORS, SPONSORS, STRIP_ITEMS,
-  rmLoadData, rmSaveData, rmGetAllData,
+  ..._initialData,
+  rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults,
   DEFAULT_TEAMS, DEFAULT_STANDINGS_A, DEFAULT_STANDINGS_O40, DEFAULT_STANDINGS_JR,
   DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_MATCHES_GIORNATA,
   DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_EVENTS, DEFAULT_HONORS,
