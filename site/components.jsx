@@ -74,11 +74,13 @@ function BottomNav({ current, onNav, hasLive }) {
     { id: 'events', label: 'Eventi',    icon: CalIcon },
     { id: 'news',   label: 'Avvisi',    icon: BellIcon },
     { id: 'honors', label: "Albo d'oro", icon: TrophyIcon },
+    { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
   const isMoreActive = ['teams','events','news','honors'].includes(current);
 
   function navTo(id) {
+    if (id === '_staff') { window.location.href = 'admin.html'; return; }
     onNav(id);
     setDrawerOpen(false);
   }
@@ -90,13 +92,16 @@ function BottomNav({ current, onNav, hasLive }) {
           <div className="rm-drawer" onClick={e => e.stopPropagation()}>
             <div className="rm-drawer-title">Sezioni</div>
             <div className="rm-drawer-grid">
-              {more.map(item => (
+              {more.filter(i => !i.isAdmin).map(item => (
                 <button key={item.id} className="rm-drawer-item" onClick={() => navTo(item.id)}>
                   <item.icon size={18}/>
                   {item.label}
                 </button>
               ))}
             </div>
+            <a href="admin.html" className="rm-drawer-staff-btn">
+              🔐 Area Staff — Accesso riservato
+            </a>
           </div>
         </div>
       )}
@@ -119,7 +124,8 @@ function BottomNav({ current, onNav, hasLive }) {
 
 // ── Top marquee strip ──────────────────────────────────────────────────────
 function StatusStrip({ items }) {
-  const src = (items && items.length > 0) ? items : STRIP_ITEMS;
+  const src = items && items.length > 0 ? items : (STRIP_ITEMS && STRIP_ITEMS.length > 0 ? STRIP_ITEMS : null);
+  if (!src) return null;
   const repeated = [...src, ...src, ...src, ...src];
   return (
     <div className="rm-strip">
@@ -422,8 +428,8 @@ function Footer({ onNav }) {
         <span>© 2026 Associazione Rinascita · Monteforte Irpino (AV)</span>
         <span>Sito non ufficiale · FIFA non c'entra niente, davvero.</span>
       </div>
-      <div style={{ textAlign: 'center', marginTop: 8 }}>
-        <a href="admin.html" className="rm-footer-admin">⚙ Accesso staff</a>
+      <div style={{ textAlign: 'center', marginTop: 20 }}>
+        <a href="admin.html" className="rm-footer-admin-btn">🔐 Area Staff — Accesso riservato</a>
       </div>
     </footer>
   );

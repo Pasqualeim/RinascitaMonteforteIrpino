@@ -1,6 +1,16 @@
 /* global React, window, MATCHES_GIORNATA, MATCHES_TODAY, LIVE_MATCH, STANDINGS_A, STANDINGS_O40, STANDINGS_JR, TEAMS, SCORERS, NEWS, EVENTS, HONORS, SPONSORS, STRIP_ITEMS */
 const { useState, useMemo } = React;
 
+function EmptyState({ icon, title, sub }) {
+  return (
+    <div className="rm-empty">
+      <div className="rm-empty-icon">{icon}</div>
+      <div className="rm-empty-title">{title}</div>
+      {sub && <div className="rm-empty-sub">{sub}</div>}
+    </div>
+  );
+}
+
 function HomeScreen({ onNav, data }) {
   const d = data || {};
   const liveMatch    = d.live_match       || LIVE_MATCH;
@@ -57,9 +67,10 @@ function HomeScreen({ onNav, data }) {
           </div>
           <button className="rm-section-link" onClick={() => onNav('calendar')}>Tutto il calendario <ArrowIcon size={13}/></button>
         </div>
-        <div className="rm-match-list">
-          {matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}
-        </div>
+        {matchesToday.length === 0
+          ? <EmptyState icon="📅" title="Nessuna partita oggi" sub="Le partite verranno pubblicate dallo staff."/>
+          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}</div>
+        }
       </section>
 
       <section className="rm-section">
@@ -169,9 +180,10 @@ function LiveScreen({ data }) {
             <h3 className="rm-section-title">Oggi</h3>
           </div>
         </div>
-        <div className="rm-match-list">
-          {matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}
-        </div>
+        {matchesToday.length === 0
+          ? <EmptyState icon="⚡" title="Nessuna partita in corso" sub="Quando inizia una partita, il live comparirà qui."/>
+          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}</div>
+        }
       </section>
     </div>
   );
@@ -193,17 +205,20 @@ function CalendarScreen({ data }) {
           {[{ id:'all',label:'Tutte'},{id:'senior',label:'Senior'},{id:'over40',label:'Over 40'},{id:'junior',label:'Junior'}]
             .map(t => <button key={t.id} className={`rm-tab ${cat===t.id?'on':''}`} onClick={() => setCat(t.id)}>{t.label}</button>)}
         </div>
-        {matchesGiornata.map((d, i) => (
-          <div className="rm-match-day" key={i}>
-            <div className="rm-match-day-head">
-              <div className="rm-match-day-num">{d.day}</div>
-              <div className="rm-match-day-date">{d.items.length} partite</div>
+        {matchesGiornata.length === 0
+          ? <EmptyState icon="📅" title="Calendario non ancora disponibile" sub="Lo staff pubblicherà il calendario delle partite a breve."/>
+          : matchesGiornata.map((d, i) => (
+            <div className="rm-match-day" key={i}>
+              <div className="rm-match-day-head">
+                <div className="rm-match-day-num">{d.day}</div>
+                <div className="rm-match-day-date">{d.items.length} partite</div>
+              </div>
+              <div className="rm-match-list">
+                {d.items.map((m, j) => <MatchRow key={m.id || j} {...m}/>)}
+              </div>
             </div>
-            <div className="rm-match-list">
-              {d.items.map((m, j) => <MatchRow key={m.id || j} {...m}/>)}
-            </div>
-          </div>
-        ))}
+          ))
+        }
       </section>
     </div>
   );
@@ -265,9 +280,10 @@ function TeamsScreen({ data }) {
           {[{id:'all',label:`Tutte (${teams.length})`},{id:'senior',label:'Senior'},{id:'over40',label:'Over 40'},{id:'junior',label:'Junior'}]
             .map(t => <button key={t.id} className={`rm-tab ${cat===t.id?'on':''}`} onClick={() => setCat(t.id)}>{t.label}</button>)}
         </div>
-        <div className="rm-team-grid">
-          {filtered.map(t => <TeamCard key={t.short} team={t}/>)}
-        </div>
+        {filtered.length === 0
+          ? <EmptyState icon="👥" title="Nessuna squadra" sub="Le squadre partecipanti verranno pubblicate dallo staff."/>
+          : <div className="rm-team-grid">{filtered.map(t => <TeamCard key={t.short} team={t}/>)}</div>
+        }
       </section>
     </div>
   );
@@ -284,9 +300,10 @@ function EventsScreen({ data }) {
             <h3 className="rm-section-title">Eventi 2026</h3>
           </div>
         </div>
-        <div className="rm-events">
-          {events.map((e, i) => <EventRow key={e.id || i} ev={e}/>)}
-        </div>
+        {events.length === 0
+          ? <EmptyState icon="🗓" title="Nessun evento" sub="Gli eventi del torneo verranno pubblicati a breve."/>
+          : <div className="rm-events">{events.map((e, i) => <EventRow key={e.id || i} ev={e}/>)}</div>
+        }
       </section>
     </div>
   );
@@ -303,9 +320,10 @@ function NewsScreen({ data }) {
             <h3 className="rm-section-title">Avvisi & News</h3>
           </div>
         </div>
-        <div className="rm-news-grid">
-          {news.map((n, i) => <NewsCard key={n.id || i} item={n} featured={i === 0}/>)}
-        </div>
+        {news.length === 0
+          ? <EmptyState icon="📢" title="Nessun avviso" sub="Gli avvisi e le notizie del torneo verranno pubblicati qui."/>
+          : <div className="rm-news-grid">{news.map((n, i) => <NewsCard key={n.id || i} item={n} featured={i === 0}/>)}</div>
+        }
       </section>
     </div>
   );
@@ -322,9 +340,10 @@ function HonorsScreen({ data }) {
             <h3 className="rm-section-title">Albo d'oro</h3>
           </div>
         </div>
-        <div className="rm-honors">
-          {honors.map((h, i) => <HonorCard key={h.id || i} honor={h} current={i===0}/>)}
-        </div>
+        {honors.length === 0
+          ? <EmptyState icon="🏆" title="Albo d'oro vuoto" sub="Le edizioni passate verranno aggiunte dallo staff."/>
+          : <div className="rm-honors">{honors.map((h, i) => <HonorCard key={h.id || i} honor={h} current={i===0}/>)}</div>
+        }
       </section>
     </div>
   );
