@@ -61,6 +61,10 @@ function Header({ current, onNav }) {
 // ── Bottom Navigation ──────────────────────────────────────────────────────
 function BottomNav({ current, onNav, hasLive }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [current]);
 
   const primary = [
     { id: 'home',     label: 'Home',      icon: HomeIcon },
@@ -82,7 +86,6 @@ function BottomNav({ current, onNav, hasLive }) {
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }
     onNav(id);
-    setDrawerOpen(false);
   }
 
   return (
