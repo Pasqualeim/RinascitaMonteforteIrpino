@@ -7,8 +7,8 @@
 const { useState, useEffect, useCallback, useMemo } = React;
 
 // ── Auth ──────────────────────────────────────────────────────────────────
-const AUTH_KEY   = 'rm_admin_auth_v2';
-const CREDS_KEY  = 'rm_admin_creds_v2';
+const AUTH_KEY = 'rm_admin_auth_v2';
+const CREDS_KEY = 'rm_admin_creds_v2';
 
 function getStoredCreds() {
   const data = rmGetAllData();
@@ -35,9 +35,9 @@ function Toast({ msg, onDone }) {
 
 // ── Login Screen ──────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
-  const [user, setUser]  = useState('');
-  const [pass, setPass]  = useState('');
-  const [err,  setErr]   = useState('');
+  const [user, setUser] = useState('');
+  const [pass, setPass] = useState('');
+  const [err, setErr] = useState('');
 
   useEffect(() => {
     // Prova a sincronizzare i dati remoti prima del login
@@ -58,7 +58,7 @@ function LoginScreen({ onLogin }) {
     <div className="adm-login">
       <div className="adm-login-box">
         <div className="adm-login-logo">
-          <img src="assets/logo-rinascita-monteforte.jpg" alt="Rinascita"/>
+          <img src="assets/logo-rinascita-monteforte.jpg" alt="Rinascita" />
           <div>
             <div className="adm-login-logo-text">Rinascita</div>
             <div className="adm-login-logo-sub">Area Staff</div>
@@ -70,11 +70,11 @@ function LoginScreen({ onLogin }) {
         <form onSubmit={submit}>
           <div className="adm-field">
             <label className="adm-label">Utente</label>
-            <input className="adm-input" value={user} onChange={e => setUser(e.target.value)} placeholder="Username" autoComplete="username" required/>
+            <input className="adm-input" value={user} onChange={e => setUser(e.target.value)} placeholder="Username" autoComplete="username" required />
           </div>
           <div className="adm-field">
             <label className="adm-label">Password</label>
-            <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" autoComplete="current-password" required/>
+            <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" autoComplete="current-password" required />
           </div>
           <button className="adm-btn" type="submit">Entra</button>
         </form>
@@ -221,9 +221,9 @@ function LiveSection({ data, onSave }) {
           </div>
 
           <div className="adm-live-min-badge">
-            <button onClick={() => setMinute(-1)} style={{ background:'transparent',border:0,color:'var(--fg-3)',cursor:'pointer',fontSize:18 }}>−</button>
+            <button onClick={() => setMinute(-1)} style={{ background: 'transparent', border: 0, color: 'var(--fg-3)', cursor: 'pointer', fontSize: 18 }}>−</button>
             {' '}{lm.minute || 0}'{' '}
-            <button onClick={() => setMinute(1)} style={{ background:'transparent',border:0,color:'var(--brand-green)',cursor:'pointer',fontSize:18 }}>+</button>
+            <button onClick={() => setMinute(1)} style={{ background: 'transparent', border: 0, color: 'var(--brand-green)', cursor: 'pointer', fontSize: 18 }}>+</button>
           </div>
 
           {/* Score buttons */}
@@ -234,10 +234,10 @@ function LiveSection({ data, onSave }) {
             <button className="adm-live-goal-btn" onClick={() => setScore('as', 1)}>
               +1 Gol<span className="sub">{lm.away?.name || 'Ospite'}</span>
             </button>
-            <button className="adm-live-goal-btn adm-btn-ghost" onClick={() => setScore('hs', -1)} style={{ background:'transparent',border:'1px solid var(--border-1)' }}>
+            <button className="adm-live-goal-btn adm-btn-ghost" onClick={() => setScore('hs', -1)} style={{ background: 'transparent', border: '1px solid var(--border-1)' }}>
               −1<span className="sub">{lm.home?.short || 'HOM'}</span>
             </button>
-            <button className="adm-live-goal-btn adm-btn-ghost" onClick={() => setScore('as', -1)} style={{ background:'transparent',border:'1px solid var(--border-1)' }}>
+            <button className="adm-live-goal-btn adm-btn-ghost" onClick={() => setScore('as', -1)} style={{ background: 'transparent', border: '1px solid var(--border-1)' }}>
               −1<span className="sub">{lm.away?.short || 'AWA'}</span>
             </button>
           </div>
@@ -257,8 +257,8 @@ function LiveSection({ data, onSave }) {
               {lm.events.map((ev, i) => (
                 <div key={i} className="adm-ev-row">
                   <span className="min">{ev.min}'</span>
-                  <span>{ev.type==='goal'?'⚽':ev.type==='yellow'?'🟨':ev.type==='red'?'🟥':'↻'}</span>
-                  <span style={{ fontSize:13,color:'var(--fg-2)' }}><b style={{color:'#fff'}}>{ev.player}</b> · {ev.team}</span>
+                  <span>{ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : ev.type === 'red' ? '🟥' : '↻'}</span>
+                  <span style={{ fontSize: 13, color: 'var(--fg-2)' }}><b style={{ color: '#fff' }}>{ev.player}</b> · {ev.team}</span>
                   <button className="adm-ev-del" onClick={() => removeEvent(i)}>✕</button>
                 </div>
               ))}
@@ -271,7 +271,7 @@ function LiveSection({ data, onSave }) {
       {addingEvent && (
         <div className="adm-overlay" onClick={() => setAddingEvent(false)}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="adm-modal-title">Aggiungi evento · {evType==='goal'?'⚽ Gol':evType==='yellow'?'🟨 Giallo':evType==='red'?'🟥 Rosso':'↻ Cambio'}</h3>
+            <h3 className="adm-modal-title">Aggiungi evento · {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : evType === 'red' ? '🟥 Rosso' : '↻ Cambio'}</h3>
             <div className="adm-form">
               <div className="adm-form-group">
                 <label className="adm-label">Squadra</label>
@@ -288,17 +288,17 @@ function LiveSection({ data, onSave }) {
                     return (
                       <select className="adm-select" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} autoFocus>
                         <option value="">-- Seleziona Giocatore --</option>
-                        {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number+'. ' : ''}{p.name}</option>)}
+                        {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number + '. ' : ''}{p.name}</option>)}
                         <option value="Autogol">Autogol</option>
                       </select>
                     );
                   }
-                  return <input className="adm-input" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} placeholder="Nome cognome" autoFocus/>;
+                  return <input className="adm-input" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} placeholder="Nome cognome" autoFocus />;
                 })()}
               </div>
               <div className="adm-form-group">
                 <label className="adm-label">Nota (opz.)</label>
-                <input className="adm-input" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="es. colpo di testa, doppietta..."/>
+                <input className="adm-input" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="es. colpo di testa, doppietta..." />
               </div>
               <div className="adm-form-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setAddingEvent(false)}>Annulla</button>
@@ -321,7 +321,7 @@ function NewsSection({ data, onSave }) {
   const TONE_OPTS = [
     { value: '', label: 'Normale' },
     { value: 'alert', label: 'Alert (rosso)' },
-    { value: 'warn',  label: 'Attenzione (giallo)' },
+    { value: 'warn', label: 'Attenzione (giallo)' },
   ];
   const CAT_OPTS = ['News', 'Avviso', 'Regolamento', 'Eventi', 'Sponsor'];
 
@@ -343,7 +343,7 @@ function NewsSection({ data, onSave }) {
   }
 
   function newItem() {
-    setEditing({ id: 'n' + Date.now(), cat: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', {day:'numeric',month:'short'}), title: '', body: '', pinned: false });
+    setEditing({ id: 'n' + Date.now(), cat: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
   }
 
   return (
@@ -365,7 +365,7 @@ function NewsSection({ data, onSave }) {
                 <div className="adm-item-meta">{n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
               </div>
               <div className="adm-item-actions">
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...n})}>Modifica</button>
+                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...n })}>Modifica</button>
                 <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(n.id)}>✕</button>
               </div>
             </div>
@@ -375,10 +375,10 @@ function NewsSection({ data, onSave }) {
 
       {editing && (
         <NewsForm item={editing} catOpts={CAT_OPTS} toneOpts={TONE_OPTS}
-          onSave={saveItem} onClose={() => setEditing(null)}/>
+          onSave={saveItem} onClose={() => setEditing(null)} />
       )}
       {deleting && (
-        <Confirm msg="Eliminare questo avviso?" onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)}/>
+        <Confirm msg="Eliminare questo avviso?" onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)} />
       )}
     </div>
   );
@@ -408,18 +408,18 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
           </div>
           <div className="adm-form-group">
             <label className="adm-label">Data</label>
-            <input className="adm-input" value={form.date} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20"/>
+            <input className="adm-input" value={form.date} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
           </div>
           <div className="adm-form-group">
             <label className="adm-label">Titolo</label>
-            <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo dell'avviso" required/>
+            <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo dell'avviso" required />
           </div>
           <div className="adm-form-group">
             <label className="adm-label">Testo</label>
-            <textarea className="adm-textarea" value={form.body} onChange={e => set('body', e.target.value)} placeholder="Descrizione..." rows={4}/>
+            <textarea className="adm-textarea" value={form.body} onChange={e => set('body', e.target.value)} placeholder="Descrizione..." rows={4} />
           </div>
           <label className="adm-checkbox-row">
-            <input type="checkbox" checked={!!form.pinned} onChange={e => set('pinned', e.target.checked)}/>
+            <input type="checkbox" checked={!!form.pinned} onChange={e => set('pinned', e.target.checked)} />
             In evidenza (📌)
           </label>
           <div className="adm-form-actions">
@@ -468,7 +468,7 @@ function MatchesSection({ data, onSave }) {
   }
 
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
-  
+
   function newMatch() {
     const defaultDay = data.matches_giornata?.[0]?.day || '1ª Giornata';
     setEditing({ _isNew: true, _day: defaultDay, status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '' });
@@ -496,13 +496,13 @@ function MatchesSection({ data, onSave }) {
                 <div className="adm-item-meta">{m._day} · {m.time} · {m.pitch} · {statusLabel[m.status]}</div>
               </div>
               <div className="adm-item-actions">
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...m})}>Modifica</button>
+                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...m })}>Modifica</button>
               </div>
             </div>
           ))
         )}
       </div>
-      {editing && <MatchForm match={editing} teams={teams} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)}/>}
+      {editing && <MatchForm match={editing} teams={teams} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -510,12 +510,12 @@ function MatchesSection({ data, onSave }) {
 function MatchForm({ match, teams, giornate, onSave, onClose }) {
   const [form, setForm] = useState({ ...match });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  
+
   function submit() {
-    if(!form.home || !form.away) { alert("Seleziona entrambe le squadre"); return; }
+    if (!form.home || !form.away) { alert("Seleziona entrambe le squadre"); return; }
     onSave(form);
   }
-  
+
   return (
     <div className="adm-overlay" onClick={onClose}>
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
@@ -532,14 +532,14 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
           <div className="adm-form-row">
             <div className="adm-form-group">
               <label className="adm-label">Squadra Casa</label>
-              <select className="adm-select" value={form.home?.short || ''} onChange={e => { const t=teams.find(x=>x.short===e.target.value); if(t) set('home',t); }}>
+              <select className="adm-select" value={form.home?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('home', t); }}>
                 <option value="">-- Seleziona --</option>
                 {teams.map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
               </select>
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Squadra Ospite</label>
-              <select className="adm-select" value={form.away?.short || ''} onChange={e => { const t=teams.find(x=>x.short===e.target.value); if(t) set('away',t); }}>
+              <select className="adm-select" value={form.away?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('away', t); }}>
                 <option value="">-- Seleziona --</option>
                 {teams.map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
               </select>
@@ -557,28 +557,28 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
             <div className="adm-form-row">
               <div className="adm-form-group">
                 <label className="adm-label">Gol Casa</label>
-                <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0"/>
+                <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
               </div>
               <div className="adm-form-group">
                 <label className="adm-label">Gol Ospite</label>
-                <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0"/>
+                <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
               </div>
             </div>
           )}
           {form.status === 'live' && (
             <div className="adm-form-group">
               <label className="adm-label">Minuto</label>
-              <input type="number" className="adm-input" value={form.minute || ''} onChange={e => set('minute', parseInt(e.target.value))} min="0" max="120"/>
+              <input type="number" className="adm-input" value={form.minute || ''} onChange={e => set('minute', parseInt(e.target.value))} min="0" max="120" />
             </div>
           )}
           <div className="adm-form-row">
             <div className="adm-form-group">
               <label className="adm-label">Data</label>
-              <input className="adm-input" value={form.date || ''} onChange={e => set('date', e.target.value)} placeholder="es. 15 Lug"/>
+              <input className="adm-input" value={form.date || ''} onChange={e => set('date', e.target.value)} placeholder="es. 15 Lug" />
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Orario</label>
-              <input className="adm-input" value={form.time || ''} onChange={e => set('time', e.target.value)} placeholder="es. 19:00"/>
+              <input className="adm-input" value={form.time || ''} onChange={e => set('time', e.target.value)} placeholder="es. 19:00" />
             </div>
           </div>
           <div className="adm-form-actions" style={{ marginTop: 24 }}>
@@ -597,9 +597,9 @@ function StandingsSection({ data, onSave }) {
   const [editing, setEditing] = useState(null);
 
   const sectionMap = {
-    senior: { key: 'standings_a',   label: 'Senior',  default: DEFAULT_STANDINGS_A },
+    senior: { key: 'standings_a', label: 'Senior', default: DEFAULT_STANDINGS_A },
     over40: { key: 'standings_o40', label: 'Over 40', default: DEFAULT_STANDINGS_O40 },
-    junior: { key: 'standings_jr',  label: 'Junior',  default: DEFAULT_STANDINGS_JR },
+    junior: { key: 'standings_jr', label: 'Junior', default: DEFAULT_STANDINGS_JR },
   };
 
   function saveRow(updated) {
@@ -618,23 +618,23 @@ function StandingsSection({ data, onSave }) {
       <h2 className="adm-section-title">Classifica</h2>
       <div className="rm-tabs" style={{ marginBottom: 16 }}>
         {Object.entries(sectionMap).map(([id, s]) => (
-          <button key={id} className={`rm-tab ${tab===id?'on':''}`} onClick={() => setTab(id)}>{s.label}</button>
+          <button key={id} className={`rm-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>{s.label}</button>
         ))}
       </div>
       <div className="adm-card">
         {rows.map((r, i) => (
           <div key={r.short} className="adm-item-row">
-            <div style={{ fontFamily:'var(--font-display)',fontSize:22,color:'var(--brand-green)',width:28 }}>{i+1}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--brand-green)', width: 28 }}>{i + 1}</div>
             <div className="adm-crest" style={{ borderColor: r.color, color: r.color }}>{r.short}</div>
             <div className="adm-item-row-body">
               <div className="adm-item-title">{r.name}</div>
-              <div className="adm-item-meta">G{r.g} V{r.v} N{r.n} P{r.p} · GF{r.gf} GS{r.gs} · <b style={{color:'var(--brand-green)'}}>{r.pt}pt</b></div>
+              <div className="adm-item-meta">G{r.g} V{r.v} N{r.n} P{r.p} · GF{r.gf} GS{r.gs} · <b style={{ color: 'var(--brand-green)' }}>{r.pt}pt</b></div>
             </div>
-            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...r})}>Modifica</button>
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...r })}>Modifica</button>
           </div>
         ))}
       </div>
-      {editing && <StandingForm row={editing} onSave={saveRow} onClose={() => setEditing(null)}/>}
+      {editing && <StandingForm row={editing} onSave={saveRow} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -645,7 +645,7 @@ function StandingForm({ row, onSave, onClose }) {
   const numField = (label, key) => (
     <div className="adm-form-group">
       <label className="adm-label">{label}</label>
-      <input type="number" className="adm-input" value={form[key] ?? ''} onChange={e => set(key, parseInt(e.target.value) || 0)} min="0"/>
+      <input type="number" className="adm-input" value={form[key] ?? ''} onChange={e => set(key, parseInt(e.target.value) || 0)} min="0" />
     </div>
   );
   return (
@@ -659,7 +659,7 @@ function StandingForm({ row, onSave, onClose }) {
           {numField('Punti (Pt)', 'pt')}
           <div className="adm-form-group">
             <label className="adm-label">Forma (es. W,L,W,D)</label>
-            <input className="adm-input" value={(form.form || []).join(',')} onChange={e => set('form', e.target.value.toUpperCase().split(',').map(s=>s.trim()).filter(Boolean))} placeholder="W,W,L,D"/>
+            <input className="adm-input" value={(form.form || []).join(',')} onChange={e => set('form', e.target.value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean))} placeholder="W,W,L,D" />
           </div>
           <div className="adm-form-actions">
             <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
@@ -707,15 +707,15 @@ function ScorersSection({ data, onSave }) {
         </div>
         {scorers.map((s, i) => (
           <div key={i} className="adm-item-row">
-            <div style={{ fontFamily:'var(--font-display)',fontSize:20,color:'var(--brand-green)',width:26 }}>{i+1}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--brand-green)', width: 26 }}>{i + 1}</div>
             <div className="adm-crest" style={{ borderColor: s.color, color: s.color }}>{s.short}</div>
             <div className="adm-item-row-body">
               <div className="adm-item-title">{s.name}</div>
               <div className="adm-item-meta">{s.team}</div>
             </div>
-            <div style={{ fontFamily:'var(--font-display)',fontSize:24,color:'var(--brand-green)',marginRight:8 }}>⚽{s.goals}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--brand-green)', marginRight: 8 }}>⚽{s.goals}</div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...s,_idx:i})}>Mod.</button>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...s, _idx: i })}>Mod.</button>
               <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
             </div>
           </div>
@@ -729,35 +729,35 @@ function ScorersSection({ data, onSave }) {
               <div className="adm-form-group">
                 <label className="adm-label">Squadra</label>
                 <select className="adm-select" value={editing.short || ''} onChange={e => {
-                  const t = (data.teams||[]).find(x => x.short === e.target.value);
-                  if (t) setEditing(f => ({...f, short: t.short, team: t.name, color: t.color || '#00E676', name: ''}));
-                  else setEditing(f => ({...f, short: e.target.value}));
+                  const t = (data.teams || []).find(x => x.short === e.target.value);
+                  if (t) setEditing(f => ({ ...f, short: t.short, team: t.name, color: t.color || '#00E676', name: '' }));
+                  else setEditing(f => ({ ...f, short: e.target.value }));
                 }}>
                   <option value="">-- Seleziona Squadra --</option>
-                  {(data.teams||[]).map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                  {(data.teams || []).map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
                 </select>
               </div>
-              
+
               <div className="adm-form-group">
                 <label className="adm-label">Giocatore</label>
                 {(() => {
-                  const tObj = (data.teams||[]).find(t => t.short === editing.short);
+                  const tObj = (data.teams || []).find(t => t.short === editing.short);
                   const pList = tObj?.players || [];
                   if (pList.length > 0) {
                     return (
-                      <select className="adm-select" value={editing.name} onChange={e => setEditing(f=>({...f,name:e.target.value}))}>
+                      <select className="adm-select" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))}>
                         <option value="">-- Seleziona Giocatore --</option>
-                        {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number+'. ' : ''}{p.name}</option>)}
+                        {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number + '. ' : ''}{p.name}</option>)}
                       </select>
                     );
                   }
-                  return <input className="adm-input" value={editing.name} onChange={e => setEditing(f=>({...f,name:e.target.value}))} placeholder="Nome giocatore"/>;
+                  return <input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} placeholder="Nome giocatore" />;
                 })()}
               </div>
 
               <div className="adm-form-group">
                 <label className="adm-label">Gol</label>
-                <input type="number" className="adm-input" value={editing.goals} onChange={e => setEditing(f=>({...f,goals:parseInt(e.target.value)||0}))} min="0"/>
+                <input type="number" className="adm-input" value={editing.goals} onChange={e => setEditing(f => ({ ...f, goals: parseInt(e.target.value) || 0 }))} min="0" />
               </div>
               <div className="adm-form-actions" style={{ marginTop: 24 }}>
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
@@ -768,7 +768,7 @@ function ScorersSection({ data, onSave }) {
         </div>
       )}
       {deleting !== null && (
-        <Confirm msg={`Eliminare ${scorers[deleting]?.name}?`} onOk={() => { saveAll(scorers.filter((_,i)=>i!==deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)}/>
+        <Confirm msg={`Eliminare ${scorers[deleting]?.name}?`} onOk={() => { saveAll(scorers.filter((_, i) => i !== deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
       )}
     </div>
   );
@@ -776,22 +776,22 @@ function ScorersSection({ data, onSave }) {
 
 // ── Teams Section ─────────────────────────────────────────────────────────
 function TeamForm({ team, onSave, onClose }) {
-  const [editing, setEditing] = useState({...team, players: team.players || []});
+  const [editing, setEditing] = useState({ ...team, players: team.players || [] });
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerNum, setNewPlayerNum] = useState('');
   const isNew = !team.short; // if short is empty, it's a new team
 
   function addPlayer(e) {
     e.preventDefault();
-    if(!newPlayerName) return;
+    if (!newPlayerName) return;
     const p = { id: Date.now().toString(), name: newPlayerName.trim(), number: newPlayerNum };
-    setEditing(f => ({...f, players: [...f.players, p]}));
+    setEditing(f => ({ ...f, players: [...f.players, p] }));
     setNewPlayerName('');
     setNewPlayerNum('');
   }
 
   function removePlayer(id) {
-    setEditing(f => ({...f, players: f.players.filter(p => p.id !== id)}));
+    setEditing(f => ({ ...f, players: f.players.filter(p => p.id !== id) }));
   }
 
   return (
@@ -800,22 +800,22 @@ function TeamForm({ team, onSave, onClose }) {
         <h3 className="adm-modal-title">{isNew ? 'Nuova Squadra' : editing.name}</h3>
         <div className="adm-form" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
           <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Nome squadra</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f=>({...f,name:e.target.value}))}/></div>
-            <div className="adm-form-group"><label className="adm-label">Sigla (max 3 lett.)</label><input className="adm-input" value={editing.short} onChange={e => setEditing(f=>({...f,short:e.target.value.toUpperCase().slice(0,3)}))} disabled={!isNew}/></div>
+            <div className="adm-form-group"><label className="adm-label">Nome squadra</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} /></div>
+            <div className="adm-form-group"><label className="adm-label">Sigla (max 3 lett.)</label><input className="adm-input" value={editing.short} onChange={e => setEditing(f => ({ ...f, short: e.target.value.toUpperCase().slice(0, 3) }))} disabled={!isNew} /></div>
           </div>
           <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Bandiera (Emoji)</label><input className="adm-input" value={editing.flag || ''} onChange={e => setEditing(f=>({...f,flag:e.target.value}))} placeholder="🇮🇹"/></div>
+            <div className="adm-form-group"><label className="adm-label">Bandiera (Emoji)</label><input className="adm-input" value={editing.flag || ''} onChange={e => setEditing(f => ({ ...f, flag: e.target.value }))} placeholder="🇮🇹" /></div>
             <div className="adm-form-group">
               <label className="adm-label">Categoria</label>
-              <select className="adm-input" value={editing.category} onChange={e => setEditing(f=>({...f,category:e.target.value}))}>
+              <select className="adm-input" value={editing.category} onChange={e => setEditing(f => ({ ...f, category: e.target.value }))}>
                 <option value="Senior">Senior</option>
                 <option value="Over 40">Over 40</option>
                 <option value="Junior">Junior</option>
               </select>
             </div>
           </div>
-          <div className="adm-form-group"><label className="adm-label">Colore</label><input type="color" className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f=>({...f,color:e.target.value}))} style={{height:40}}/></div>
-          
+          <div className="adm-form-group"><label className="adm-label">Colore</label><input type="color" className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f => ({ ...f, color: e.target.value }))} style={{ height: 40 }} /></div>
+
           <h4 style={{ marginTop: 20, marginBottom: 10, color: '#fff', fontSize: 14 }}>Rosa Giocatori</h4>
           <div style={{ background: '#111', padding: 12, borderRadius: 8, marginBottom: 16 }}>
             {editing.players.length === 0 ? <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 10 }}>Nessun giocatore inserito.</div> : (
@@ -829,22 +829,22 @@ function TeamForm({ team, onSave, onClose }) {
               </div>
             )}
             <form onSubmit={addPlayer} style={{ display: 'flex', gap: 6 }}>
-              <input className="adm-input" placeholder="N." style={{ width: 50 }} value={newPlayerNum} onChange={e => setNewPlayerNum(e.target.value)}/>
-              <input className="adm-input" placeholder="Nome giocatore" style={{ flex: 1 }} value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)}/>
+              <input className="adm-input" placeholder="N." style={{ width: 50 }} value={newPlayerNum} onChange={e => setNewPlayerNum(e.target.value)} />
+              <input className="adm-input" placeholder="Nome giocatore" style={{ flex: 1 }} value={newPlayerName} onChange={e => setNewPlayerName(e.target.value)} />
               <button className="adm-btn adm-btn-sm" type="submit">+</button>
             </form>
           </div>
 
           <h4 style={{ marginTop: 10, marginBottom: 10, color: 'var(--fg-2)', fontSize: 13 }}>Statistiche</h4>
           <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Partite</label><input type="number" className="adm-input" value={editing.played} onChange={e => setEditing(f=>({...f,played:parseInt(e.target.value)||0}))} min="0"/></div>
-            <div className="adm-form-group"><label className="adm-label">Vittorie</label><input type="number" className="adm-input" value={editing.won} onChange={e => setEditing(f=>({...f,won:parseInt(e.target.value)||0}))} min="0"/></div>
+            <div className="adm-form-group"><label className="adm-label">Partite</label><input type="number" className="adm-input" value={editing.played} onChange={e => setEditing(f => ({ ...f, played: parseInt(e.target.value) || 0 }))} min="0" /></div>
+            <div className="adm-form-group"><label className="adm-label">Vittorie</label><input type="number" className="adm-input" value={editing.won} onChange={e => setEditing(f => ({ ...f, won: parseInt(e.target.value) || 0 }))} min="0" /></div>
           </div>
           <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Gol Fatti</label><input type="number" className="adm-input" value={editing.goals} onChange={e => setEditing(f=>({...f,goals:parseInt(e.target.value)||0}))} min="0"/></div>
-            <div className="adm-form-group"><label className="adm-label">Punti</label><input type="number" className="adm-input" value={editing.points} onChange={e => setEditing(f=>({...f,points:parseInt(e.target.value)||0}))} min="0"/></div>
+            <div className="adm-form-group"><label className="adm-label">Gol Fatti</label><input type="number" className="adm-input" value={editing.goals} onChange={e => setEditing(f => ({ ...f, goals: parseInt(e.target.value) || 0 }))} min="0" /></div>
+            <div className="adm-form-group"><label className="adm-label">Punti</label><input type="number" className="adm-input" value={editing.points} onChange={e => setEditing(f => ({ ...f, points: parseInt(e.target.value) || 0 }))} min="0" /></div>
           </div>
-          
+
           <div className="adm-form-actions" style={{ marginTop: 24 }}>
             <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
             <button className="adm-btn adm-btn-sm" onClick={() => onSave(editing)}>Salva Squadra</button>
@@ -861,8 +861,8 @@ function TeamsSection({ data, onSave }) {
 
   function saveItem(item) {
     if (!item.short) {
-       alert("Devi inserire una sigla per la squadra (es. RM)");
-       return;
+      alert("Devi inserire una sigla per la squadra (es. RM)");
+      return;
     }
     let updated;
     if (teams.find(t => t.short === item.short)) {
@@ -874,9 +874,9 @@ function TeamsSection({ data, onSave }) {
     onSave({ ...data, teams: updated }, 'Squadra salvata');
     setEditing(null);
   }
-  
+
   function deleteTeam(short) {
-    if(!window.confirm('Sicuro di voler eliminare questa squadra?')) return;
+    if (!window.confirm('Sicuro di voler eliminare questa squadra?')) return;
     const updated = teams.filter(t => t.short !== short);
     setTeams(updated);
     onSave({ ...data, teams: updated }, 'Squadra eliminata');
@@ -905,13 +905,13 @@ function TeamsSection({ data, onSave }) {
               <div className="adm-item-meta">{t.category} · {t.players?.length || 0} Giocatori · {t.played}G {t.won}V {t.points}pt</div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...t})}>Modifica</button>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...t })}>Modifica</button>
               <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => deleteTeam(t.short)}>✕</button>
             </div>
           </div>
         ))}
       </div>
-      {editing && <TeamForm team={editing} onSave={saveItem} onClose={() => setEditing(null)}/>}
+      {editing && <TeamForm team={editing} onSave={saveItem} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -925,7 +925,7 @@ function EventsSection({ data, onSave }) {
   function saveAll(list) { setEvents(list); onSave({ ...data, events: list }, 'Eventi aggiornati'); }
   function saveItem(item) {
     const idx = events.findIndex(e => e.id === item.id);
-    saveAll(idx >= 0 ? events.map((e,i) => i===idx ? item : e) : [...events, item]);
+    saveAll(idx >= 0 ? events.map((e, i) => i === idx ? item : e) : [...events, item]);
     setEditing(null);
   }
 
@@ -935,20 +935,20 @@ function EventsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{events.length} eventi</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id:'e'+Date.now(),day:'',month:'',kind:'match',kindLabel:'Partita',title:'',time:'',where:'',highlight:false })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 'e' + Date.now(), day: '', month: '', kind: 'match', kindLabel: 'Partita', title: '', time: '', where: '', highlight: false })}>+ Nuovo</button>
         </div>
-        {events.map((ev,i) => (
+        {events.map((ev, i) => (
           <div key={ev.id} className="adm-item-row">
-            <div style={{ textAlign:'center',minWidth:44 }}>
-              <div style={{ fontFamily:'var(--font-display)',fontSize:22,color:'var(--brand-green)',lineHeight:1 }}>{ev.day}</div>
-              <div style={{ fontSize:10,color:'var(--fg-3)',letterSpacing:'0.14em',textTransform:'uppercase' }}>{ev.month}</div>
+            <div style={{ textAlign: 'center', minWidth: 44 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--brand-green)', lineHeight: 1 }}>{ev.day}</div>
+              <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>{ev.month}</div>
             </div>
             <div className="adm-item-row-body">
               <div className="adm-item-title">{ev.title}</div>
               <div className="adm-item-meta">{ev.time} · {ev.where}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...ev})}>Mod.</button>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...ev })}>Mod.</button>
               <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
             </div>
           </div>
@@ -960,24 +960,24 @@ function EventsSection({ data, onSave }) {
             <h3 className="adm-modal-title">Evento</h3>
             <div className="adm-form">
               <div className="adm-form-row">
-                <div className="adm-form-group"><label className="adm-label">Giorno</label><input className="adm-input" value={editing.day} onChange={e => setEditing(f=>({...f,day:e.target.value}))} placeholder="15"/></div>
-                <div className="adm-form-group"><label className="adm-label">Mese</label><input className="adm-input" value={editing.month} onChange={e => setEditing(f=>({...f,month:e.target.value}))} placeholder="Lug"/></div>
+                <div className="adm-form-group"><label className="adm-label">Giorno</label><input className="adm-input" value={editing.day} onChange={e => setEditing(f => ({ ...f, day: e.target.value }))} placeholder="15" /></div>
+                <div className="adm-form-group"><label className="adm-label">Mese</label><input className="adm-input" value={editing.month} onChange={e => setEditing(f => ({ ...f, month: e.target.value }))} placeholder="Lug" /></div>
               </div>
-              <div className="adm-form-group"><label className="adm-label">Titolo</label><input className="adm-input" value={editing.title} onChange={e => setEditing(f=>({...f,title:e.target.value}))}/></div>
+              <div className="adm-form-group"><label className="adm-label">Titolo</label><input className="adm-input" value={editing.title} onChange={e => setEditing(f => ({ ...f, title: e.target.value }))} /></div>
               <div className="adm-form-row">
-                <div className="adm-form-group"><label className="adm-label">Orario</label><input className="adm-input" value={editing.time} onChange={e => setEditing(f=>({...f,time:e.target.value}))}/></div>
-                <div className="adm-form-group"><label className="adm-label">Dove</label><input className="adm-input" value={editing.where} onChange={e => setEditing(f=>({...f,where:e.target.value}))}/></div>
+                <div className="adm-form-group"><label className="adm-label">Orario</label><input className="adm-input" value={editing.time} onChange={e => setEditing(f => ({ ...f, time: e.target.value }))} /></div>
+                <div className="adm-form-group"><label className="adm-label">Dove</label><input className="adm-input" value={editing.where} onChange={e => setEditing(f => ({ ...f, where: e.target.value }))} /></div>
               </div>
               <div className="adm-form-row">
                 <div className="adm-form-group">
                   <label className="adm-label">Tipo</label>
-                  <select className="adm-select" value={editing.kind} onChange={e => { const map={match:'Partita',cer:'Cerimonia',party:'Festa/Cena'}; setEditing(f=>({...f,kind:e.target.value,kindLabel:map[e.target.value]||e.target.value})); }}>
+                  <select className="adm-select" value={editing.kind} onChange={e => { const map = { match: 'Partita', cer: 'Cerimonia', party: 'Festa/Cena' }; setEditing(f => ({ ...f, kind: e.target.value, kindLabel: map[e.target.value] || e.target.value })); }}>
                     <option value="match">Partita</option><option value="cer">Cerimonia</option><option value="party">Festa/Cena</option>
                   </select>
                 </div>
-                <div className="adm-form-group"><label className="adm-label">Extra (opz.)</label><input className="adm-input" value={editing.extra||''} onChange={e => setEditing(f=>({...f,extra:e.target.value}))}/></div>
+                <div className="adm-form-group"><label className="adm-label">Extra (opz.)</label><input className="adm-input" value={editing.extra || ''} onChange={e => setEditing(f => ({ ...f, extra: e.target.value }))} /></div>
               </div>
-              <label className="adm-checkbox-row"><input type="checkbox" checked={!!editing.highlight} onChange={e => setEditing(f=>({...f,highlight:e.target.checked}))}/> In evidenza</label>
+              <label className="adm-checkbox-row"><input type="checkbox" checked={!!editing.highlight} onChange={e => setEditing(f => ({ ...f, highlight: e.target.checked }))} /> In evidenza</label>
               <div className="adm-form-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
                 <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)}>Salva</button>
@@ -986,7 +986,7 @@ function EventsSection({ data, onSave }) {
           </div>
         </div>
       )}
-      {deleting !== null && <Confirm msg="Eliminare questo evento?" onOk={() => { saveAll(events.filter((_,i)=>i!==deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)}/>}
+      {deleting !== null && <Confirm msg="Eliminare questo evento?" onOk={() => { saveAll(events.filter((_, i) => i !== deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
@@ -1000,7 +1000,7 @@ function HonorsSection({ data, onSave }) {
   function saveAll(list) { setHonors(list); onSave({ ...data, honors: list }, 'Albo d\'oro aggiornato'); }
   function saveItem(item) {
     const idx = honors.findIndex(h => h.id === item.id);
-    saveAll(idx >= 0 ? honors.map(h => h.id===item.id ? item : h) : [...honors, item]);
+    saveAll(idx >= 0 ? honors.map(h => h.id === item.id ? item : h) : [...honors, item]);
     setEditing(null);
   }
 
@@ -1010,17 +1010,17 @@ function HonorsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{honors.length} edizioni</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id:'h'+Date.now(),year:'',edition:'',winner:'',runner:'',topScorer:'',mvp:'',alt:false })}>+ Nuova edizione</button>
+          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 'h' + Date.now(), year: '', edition: '', winner: '', runner: '', topScorer: '', mvp: '', alt: false })}>+ Nuova edizione</button>
         </div>
-        {honors.map((h,i) => (
+        {honors.map((h, i) => (
           <div key={h.id} className="adm-item-row">
-            <div style={{ fontFamily:'var(--font-display)',fontSize:32,color:h.alt?'var(--brand-gold)':'var(--brand-green)',lineHeight:1,width:60 }}>{h.year}</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: h.alt ? 'var(--brand-gold)' : 'var(--brand-green)', lineHeight: 1, width: 60 }}>{h.year}</div>
             <div className="adm-item-row-body">
               <div className="adm-item-title">{h.edition}</div>
               <div className="adm-item-meta">🏆 {h.winner} · ⚽ {h.topScorer}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...h})}>Mod.</button>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...h })}>Mod.</button>
               <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
             </div>
           </div>
@@ -1032,13 +1032,13 @@ function HonorsSection({ data, onSave }) {
             <h3 className="adm-modal-title">Edizione</h3>
             <div className="adm-form">
               <div className="adm-form-row">
-                <div className="adm-form-group"><label className="adm-label">Anno</label><input className="adm-input" value={editing.year} onChange={e => setEditing(f=>({...f,year:e.target.value}))} placeholder="2026"/></div>
-                <div className="adm-form-group"><label className="adm-label">Edizione</label><input className="adm-input" value={editing.edition} onChange={e => setEditing(f=>({...f,edition:e.target.value}))} placeholder="3ª Edizione · Cup 2026"/></div>
+                <div className="adm-form-group"><label className="adm-label">Anno</label><input className="adm-input" value={editing.year} onChange={e => setEditing(f => ({ ...f, year: e.target.value }))} placeholder="2026" /></div>
+                <div className="adm-form-group"><label className="adm-label">Edizione</label><input className="adm-input" value={editing.edition} onChange={e => setEditing(f => ({ ...f, edition: e.target.value }))} placeholder="3ª Edizione · Cup 2026" /></div>
               </div>
-              <div className="adm-form-group"><label className="adm-label">Vincitore</label><input className="adm-input" value={editing.winner} onChange={e => setEditing(f=>({...f,winner:e.target.value}))}/></div>
-              <div className="adm-form-group"><label className="adm-label">Finalista</label><input className="adm-input" value={editing.runner} onChange={e => setEditing(f=>({...f,runner:e.target.value}))}/></div>
-              <div className="adm-form-group"><label className="adm-label">Capocannoniere</label><input className="adm-input" value={editing.topScorer} onChange={e => setEditing(f=>({...f,topScorer:e.target.value}))} placeholder="Nome Cognome (N)"/></div>
-              <div className="adm-form-group"><label className="adm-label">MVP</label><input className="adm-input" value={editing.mvp} onChange={e => setEditing(f=>({...f,mvp:e.target.value}))}/></div>
+              <div className="adm-form-group"><label className="adm-label">Vincitore</label><input className="adm-input" value={editing.winner} onChange={e => setEditing(f => ({ ...f, winner: e.target.value }))} /></div>
+              <div className="adm-form-group"><label className="adm-label">Finalista</label><input className="adm-input" value={editing.runner} onChange={e => setEditing(f => ({ ...f, runner: e.target.value }))} /></div>
+              <div className="adm-form-group"><label className="adm-label">Capocannoniere</label><input className="adm-input" value={editing.topScorer} onChange={e => setEditing(f => ({ ...f, topScorer: e.target.value }))} placeholder="Nome Cognome (N)" /></div>
+              <div className="adm-form-group"><label className="adm-label">MVP</label><input className="adm-input" value={editing.mvp} onChange={e => setEditing(f => ({ ...f, mvp: e.target.value }))} /></div>
               <div className="adm-form-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
                 <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)}>Salva</button>
@@ -1047,7 +1047,7 @@ function HonorsSection({ data, onSave }) {
           </div>
         </div>
       )}
-      {deleting !== null && <Confirm msg="Eliminare questa edizione?" onOk={() => { saveAll(honors.filter((_,i)=>i!==deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)}/>}
+      {deleting !== null && <Confirm msg="Eliminare questa edizione?" onOk={() => { saveAll(honors.filter((_, i) => i !== deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
@@ -1061,7 +1061,7 @@ function SponsorsSection({ data, onSave }) {
   function saveAll(list) { setSponsors(list); onSave({ ...data, sponsors: list }, 'Sponsor aggiornati'); }
   function saveItem(item) {
     const idx = sponsors.findIndex(s => s.id === item.id);
-    saveAll(idx >= 0 ? sponsors.map(s => s.id===item.id ? item : s) : [...sponsors, item]);
+    saveAll(idx >= 0 ? sponsors.map(s => s.id === item.id ? item : s) : [...sponsors, item]);
     setEditing(null);
   }
 
@@ -1071,16 +1071,16 @@ function SponsorsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{sponsors.length} sponsor</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id:'s'+Date.now(),name:'',tag:'' })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 's' + Date.now(), name: '', tag: '' })}>+ Nuovo</button>
         </div>
-        {sponsors.map((s,i) => (
+        {sponsors.map((s, i) => (
           <div key={s.id} className="adm-item-row">
             <div className="adm-item-row-body">
               <div className="adm-item-title">{s.name}</div>
               <div className="adm-item-meta">{s.tag}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({...s})}>Mod.</button>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...s })}>Mod.</button>
               <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
             </div>
           </div>
@@ -1091,8 +1091,8 @@ function SponsorsSection({ data, onSave }) {
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
             <h3 className="adm-modal-title">Sponsor</h3>
             <div className="adm-form">
-              <div className="adm-form-group"><label className="adm-label">Nome</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f=>({...f,name:e.target.value}))}/></div>
-              <div className="adm-form-group"><label className="adm-label">Categoria/Tag</label><input className="adm-input" value={editing.tag} onChange={e => setEditing(f=>({...f,tag:e.target.value}))} placeholder="es. Food partner"/></div>
+              <div className="adm-form-group"><label className="adm-label">Nome</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} /></div>
+              <div className="adm-form-group"><label className="adm-label">Categoria/Tag</label><input className="adm-input" value={editing.tag} onChange={e => setEditing(f => ({ ...f, tag: e.target.value }))} placeholder="es. Food partner" /></div>
               <div className="adm-form-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
                 <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)}>Salva</button>
@@ -1101,7 +1101,7 @@ function SponsorsSection({ data, onSave }) {
           </div>
         </div>
       )}
-      {deleting !== null && <Confirm msg="Eliminare questo sponsor?" onOk={() => { saveAll(sponsors.filter((_,i)=>i!==deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)}/>}
+      {deleting !== null && <Confirm msg="Eliminare questo sponsor?" onOk={() => { saveAll(sponsors.filter((_, i) => i !== deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
@@ -1125,14 +1125,14 @@ function StripSection({ data, onSave }) {
       <p className="adm-section-sub">Messaggi che scorrono nella striscia verde in cima al sito.</p>
       <div className="adm-card">
         <div className="adm-card-body">
-          <div style={{ display:'flex',gap:8,marginBottom:16 }}>
-            <input className="adm-input" style={{ flex:1 }} value={newMsg} onChange={e => setNewMsg(e.target.value)} placeholder="Nuovo messaggio..." onKeyDown={e => e.key==='Enter' && addItem()}/>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <input className="adm-input" style={{ flex: 1 }} value={newMsg} onChange={e => setNewMsg(e.target.value)} placeholder="Nuovo messaggio..." onKeyDown={e => e.key === 'Enter' && addItem()} />
             <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={addItem}>+ Aggiungi</button>
           </div>
           {items.map((item, i) => (
-            <div key={i} className="adm-item-row" style={{ padding:'8px 0' }}>
-              <div className="adm-item-row-body" style={{ fontSize:14,color:'var(--fg-1)' }}>{item}</div>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => saveAll(items.filter((_,j)=>j!==i))}>✕</button>
+            <div key={i} className="adm-item-row" style={{ padding: '8px 0' }}>
+              <div className="adm-item-row-body" style={{ fontSize: 14, color: 'var(--fg-1)' }}>{item}</div>
+              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => saveAll(items.filter((_, j) => j !== i))}>✕</button>
             </div>
           ))}
         </div>
@@ -1151,12 +1151,12 @@ function SettingsSection({ data, onSave }) {
   async function save(e) {
     e.preventDefault();
     if (pass && pass !== confirm) { setMsg('Le password non coincidono'); return; }
-    
-    const newAuth = { 
-      username: user.trim(), 
-      password: pass || data._auth.password 
+
+    const newAuth = {
+      username: user.trim(),
+      password: pass || data._auth.password
     };
-    
+
     const newData = { ...data, _auth: newAuth };
     await onSave(newData, 'Credenziali aggiornate');
     setPass(''); setConfirm('');
@@ -1180,16 +1180,16 @@ function SettingsSection({ data, onSave }) {
           <form onSubmit={save} className="adm-form">
             <div className="adm-form-group">
               <label className="adm-label">Username</label>
-              <input className="adm-input" value={user} onChange={e => setUser(e.target.value)} required/>
+              <input className="adm-input" value={user} onChange={e => setUser(e.target.value)} required />
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Nuova Password (lascia vuoto per non cambiare)</label>
-              <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••"/>
+              <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" />
             </div>
             {pass && (
               <div className="adm-form-group">
                 <label className="adm-label">Conferma Password</label>
-                <input type="password" className="adm-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••"/>
+                <input type="password" className="adm-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" />
               </div>
             )}
             {msg && <div style={{ color: msg.includes('non') ? '#FF3D3D' : 'var(--brand-green)', fontSize: 13 }}>{msg}</div>}
@@ -1200,12 +1200,12 @@ function SettingsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header"><span className="adm-card-title">Dati sito</span></div>
         <div className="adm-card-body">
-          <p style={{ fontSize:13,color:'var(--fg-2)',marginBottom:14 }}>Ripristina tutti i dati (classifica, partite, avvisi, ecc.) ai valori predefiniti. L'operazione è irreversibile.</p>
+          <p style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 14 }}>Ripristina tutti i dati (classifica, partite, avvisi, ecc.) ai valori predefiniti. L'operazione è irreversibile.</p>
           <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={resetData}>Ripristina dati iniziali</button>
         </div>
       </div>
-      <div style={{ textAlign:'center',marginTop:24 }}>
-        <a href="index.html" style={{ color:'var(--brand-green)',fontSize:14 }}>← Vai al sito pubblico</a>
+      <div style={{ textAlign: 'center', marginTop: 24 }}>
+        <a href="index.html" style={{ color: 'var(--brand-green)', fontSize: 14 }}>← Vai al sito pubblico</a>
       </div>
     </div>
   );
@@ -1213,17 +1213,17 @@ function SettingsSection({ data, onSave }) {
 
 // ── Admin App ─────────────────────────────────────────────────────────────
 const TABS = [
-  { id: 'live',      label: 'Live 🔴' },
-  { id: 'news',      label: 'Avvisi' },
-  { id: 'matches',   label: 'Partite' },
+  { id: 'live', label: 'Live 🔴' },
+  { id: 'news', label: 'Avvisi' },
+  { id: 'matches', label: 'Partite' },
   { id: 'standings', label: 'Classifica' },
-  { id: 'scorers',   label: 'Marcatori' },
-  { id: 'teams',     label: 'Squadre' },
-  { id: 'events',    label: 'Eventi' },
-  { id: 'honors',    label: "Albo d'oro" },
-  { id: 'sponsors',  label: 'Sponsor' },
-  { id: 'strip',     label: 'Striscia' },
-  { id: 'settings',  label: '⚙ Settings' },
+  { id: 'scorers', label: 'Marcatori' },
+  { id: 'teams', label: 'Squadre' },
+  { id: 'events', label: 'Eventi' },
+  { id: 'honors', label: "Albo d'oro" },
+  { id: 'sponsors', label: 'Sponsor' },
+  { id: 'strip', label: 'Striscia' },
+  { id: 'settings', label: '⚙ Settings' },
 ];
 
 function AdminApp() {
@@ -1258,7 +1258,7 @@ function AdminApp() {
     <div className="adm-app">
       <header className="adm-topbar">
         <div className="adm-topbar-left">
-          <img src="assets/logo-rinascita-monteforte.jpg" alt="" style={{ width:32,height:32,borderRadius:6,objectFit:'cover' }}/>
+          <img src="assets/logo-rinascita-monteforte.jpg" alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />
           <span className="adm-topbar-title">Admin Rinascita</span>
           <span className="adm-badge">Staff</span>
         </div>
@@ -1268,7 +1268,7 @@ function AdminApp() {
       <div className="adm-tabs-wrap">
         <div className="adm-tabs">
           {TABS.map(t => (
-            <button key={t.id} className={`adm-tab ${tab===t.id?'on':''}`} onClick={() => setTab(t.id)}>
+            <button key={t.id} className={`adm-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>
               {t.label}
             </button>
           ))}
@@ -1276,20 +1276,20 @@ function AdminApp() {
       </div>
 
       <main className="adm-main">
-        {tab === 'live'      && <LiveSection      {...props}/>}
-        {tab === 'news'      && <NewsSection      {...props}/>}
-        {tab === 'matches'   && <MatchesSection   {...props}/>}
-        {tab === 'standings' && <StandingsSection {...props}/>}
-        {tab === 'scorers'   && <ScorersSection   {...props}/>}
-        {tab === 'teams'     && <TeamsSection     {...props}/>}
-        {tab === 'events'    && <EventsSection    {...props}/>}
-        {tab === 'honors'    && <HonorsSection    {...props}/>}
-        {tab === 'sponsors'  && <SponsorsSection  {...props}/>}
-        {tab === 'strip'     && <StripSection     {...props}/>}
-        {tab === 'settings'  && <SettingsSection  {...props}/>}
+        {tab === 'live' && <LiveSection      {...props} />}
+        {tab === 'news' && <NewsSection      {...props} />}
+        {tab === 'matches' && <MatchesSection   {...props} />}
+        {tab === 'standings' && <StandingsSection {...props} />}
+        {tab === 'scorers' && <ScorersSection   {...props} />}
+        {tab === 'teams' && <TeamsSection     {...props} />}
+        {tab === 'events' && <EventsSection    {...props} />}
+        {tab === 'honors' && <HonorsSection    {...props} />}
+        {tab === 'sponsors' && <SponsorsSection  {...props} />}
+        {tab === 'strip' && <StripSection     {...props} />}
+        {tab === 'settings' && <SettingsSection  {...props} />}
       </main>
 
-      {toast && <Toast msg={`✓ ${toast}`} onDone={() => setToast(null)}/>}
+      {toast && <Toast msg={`✓ ${toast}`} onDone={() => setToast(null)} />}
     </div>
   );
 }
@@ -1297,8 +1297,8 @@ function AdminApp() {
 // ── Root ──────────────────────────────────────────────────────────────────
 function Root() {
   const [authed, setAuthed] = useState(isLoggedIn());
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)}/>;
-  return <AdminApp/>;
+  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
+  return <AdminApp />;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Root/>);
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);

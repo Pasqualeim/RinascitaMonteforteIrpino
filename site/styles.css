@@ -3,13 +3,37 @@
    Base = 375px mobile | tablet 600px+ | desktop 900px+
    ============================================================ */
 
-html, body { margin: 0; background: #000; color: var(--fg-1); font-family: var(--font-body); -webkit-tap-highlight-color: transparent; }
+html {
+  height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+body {
+  margin: 0;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  background: #000;
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-x: none;
+}
 *, *::before, *::after { box-sizing: border-box; }
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; }
+img, svg, video, canvas { max-width: 100%; height: auto; }
 
-.rm-app { min-height: 100vh; padding-bottom: 72px; }
+.rm-app {
+  min-height: 100vh;
+  padding-bottom: 72px;
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overscroll-behavior-x: none;
+}
 
 /* ── Top status strip ──────────────────────────────────────── */
 .rm-strip {
@@ -21,6 +45,8 @@ input, textarea, select { font-family: inherit; }
   text-transform: uppercase;
   padding: 7px 0;
   overflow: hidden;
+  width: 100%;
+  max-width: 100vw;
 }
 .rm-strip-track {
   display: flex; gap: 40px; white-space: nowrap;
@@ -38,6 +64,7 @@ input, textarea, select { font-family: inherit; }
   background: rgba(0,0,0,0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
+  width: 100%; max-width: 100vw; overflow: hidden;
 }
 .rm-logo { display: flex; align-items: center; gap: 10px; }
 .rm-logo img { width: 40px; height: 40px; border-radius: 6px; border: 1px solid var(--border-brand); box-shadow: var(--glow-green-sm); object-fit: cover; }
@@ -58,6 +85,7 @@ input, textarea, select { font-family: inherit; }
   display: flex; align-items: stretch;
   z-index: 50;
   padding-bottom: env(safe-area-inset-bottom, 0);
+  width: 100%; max-width: 100vw; overflow: hidden;
 }
 .rm-bn-item {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -109,6 +137,8 @@ input, textarea, select { font-family: inherit; }
   position: relative;
   padding: 36px 16px 40px;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
 }
 .rm-hero-glow {
   position: absolute; width: 600px; height: 600px; border-radius: 999px;
@@ -167,13 +197,14 @@ input, textarea, select { font-family: inherit; }
 
 /* ── Countdown ─────────────────────────────────────────────── */
 .rm-countdown {
-  display: inline-flex; flex-direction: column; gap: 8px;
-  padding: 14px 18px; border: 1px solid var(--border-brand); border-radius: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 16px; border: 1px solid var(--border-brand); border-radius: 12px;
   background: #0a0a0a; box-shadow: var(--glow-green-sm);
+  max-width: 100%; width: fit-content;
 }
-.rm-cd-row { display: flex; align-items: baseline; gap: 10px; }
-.rm-cd-cell { display: flex; flex-direction: column; align-items: center; min-width: 52px; }
-.rm-cd-cell b { font-family: var(--font-display); font-size: 38px; letter-spacing: 0.04em; line-height: 1; color: #fff; font-weight: 400; font-variant-numeric: tabular-nums; }
+.rm-cd-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: nowrap; }
+.rm-cd-cell { display: flex; flex-direction: column; align-items: center; min-width: 44px; flex: 1; }
+.rm-cd-cell b { font-family: var(--font-display); font-size: clamp(28px, 8vw, 38px); letter-spacing: 0.04em; line-height: 1; color: #fff; font-weight: 400; font-variant-numeric: tabular-nums; }
 .rm-cd-cell span { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fg-3); margin-top: 4px; }
 .rm-cd-sep { font-family: var(--font-display); font-size: 26px; color: var(--brand-green); animation: cdpulse 1s infinite; }
 @keyframes cdpulse { 50% { opacity: 0.3; } }
@@ -182,7 +213,7 @@ input, textarea, select { font-family: inherit; }
 .rm-eyebrow.muted { color: var(--fg-3); }
 
 /* ── Sections ──────────────────────────────────────────────── */
-.rm-section { padding: 32px 16px; border-top: 1px solid var(--border-subtle); }
+.rm-section { padding: 32px 16px; border-top: 1px solid var(--border-subtle); width: 100%; max-width: 100%; overflow: hidden; }
 .rm-section-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .rm-section-title { font-family: var(--font-display); font-size: clamp(30px, 8vw, 56px); letter-spacing: 0.04em; text-transform: uppercase; margin: 4px 0 0; color: #fff; line-height: 1; font-weight: 400; }
 .rm-section-link { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--brand-green); display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 0; padding: 0; min-height: 36px; }
@@ -207,6 +238,7 @@ input, textarea, select { font-family: inherit; }
   padding: 20px 16px 24px;
   box-shadow: var(--glow-green);
   overflow: hidden;
+  max-width: 100%;
 }
 .rm-live-hero::before {
   content: "";
@@ -234,7 +266,7 @@ input, textarea, select { font-family: inherit; }
 .rm-live-team-name { font-family: var(--font-display); font-size: 16px; letter-spacing: 0.06em; text-transform: uppercase; color: #fff; line-height: 1.1; }
 .rm-live-team-meta { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-3); }
 .rm-live-score { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.rm-live-score-row { font-family: var(--font-display); font-size: 72px; letter-spacing: 0.02em; color: #fff; line-height: 1; font-weight: 400; }
+.rm-live-score-row { font-family: var(--font-display); font-size: clamp(44px, 14vw, 72px); letter-spacing: 0.02em; color: #fff; line-height: 1; font-weight: 400; }
 .rm-live-score-row i { font-style: normal; color: var(--brand-green); margin: 0 8px; }
 .rm-live-min { font-family: var(--font-display); font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--brand-green); }
 
@@ -418,6 +450,7 @@ input, textarea, select { font-family: inherit; }
   margin-top: 40px; border-top: 1px solid var(--border-subtle);
   background: #050505;
   padding: 36px 16px 20px;
+  width: 100%; max-width: 100%; overflow: hidden;
 }
 .rm-footer-grid {
   display: flex; flex-direction: column; gap: 24px;
