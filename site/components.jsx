@@ -178,6 +178,7 @@ function SponsorWink() {
 
 // ── Match row ─────────────────────────────────────────────────────────────
 function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }) {
+  if (!home || !away) return null;
   const live = status === 'live';
   const done = status === 'ft';
   return (
@@ -224,6 +225,7 @@ function LiveBoard({ match }) {
     </div>
   );
   const { home, away, hs, as: as_, minute, pitch, events = [] } = match;
+  if (!home || !away) return null;
   return (
     <div className="rm-live-hero">
       <div className="rm-live-top">

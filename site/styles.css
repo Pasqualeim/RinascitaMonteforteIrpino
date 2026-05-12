@@ -4,15 +4,12 @@
    ============================================================ */
 
 html {
-  height: 100%;
-  overflow: hidden;
+  overflow-x: hidden;
   width: 100%;
 }
 body {
   margin: 0;
-  height: 100%;
   overflow-x: hidden;
-  overflow-y: auto;
   width: 100%;
   background: #000;
   color: var(--fg-1);
