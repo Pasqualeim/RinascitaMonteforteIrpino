@@ -24,6 +24,26 @@ function isLoggedIn() {
   return sessionStorage.getItem(AUTH_KEY) === '1';
 }
 
+// ── Icons ─────────────────────────────────────────────────────────────────
+const Icon = ({ children, size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    {children}
+  </svg>
+);
+const EditIcon = (p) => <Icon {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></Icon>;
+const TrashIcon = (p) => <Icon {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></Icon>;
+const HomeIcon = (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
+const ZapIcon = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
+const GridIcon = (p) => <Icon {...p}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></Icon>;
+const BellIcon = (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></Icon>;
+const MenuIcon = (p) => <Icon {...p}><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></Icon>;
+const UsersIcon = (p) => <Icon {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></Icon>;
+const CalIcon = (p) => <Icon {...p}><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></Icon>;
+const BallIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/></Icon>;
+const StarIcon = (p) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
+const TrophyIcon = (p) => <Icon {...p}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></Icon>;
+const NewspaperIcon = (p) => <Icon {...p}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></Icon>;
+
 // ── Toast ─────────────────────────────────────────────────────────────────
 function Toast({ msg, onDone }) {
   useEffect(() => {
@@ -397,8 +417,8 @@ function NewsSection({ data, onSave }) {
                 <div className="adm-item-meta">{n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
               </div>
               <div className="adm-item-actions">
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...n })}>Modifica</button>
-                <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(n.id)}>✕</button>
+                <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...n })}><EditIcon size={16}/></button>
+                <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(n.id)}><TrashIcon size={16}/></button>
               </div>
             </div>
           ))
@@ -607,8 +627,8 @@ function MatchesSection({ data, onSave }) {
                   <div className="adm-item-meta">{m._day} · {m.time} · {statusLabel[m.status]}</div>
                 </div>
                 <div className="adm-item-actions">
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...m })}>Modifica</button>
-                  <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(m.id)}>✕</button>
+                  <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...m })}><EditIcon size={16}/></button>
+                  <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(m.id)}><TrashIcon size={16}/></button>
                 </div>
               </div>
             ))
@@ -899,8 +919,8 @@ function ScorersSection({ data, onSave }) {
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--brand-green)', marginRight: 8 }}>⚽{s.goals}</div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...s, _idx: i })}>Mod.</button>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
+              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s, _idx: i })}><EditIcon size={16}/></button>
+              <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(i)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -1089,8 +1109,8 @@ function TeamsSection({ data, onSave }) {
               <div className="adm-item-meta">{t.category} · {t.players?.length || 0} Giocatori · {t.played}G {t.won}V {t.points}pt</div>
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...t })}>Modifica</button>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => deleteTeam(t.short)}>✕</button>
+              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
+              <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteTeam(t.short)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -1132,8 +1152,8 @@ function EventsSection({ data, onSave }) {
               <div className="adm-item-meta">{ev.time} · {ev.where}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...ev })}>Mod.</button>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
+              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...ev })}><EditIcon size={16}/></button>
+              <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(i)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -1204,8 +1224,8 @@ function HonorsSection({ data, onSave }) {
               <div className="adm-item-meta">🏆 {h.winner} · ⚽ {h.topScorer}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...h })}>Mod.</button>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
+              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...h })}><EditIcon size={16}/></button>
+              <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(i)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -1264,8 +1284,8 @@ function SponsorsSection({ data, onSave }) {
               <div className="adm-item-meta">{s.tag}</div>
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...s })}>Mod.</button>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(i)}>✕</button>
+              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s })}><EditIcon size={16}/></button>
+              <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(i)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -1360,22 +1380,54 @@ function SettingsSection({ data, onSave }) {
   );
 }
 
-// ── Admin App ─────────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'live', label: 'Live 🔴' },
-  { id: 'matches', label: 'Partite' },
-  { id: 'teams', label: 'Squadre' },
-  { id: 'scorers', label: 'Marcatori' },
-  { id: 'standings', label: 'Classifica' },
-  { id: 'news', label: 'Avvisi' },
-  { id: 'events', label: 'Eventi' },
-  { id: 'honors', label: "Albo d'oro" },
-  { id: 'sponsors', label: 'Sponsor' },
-  { id: 'settings', label: '⚙ Settings' },
-];
+// ── Dashboard Menu ────────────────────────────────────────────────────────
+function DashboardMenu({ setTab }) {
+  return (
+    <>
+      <div className="adm-eyebrow" style={{ marginTop: 10 }}>Stagione 2026</div>
+      <h3 className="adm-section-title">Torneo</h3>
+      <p className="adm-section-sub">Gestisci le squadre, i calendari e le classifiche.</p>
+      
+      <div className="adm-grid-menu">
+        <div className="adm-grid-btn" onClick={() => setTab('teams')}>
+          <UsersIcon size={32} />
+          <span>Squadre & Rose</span>
+        </div>
+        <div className="adm-grid-btn" onClick={() => setTab('matches')}>
+          <CalIcon size={32} />
+          <span>Gironi & Partite</span>
+        </div>
+        <div className="adm-grid-btn" onClick={() => setTab('standings')}>
+          <GridIcon size={32} />
+          <span>Classifiche</span>
+        </div>
+        <div className="adm-grid-btn" onClick={() => setTab('scorers')}>
+          <BallIcon size={32} />
+          <span>Marcatori</span>
+        </div>
+      </div>
 
+      <div className="adm-eyebrow" style={{ marginTop: 32 }}>Sito Pubblico</div>
+      <h3 className="adm-section-title">Portale</h3>
+      <p className="adm-section-sub">Personalizza gli eventi, gli avvisi e l'albo d'oro del sito.</p>
+      
+      <div className="adm-grid-menu">
+        <div className="adm-grid-btn" onClick={() => setTab('events')}>
+          <CalIcon size={32} />
+          <span>Eventi</span>
+        </div>
+        <div className="adm-grid-btn" onClick={() => setTab('honors')}>
+          <TrophyIcon size={32} />
+          <span>Albo d'oro</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Admin App ─────────────────────────────────────────────────────────────
 function AdminApp() {
-  const [tab, setTab] = useState('live');
+  const [tab, setTab] = useState('dashboard');
   const [data, setData] = useState(() => {
     const d = rmGetAllData();
     return { ...d, ...computeStandings(d.matches_giornata, d.teams) };
@@ -1406,10 +1458,13 @@ function AdminApp() {
 
   const props = { data, onSave: handleSave };
 
+  const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
+  const bottomNav = isMainTab ? tab : 'dashboard';
+
   return (
     <div className="adm-app">
       <header className="adm-topbar">
-        <div className="adm-topbar-left">
+        <div className="adm-topbar-left" style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           <img src="assets/logo-rinascita-monteforte.jpg" alt="" style={{ width: 32, height: 32, borderRadius: 6, objectFit: 'cover' }} />
           <span className="adm-topbar-title">Admin Rinascita</span>
           <span className="adm-badge">Staff</span>
@@ -1417,17 +1472,14 @@ function AdminApp() {
         <button className="adm-logout" onClick={logout}>Esci</button>
       </header>
 
-      <div className="adm-tabs-wrap">
-        <div className="adm-tabs">
-          {TABS.map(t => (
-            <button key={t.id} className={`adm-tab ${tab === t.id ? 'on' : ''}`} onClick={() => setTab(t.id)}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <main className="adm-main">
+        {!isMainTab && (
+          <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ marginBottom: 20, padding: 0 }} onClick={() => setTab('dashboard')}>
+            ← Torna al Menù
+          </button>
+        )}
+        
+        {tab === 'dashboard' && <DashboardMenu setTab={setTab} />}
         {tab === 'live' && <LiveSection      {...props} />}
         {tab === 'news' && <NewsSection      {...props} />}
         {tab === 'matches' && <MatchesSection   {...props} />}
@@ -1439,6 +1491,21 @@ function AdminApp() {
         {tab === 'sponsors' && <SponsorsSection  {...props} />}
         {tab === 'settings' && <SettingsSection  {...props} />}
       </main>
+
+      <nav className="adm-bottom-nav">
+        <button className={`adm-bn-item ${bottomNav === 'dashboard' ? 'on' : ''}`} onClick={() => setTab('dashboard')}>
+          <HomeIcon size={24}/><span>Torneo</span>
+        </button>
+        <button className={`adm-bn-item ${bottomNav === 'live' ? 'on' : ''}`} onClick={() => setTab('live')}>
+          <ZapIcon size={24}/><span>Live</span>
+        </button>
+        <button className={`adm-bn-item ${bottomNav === 'news' ? 'on' : ''}`} onClick={() => setTab('news')}>
+          <BellIcon size={24}/><span>Bacheca</span>
+        </button>
+        <button className={`adm-bn-item ${bottomNav === 'settings' ? 'on' : ''}`} onClick={() => setTab('settings')}>
+          <MenuIcon size={24}/><span>Altro</span>
+        </button>
+      </nav>
 
       {toast && <Toast msg={`✓ ${toast}`} onDone={() => setToast(null)} />}
     </div>
