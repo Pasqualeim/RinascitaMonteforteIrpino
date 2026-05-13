@@ -112,11 +112,31 @@ function LiveSection({ data, onSave }) {
   const [evNote, setEvNote] = useState('');
   const [evType, setEvType] = useState('goal');
 
-  function save(updated) {
-    const newLm = updated || lm;
+  function save(updatedLm, updatedScorers) {
+    const newLm = updatedLm || lm;
     const newData = { ...data, live_match: newLm };
-    onSave(newData, 'Partita live aggiornata');
+    if (updatedScorers) newData.scorers = updatedScorers;
+    onSave(newData, updatedScorers ? 'Partita e marcatori aggiornati' : 'Partita live aggiornata');
     setLm({ ...newLm });
+  }
+
+  function updateScorer(playerName, teamShort, teamName, delta) {
+    let scorers = [...(data.scorers || [])];
+    const idx = scorers.findIndex(s => s.name === playerName && (s.short === teamShort || s.team === teamName));
+    
+    if (idx >= 0) {
+      scorers[idx] = { ...scorers[idx], goals: Math.max(0, (scorers[idx].goals || 0) + delta) };
+    } else if (delta > 0) {
+      const t = teams.find(x => x.short === teamShort || x.name === teamName);
+      scorers.push({
+        name: playerName,
+        team: teamName,
+        short: teamShort || t?.short || '',
+        color: t?.color || '#00E676',
+        goals: delta
+      });
+    }
+    return scorers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
   }
 
   function toggleActive() {
@@ -145,21 +165,34 @@ function LiveSection({ data, onSave }) {
   function confirmEvent() {
     if (!evPlayer.trim()) return;
     const teamObj = teams.find(t => t.short === evTeam) || lm.home;
-    const newEvent = { min: lm.minute, type: evType, player: evPlayer.trim(), team: teamObj?.name || '', note: evNote.trim() || undefined };
+    const newEvent = { min: lm.minute, type: evType, player: evPlayer.trim(), team: teamObj?.name || '', note: evNote.trim() || undefined, _ts: evTeam };
     const events = [...(lm.events || []), newEvent].sort((a, b) => a.min - b.min);
-    const updated = { ...lm, events };
-    setLm(updated);
-    save(updated);
+    const updatedLm = { ...lm, events };
+    
+    let updatedScorers = null;
+    if (evType === 'goal' && evPlayer !== 'Autogol') {
+      updatedScorers = updateScorer(evPlayer.trim(), evTeam, teamObj?.name || '', 1);
+    }
+    
+    setLm(updatedLm);
+    save(updatedLm, updatedScorers);
     setAddingEvent(false);
     setEvPlayer('');
     setEvNote('');
   }
 
   function removeEvent(idx) {
+    const ev = lm.events[idx];
     const events = lm.events.filter((_, i) => i !== idx);
-    const updated = { ...lm, events };
-    setLm(updated);
-    save(updated);
+    const updatedLm = { ...lm, events };
+    
+    let updatedScorers = null;
+    if (ev.type === 'goal' && ev.player !== 'Autogol') {
+      updatedScorers = updateScorer(ev.player, ev._ts || '', ev.team, -1);
+    }
+    
+    setLm(updatedLm);
+    save(updatedLm, updatedScorers);
   }
 
   function setTeam(side, short) {
@@ -248,7 +281,6 @@ function LiveSection({ data, onSave }) {
             <button className="adm-live-ev-btn" onClick={() => addEvent('goal')}>⚽<span>Gol</span></button>
             <button className="adm-live-ev-btn" onClick={() => addEvent('yellow')}>🟨<span>Giallo</span></button>
             <button className="adm-live-ev-btn" onClick={() => addEvent('red')}>🟥<span>Rosso</span></button>
-            <button className="adm-live-ev-btn" onClick={() => addEvent('sub')}>↻<span>Cambio</span></button>
           </div>
 
           {/* Events log */}
@@ -257,7 +289,7 @@ function LiveSection({ data, onSave }) {
               {lm.events.map((ev, i) => (
                 <div key={i} className="adm-ev-row">
                   <span className="min">{ev.min}'</span>
-                  <span>{ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : ev.type === 'red' ? '🟥' : '↻'}</span>
+                  <span>{ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : '🟥'}</span>
                   <span style={{ fontSize: 13, color: 'var(--fg-2)' }}><b style={{ color: '#fff' }}>{ev.player}</b> · {ev.team}</span>
                   <button className="adm-ev-del" onClick={() => removeEvent(i)}>✕</button>
                 </div>
@@ -271,7 +303,7 @@ function LiveSection({ data, onSave }) {
       {addingEvent && (
         <div className="adm-overlay" onClick={() => setAddingEvent(false)}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="adm-modal-title">Aggiungi evento · {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : evType === 'red' ? '🟥 Rosso' : '↻ Cambio'}</h3>
+            <h3 className="adm-modal-title">Aggiungi evento · {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : '🟥 Rosso'}</h3>
             <div className="adm-form">
               <div className="adm-form-group">
                 <label className="adm-label">Squadra</label>
@@ -442,27 +474,36 @@ function MatchesSection({ data, onSave }) {
   const teams = data.teams || DEFAULT_TEAMS;
 
   function saveMatch(updated) {
-    const giornata = JSON.parse(JSON.stringify(data.matches_giornata || DEFAULT_MATCHES_GIORNATA));
-    if (updated._isNew) {
-      const g = giornata.find(x => x.day === updated._day);
-      if (g) {
-        delete updated._isNew;
-        delete updated._day;
-        updated.id = Date.now().toString();
-        updated.pitch = 'Campo Sportivo'; // Fisso
-        g.items.push(updated);
-      }
-    } else {
-      for (const g of giornata) {
+    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
+    
+    if (!updated._isNew) {
+      for (let g of giornata) {
         const idx = g.items.findIndex(m => m.id === updated.id);
         if (idx >= 0) {
-          delete updated._day;
-          g.items[idx] = { ...g.items[idx], ...updated, pitch: 'Campo Sportivo' };
+          g.items.splice(idx, 1);
           break;
         }
       }
+    } else {
+      updated.id = Date.now().toString();
     }
-    const matchesToday = giornata.flatMap(g => g.items.filter(m => m.date === 'Oggi' || m.date === updated.date));
+
+    updated.pitch = 'Campo Sportivo'; // Fisso
+    const targetDay = updated._day || '1ª Giornata';
+    delete updated._isNew;
+    delete updated._day;
+
+    let g = giornata.find(x => x.day === targetDay);
+    if (!g) {
+      g = { day: targetDay, items: [] };
+      giornata.push(g);
+    }
+    g.items.push(updated);
+
+    // Clean up empty phases
+    giornata = giornata.filter(x => x.items.length > 0);
+
+    const matchesToday = giornata.flatMap(x => x.items.filter(m => m.date === 'Oggi' || m.date === updated.date));
     onSave({ ...data, matches_giornata: giornata, matches_today: matchesToday.slice(0, 5) }, 'Partita aggiornata');
     setEditing(null);
   }
@@ -521,14 +562,13 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
         <h3 className="adm-modal-title">{match._isNew ? 'Nuova Partita' : 'Modifica partita'}</h3>
         <div className="adm-form">
-          {match._isNew && (
-            <div className="adm-form-group">
-              <label className="adm-label">Giornata</label>
-              <select className="adm-select" value={form._day} onChange={e => set('_day', e.target.value)}>
-                {giornate.map(g => <option key={g.day} value={g.day}>{g.day}</option>)}
-              </select>
-            </div>
-          )}
+          <div className="adm-form-group">
+            <label className="adm-label">Fase / Giornata</label>
+            <input className="adm-input" list="giornate-list" value={form._day || ''} onChange={e => set('_day', e.target.value)} placeholder="es. Girone A, Semifinale..." required />
+            <datalist id="giornate-list">
+              {giornate.map(g => <option key={g.day} value={g.day} />)}
+            </datalist>
+          </div>
           <div className="adm-form-row">
             <div className="adm-form-group">
               <label className="adm-label">Squadra Casa</label>
@@ -1214,11 +1254,11 @@ function SettingsSection({ data, onSave }) {
 // ── Admin App ─────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'live', label: 'Live 🔴' },
-  { id: 'news', label: 'Avvisi' },
   { id: 'matches', label: 'Partite' },
-  { id: 'standings', label: 'Classifica' },
-  { id: 'scorers', label: 'Marcatori' },
   { id: 'teams', label: 'Squadre' },
+  { id: 'scorers', label: 'Marcatori' },
+  { id: 'standings', label: 'Classifica' },
+  { id: 'news', label: 'Avvisi' },
   { id: 'events', label: 'Eventi' },
   { id: 'honors', label: "Albo d'oro" },
   { id: 'sponsors', label: 'Sponsor' },
