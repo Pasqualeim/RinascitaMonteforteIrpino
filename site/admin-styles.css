@@ -4,7 +4,7 @@
    ============================================================ */
 
 html {
-  overflow-x: hidden;
+  overflow: hidden;
   overflow-x: clip;
   width: 100%;
   max-width: 100vw;
@@ -15,6 +15,7 @@ body {
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
   max-width: 100vw;
   background: #000;
@@ -29,6 +30,7 @@ body {
 *::before,
 *::after {
   box-sizing: border-box;
+  max-width: 100%;
 }
 
 img,
@@ -156,6 +158,9 @@ select {
   padding: 12px 14px;
   outline: none;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   transition: border-color 200ms;
 }
 
@@ -246,8 +251,9 @@ select {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .adm-topbar {
@@ -262,7 +268,7 @@ select {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-1);
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
   box-sizing: border-box;
 }
@@ -317,7 +323,7 @@ select {
 
 /* Tab navigation */
 .adm-tabs-wrap {
-  overflow-x: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
   touch-action: pan-x;
@@ -326,6 +332,7 @@ select {
   width: 100%;
   max-width: 100vw;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .adm-tabs-wrap::-webkit-scrollbar {
@@ -336,6 +343,9 @@ select {
   display: flex;
   min-width: max-content;
   padding: 0 12px;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .adm-tab {
@@ -370,9 +380,10 @@ select {
   padding: 20px 16px;
   flex: 1;
   width: 100%;
-  max-width: 100%;
+  max-width: 100vw;
   overflow-x: hidden;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 /* ── Sections & cards ───────────────────────────────────────── */
@@ -483,6 +494,8 @@ select {
   z-index: 100;
   display: flex;
   align-items: flex-end;
+  max-width: 100vw;
+  box-sizing: border-box;
 }
 
 .adm-modal {
@@ -490,9 +503,11 @@ select {
   border: 1px solid var(--border-1);
   border-radius: 16px 16px 0 0;
   width: 100%;
+  max-width: 100vw;
   max-height: 90vh;
   overflow-y: auto;
   padding: 20px 16px 32px;
+  box-sizing: border-box;
   animation: slideUpModal 250ms var(--ease-sport);
 }
 
@@ -523,8 +538,10 @@ select {
 
 .adm-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .adm-form-group {
@@ -542,6 +559,9 @@ select {
   padding: 10px 12px;
   outline: none;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   resize: vertical;
   min-height: 80px;
   transition: border-color 200ms;
@@ -560,6 +580,9 @@ select {
   padding: 10px 12px;
   outline: none;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   appearance: none;
   cursor: pointer;
   min-height: 44px;
@@ -617,6 +640,7 @@ select {
   margin-bottom: 16px;
   width: 100%;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .adm-live-team-box {
@@ -633,6 +657,7 @@ select {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .adm-live-team-name {
@@ -656,6 +681,9 @@ select {
   flex: none;
   display: flex;
   align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .adm-live-score-center i {
@@ -680,7 +708,7 @@ select {
 
 .adm-live-btns {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -701,6 +729,9 @@ select {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .adm-live-goal-btn:hover {
@@ -741,7 +772,7 @@ select {
 
 .adm-ev-row {
   display: grid;
-  grid-template-columns: 40px 20px 1fr auto;
+  grid-template-columns: 40px 20px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   font-size: 13px;
@@ -903,5 +934,16 @@ select {
 
   .adm-tabs {
     padding: 0 24px;
+  }
+}
+
+@media (max-width: 600px) {
+  .adm-app, .adm-main, .adm-topbar, .adm-tabs-wrap,
+  .adm-card, .adm-card-body, .adm-card-header,
+  .adm-live-board, .adm-form, .adm-form-row,
+  .adm-item-row, .adm-modal {
+    max-width: 100vw;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 }

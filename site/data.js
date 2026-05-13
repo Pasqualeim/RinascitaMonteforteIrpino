@@ -53,22 +53,41 @@ async function rmLoadData() {
 
 async function rmSaveData(data) {
   data.updated_at = new Date().toISOString();
-  // Salva in locale immediatamente
-  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(data));
-  
-  // Salva in Supabase
+  const toSave = { ...data };
+  delete toSave.strip_items; // computed from matches_giornata, not persisted
+  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(toSave));
+
   if (_supabase) {
     try {
       const { error } = await _supabase
         .from('site_data')
-        .update({ content: data, updated_at: data.updated_at })
+        .update({ content: toSave, updated_at: data.updated_at })
         .eq('id', 1);
-      
+
       if (error) throw error;
     } catch(e) {
       console.error('Errore salvataggio su Supabase:', e);
     }
   }
+}
+
+// Genera strip_items automaticamente da matches_giornata
+function buildStripItems(saved) {
+  const giornata = saved?.matches_giornata || [];
+  const items = [];
+  for (const g of giornata) {
+    for (const m of g.items || []) {
+      if (!m.home || !m.away) continue;
+      if (m.status === 'ft') {
+        items.push(`${m.home.short} ${m.hs ?? 0}–${m.as ?? 0} ${m.away.short} · Finale`);
+      } else if (m.status === 'live') {
+        items.push(`🔴 LIVE · ${m.home.short} ${m.hs ?? 0}–${m.as ?? 0} ${m.away.short} · ${m.minute}'`);
+      } else {
+        items.push(`${m.home.short} vs ${m.away.short} · ${m.date || ''} ${m.time || ''} · ${g.day}`);
+      }
+    }
+  }
+  return items.length > 0 ? items : ['Rinascita Monteforte Cup 2026 · Al via il 15 Giugno · Campo Sportivo Monteforte Irpino'];
 }
 
 // Merge saved data with defaults
@@ -86,7 +105,7 @@ function rmMergeDefaults(saved) {
     events:           saved?.events           || DEFAULT_EVENTS,
     honors:           saved?.honors           || DEFAULT_HONORS,
     sponsors:         saved?.sponsors         || DEFAULT_SPONSORS,
-    strip_items:      saved?.strip_items      || DEFAULT_STRIP_ITEMS,
+    strip_items:      buildStripItems(saved),
     _auth:            saved?._auth            || { username: 'Admin', password: 'pasale98' },
     updated_at:       saved?.updated_at       || null,
   };

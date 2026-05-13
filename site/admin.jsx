@@ -464,6 +464,65 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
   );
 }
 
+// ── Compute Standings ─────────────────────────────────────────────────────
+function computeStandings(giornata, teams) {
+  const map = {};
+
+  for (const t of (teams || [])) {
+    map[t.short] = {
+      short: t.short, name: t.name, color: t.color,
+      category: t.category,
+      g: 0, v: 0, n: 0, p: 0, gf: 0, gs: 0, pt: 0, form: []
+    };
+  }
+
+  const allMatches = (giornata || []).flatMap(g => g.items || []);
+
+  for (const m of allMatches) {
+    if (m.status !== 'ft' || m.hs == null || m.as == null || !m.home || !m.away) continue;
+    const h = map[m.home.short];
+    const a = map[m.away.short];
+    if (!h || !a) continue;
+
+    h.g++; a.g++;
+    h.gf += m.hs; h.gs += m.as;
+    a.gf += m.as; a.gs += m.hs;
+
+    if (m.hs > m.as) {
+      h.v++; h.pt += 3; a.p++;
+      h.form = [...h.form.slice(-4), 'W'];
+      a.form = [...a.form.slice(-4), 'L'];
+    } else if (m.hs < m.as) {
+      a.v++; a.pt += 3; h.p++;
+      h.form = [...h.form.slice(-4), 'L'];
+      a.form = [...a.form.slice(-4), 'W'];
+    } else {
+      h.n++; h.pt++; a.n++; a.pt++;
+      h.form = [...h.form.slice(-4), 'D'];
+      a.form = [...a.form.slice(-4), 'D'];
+    }
+  }
+
+  const sort = arr => arr.sort((a, b) => {
+    if (b.pt !== a.pt) return b.pt - a.pt;
+    const drA = a.gf - a.gs, drB = b.gf - b.gs;
+    if (drB !== drA) return drB - drA;
+    return b.gf - a.gf;
+  });
+
+  const rows = Object.values(map);
+  return {
+    standings_a:   sort(rows.filter(r => r.category === 'Senior')),
+    standings_o40: sort(rows.filter(r => r.category === 'Over 40')),
+    standings_jr:  sort(rows.filter(r => r.category === 'Junior')),
+  };
+}
+
+const PHASE_PRESETS = [
+  'Girone A', 'Girone B', 'Girone Over 40', 'Girone Junior',
+  'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'
+];
+
 // ── Matches Section ───────────────────────────────────────────────────────
 function MatchesSection({ data, onSave }) {
   const allMatches = useMemo(() => {
@@ -471,48 +530,53 @@ function MatchesSection({ data, onSave }) {
     return giornata.flatMap(g => g.items.map(m => ({ ...m, _day: g.day })));
   }, [data.matches_giornata]);
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [view, setView] = useState('lista');
   const teams = data.teams || DEFAULT_TEAMS;
 
   function saveMatch(updated) {
     let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
-    
+
     if (!updated._isNew) {
       for (let g of giornata) {
         const idx = g.items.findIndex(m => m.id === updated.id);
-        if (idx >= 0) {
-          g.items.splice(idx, 1);
-          break;
-        }
+        if (idx >= 0) { g.items.splice(idx, 1); break; }
       }
     } else {
       updated.id = Date.now().toString();
     }
 
-    updated.pitch = 'Campo Sportivo'; // Fisso
-    const targetDay = updated._day || '1ª Giornata';
+    updated.pitch = 'Campo Sportivo';
+    const targetDay = updated._day || PHASE_PRESETS[0];
     delete updated._isNew;
     delete updated._day;
 
     let g = giornata.find(x => x.day === targetDay);
-    if (!g) {
-      g = { day: targetDay, items: [] };
-      giornata.push(g);
-    }
+    if (!g) { g = { day: targetDay, items: [] }; giornata.push(g); }
     g.items.push(updated);
-
-    // Clean up empty phases
     giornata = giornata.filter(x => x.items.length > 0);
 
     const matchesToday = giornata.flatMap(x => x.items.filter(m => m.date === 'Oggi' || m.date === updated.date));
-    onSave({ ...data, matches_giornata: giornata, matches_today: matchesToday.slice(0, 5) }, 'Partita aggiornata');
+    const newStandings = computeStandings(giornata, data.teams);
+    onSave({ ...data, matches_giornata: giornata, matches_today: matchesToday.slice(0, 5), ...newStandings }, 'Partita e classifica aggiornate');
     setEditing(null);
+  }
+
+  function deleteMatch(matchId) {
+    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
+    for (let g of giornata) {
+      g.items = g.items.filter(m => m.id !== matchId);
+    }
+    giornata = giornata.filter(x => x.items.length > 0);
+    const newStandings = computeStandings(giornata, data.teams);
+    onSave({ ...data, matches_giornata: giornata, ...newStandings }, 'Partita eliminata');
+    setDeleting(null);
   }
 
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
 
   function newMatch() {
-    const defaultDay = data.matches_giornata?.[0]?.day || '1ª Giornata';
-    setEditing({ _isNew: true, _day: defaultDay, status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '' });
+    setEditing({ _isNew: true, _day: PHASE_PRESETS[0], status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '' });
   }
 
   return (
@@ -520,30 +584,42 @@ function MatchesSection({ data, onSave }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
         <div>
           <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
-          <p className="adm-section-sub" style={{ margin: 0 }}>Aggiorna risultati o aggiungi nuove partite in calendario.</p>
+          <p className="adm-section-sub" style={{ margin: 0 }}>Risultati, fasi torneo e tabellone eliminazione.</p>
         </div>
-        <button className="adm-btn adm-btn-sm" onClick={newMatch}>+ Nuova Partita</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
+          <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Bracket</button>
+          <button className="adm-btn adm-btn-sm" onClick={newMatch}>+ Nuova</button>
+        </div>
       </div>
-      <div className="adm-card">
-        {allMatches.length === 0 ? (
-          <div className="adm-empty">Nessuna partita nel calendario.</div>
-        ) : (
-          allMatches.map(m => (
-            <div key={m.id} className="adm-item-row">
-              <div className="adm-item-row-body">
-                <div className="adm-item-title">
-                  {m.home?.short} {m.hs != null ? `${m.hs}–${m.as}` : 'VS'} {m.away?.short}
+
+      {view === 'lista' && (
+        <div className="adm-card">
+          {allMatches.length === 0 ? (
+            <div className="adm-empty">Nessuna partita nel calendario.</div>
+          ) : (
+            allMatches.map(m => (
+              <div key={m.id} className="adm-item-row">
+                <div className="adm-item-row-body">
+                  <div className="adm-item-title">
+                    {m.home?.short} {m.hs != null ? `${m.hs}–${m.as}` : 'VS'} {m.away?.short}
+                  </div>
+                  <div className="adm-item-meta">{m._day} · {m.time} · {statusLabel[m.status]}</div>
                 </div>
-                <div className="adm-item-meta">{m._day} · {m.time} · {m.pitch} · {statusLabel[m.status]}</div>
+                <div className="adm-item-actions">
+                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...m })}>Modifica</button>
+                  <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleting(m.id)}>✕</button>
+                </div>
               </div>
-              <div className="adm-item-actions">
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...m })}>Modifica</button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {view === 'bracket' && <BracketView giornata={data.matches_giornata} />}
+
       {editing && <MatchForm match={editing} teams={teams} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
+      {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
@@ -564,10 +640,15 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
         <div className="adm-form">
           <div className="adm-form-group">
             <label className="adm-label">Fase / Giornata</label>
-            <input className="adm-input" list="giornate-list" value={form._day || ''} onChange={e => set('_day', e.target.value)} placeholder="es. Girone A, Semifinale..." required />
-            <datalist id="giornate-list">
-              {giornate.map(g => <option key={g.day} value={g.day} />)}
-            </datalist>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {PHASE_PRESETS.map(p => (
+                <button key={p} type="button"
+                  className={`adm-btn adm-btn-sm ${form._day === p ? '' : 'adm-btn-ghost'}`}
+                  style={{ fontSize: 11, padding: '4px 8px' }}
+                  onClick={() => set('_day', p)}>{p}</button>
+              ))}
+            </div>
+            <input className="adm-input" value={form._day || ''} onChange={e => set('_day', e.target.value)} placeholder="Fase personalizzata..." />
           </div>
           <div className="adm-form-row">
             <div className="adm-form-group">
@@ -631,10 +712,108 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
   );
 }
 
+// ── Bracket ───────────────────────────────────────────────────────────────
+function BracketSlot({ match }) {
+  const home  = match?.home?.short || 'TBD';
+  const away  = match?.away?.short || 'TBD';
+  const score = match?.hs != null  ? `${match.hs}–${match.as}` : 'vs';
+  const isLive = match?.status === 'live';
+  const isDone = match?.status === 'ft';
+  const isTbd  = !match;
+
+  return (
+    <div style={{
+      background: '#0f0f0f',
+      border: `1px solid ${isDone ? 'var(--border-brand)' : 'var(--border-1)'}`,
+      borderRadius: 8,
+      padding: '10px 14px',
+      minWidth: 150,
+      position: 'relative',
+    }}>
+      {isLive && <span style={{ position: 'absolute', top: 4, right: 8, fontSize: 10, color: '#FF3D3D' }}>🔴</span>}
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, lineHeight: 1.4 }}>
+        <div style={{ color: isTbd ? 'var(--fg-3)' : '#fff' }}>{home}</div>
+        <div style={{ color: 'var(--fg-3)', fontSize: 13, textAlign: 'center', margin: '1px 0' }}>{score}</div>
+        <div style={{ color: isTbd ? 'var(--fg-3)' : '#fff' }}>{away}</div>
+      </div>
+    </div>
+  );
+}
+
+function BracketView({ giornata }) {
+  const getPhase = name => (giornata || []).find(g => g.day === name)?.items || [];
+  const pad = (arr, n) => [...arr, ...Array(Math.max(0, n - arr.length)).fill(null)];
+
+  const q  = pad(getPhase('Quarti di finale'), 4);
+  const s  = pad(getPhase('Semifinali'), 2);
+  const f  = pad(getPhase('Finale'), 1);
+  const t3 = pad(getPhase('Finale 3°/4° posto'), 1);
+
+  const hasAny = q.some(Boolean) || s.some(Boolean) || f.some(Boolean) || t3.some(Boolean);
+  if (!hasAny) {
+    return <div className="adm-empty">Nessuna partita nelle fasi eliminatorie. Aggiungi partite con fase "Quarti di finale", "Semifinali", "Finale 3°/4° posto" o "Finale".</div>;
+  }
+
+  const colHeader = txt => (
+    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--fg-3)', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase' }}>{txt}</div>
+  );
+  const connector = () => (
+    <div style={{ width: 24, height: 2, background: 'var(--border-brand)', flexShrink: 0, alignSelf: 'center' }} />
+  );
+
+  return (
+    <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 0, minWidth: 560, padding: '8px 4px', alignItems: 'stretch' }}>
+
+        {/* Quarti */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Quarti di finale')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1, gap: 20 }}>
+            {q.map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                <BracketSlot match={m} />
+                {connector()}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Semifinali */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Semifinali')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1, gap: 20 }}>
+            {s.map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                <BracketSlot match={m} />
+                {connector()}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Finali */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Finali')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--brand-green)', marginBottom: 6, letterSpacing: '0.1em', fontFamily: 'var(--font-display)' }}>🏆 FINALE</div>
+              <BracketSlot match={f[0]} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--fg-3)', marginBottom: 6, letterSpacing: '0.1em', fontFamily: 'var(--font-display)' }}>3°/4° POSTO</div>
+              <BracketSlot match={t3[0]} />
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Standings Section ─────────────────────────────────────────────────────
-function StandingsSection({ data, onSave }) {
+function StandingsSection({ data }) {
   const [tab, setTab] = useState('senior');
-  const [editing, setEditing] = useState(null);
 
   const sectionMap = {
     senior: { key: 'standings_a', label: 'Senior', default: DEFAULT_STANDINGS_A },
@@ -642,70 +821,35 @@ function StandingsSection({ data, onSave }) {
     junior: { key: 'standings_jr', label: 'Junior', default: DEFAULT_STANDINGS_JR },
   };
 
-  function saveRow(updated) {
-    const { key, default: def } = sectionMap[tab];
-    const rows = data[key] || def;
-    const newRows = rows.map(r => r.short === updated.short ? updated : r);
-    onSave({ ...data, [key]: newRows }, 'Classifica aggiornata');
-    setEditing(null);
-  }
-
   const { key, default: def } = sectionMap[tab];
   const rows = data[key] || def;
 
   return (
     <div>
       <h2 className="adm-section-title">Classifica</h2>
+      <div style={{ padding: '10px 16px', background: 'rgba(0,230,118,0.07)', border: '1px solid var(--border-brand)', borderRadius: 8, marginBottom: 16, fontSize: 13, color: 'var(--brand-green)' }}>
+        ⚡ Classifica calcolata automaticamente dai risultati delle partite terminate (FT).
+      </div>
       <div className="rm-tabs" style={{ marginBottom: 16 }}>
         {Object.entries(sectionMap).map(([id, s]) => (
           <button key={id} className={`rm-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>{s.label}</button>
         ))}
       </div>
       <div className="adm-card">
-        {rows.map((r, i) => (
-          <div key={r.short} className="adm-item-row">
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--brand-green)', width: 28 }}>{i + 1}</div>
-            <div className="adm-crest" style={{ borderColor: r.color, color: r.color }}>{r.short}</div>
-            <div className="adm-item-row-body">
-              <div className="adm-item-title">{r.name}</div>
-              <div className="adm-item-meta">G{r.g} V{r.v} N{r.n} P{r.p} · GF{r.gf} GS{r.gs} · <b style={{ color: 'var(--brand-green)' }}>{r.pt}pt</b></div>
+        {rows.length === 0 ? (
+          <div className="adm-empty">Nessuna squadra in classifica. Aggiungi squadre e partite con risultato FT.</div>
+        ) : (
+          rows.map((r, i) => (
+            <div key={r.short} className="adm-item-row">
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--brand-green)', width: 28 }}>{i + 1}</div>
+              <div className="adm-crest" style={{ borderColor: r.color, color: r.color }}>{r.short}</div>
+              <div className="adm-item-row-body">
+                <div className="adm-item-title">{r.name}</div>
+                <div className="adm-item-meta">G{r.g} V{r.v} N{r.n} P{r.p} · GF{r.gf} GS{r.gs} · <b style={{ color: 'var(--brand-green)' }}>{r.pt}pt</b></div>
+              </div>
             </div>
-            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ ...r })}>Modifica</button>
-          </div>
-        ))}
-      </div>
-      {editing && <StandingForm row={editing} onSave={saveRow} onClose={() => setEditing(null)} />}
-    </div>
-  );
-}
-
-function StandingForm({ row, onSave, onClose }) {
-  const [form, setForm] = useState({ ...row });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const numField = (label, key) => (
-    <div className="adm-form-group">
-      <label className="adm-label">{label}</label>
-      <input type="number" className="adm-input" value={form[key] ?? ''} onChange={e => set(key, parseInt(e.target.value) || 0)} min="0" />
-    </div>
-  );
-  return (
-    <div className="adm-overlay" onClick={onClose}>
-      <div className="adm-modal" onClick={e => e.stopPropagation()}>
-        <h3 className="adm-modal-title">{row.name}</h3>
-        <div className="adm-form">
-          <div className="adm-form-row">{numField('Giocate (G)', 'g')}{numField('Vinte (V)', 'v')}</div>
-          <div className="adm-form-row">{numField('Pari (N)', 'n')}{numField('Perse (P)', 'p')}</div>
-          <div className="adm-form-row">{numField('Gol Fatti (GF)', 'gf')}{numField('Gol Subiti (GS)', 'gs')}</div>
-          {numField('Punti (Pt)', 'pt')}
-          <div className="adm-form-group">
-            <label className="adm-label">Forma (es. W,L,W,D)</label>
-            <input className="adm-input" value={(form.form || []).join(',')} onChange={e => set('form', e.target.value.toUpperCase().split(',').map(s => s.trim()).filter(Boolean))} placeholder="W,W,L,D" />
-          </div>
-          <div className="adm-form-actions">
-            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-            <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)}>Salva</button>
-          </div>
-        </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -1146,41 +1290,6 @@ function SponsorsSection({ data, onSave }) {
   );
 }
 
-// ── Strip Section ─────────────────────────────────────────────────────────
-function StripSection({ data, onSave }) {
-  const [items, setItems] = useState(data.strip_items || DEFAULT_STRIP_ITEMS);
-  const [newMsg, setNewMsg] = useState('');
-
-  function saveAll(list) { setItems(list); onSave({ ...data, strip_items: list }, 'Striscia aggiornata'); }
-
-  function addItem() {
-    if (!newMsg.trim()) return;
-    saveAll([...items, newMsg.trim()]);
-    setNewMsg('');
-  }
-
-  return (
-    <div>
-      <h2 className="adm-section-title">Striscia notizie</h2>
-      <p className="adm-section-sub">Messaggi che scorrono nella striscia verde in cima al sito.</p>
-      <div className="adm-card">
-        <div className="adm-card-body">
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <input className="adm-input" style={{ flex: 1 }} value={newMsg} onChange={e => setNewMsg(e.target.value)} placeholder="Nuovo messaggio..." onKeyDown={e => e.key === 'Enter' && addItem()} />
-            <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={addItem}>+ Aggiungi</button>
-          </div>
-          {items.map((item, i) => (
-            <div key={i} className="adm-item-row" style={{ padding: '8px 0' }}>
-              <div className="adm-item-row-body" style={{ fontSize: 14, color: 'var(--fg-1)' }}>{item}</div>
-              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => saveAll(items.filter((_, j) => j !== i))}>✕</button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Settings Section ──────────────────────────────────────────────────────
 function SettingsSection({ data, onSave }) {
   const [user, setUser] = useState(data._auth.username);
@@ -1262,20 +1371,23 @@ const TABS = [
   { id: 'events', label: 'Eventi' },
   { id: 'honors', label: "Albo d'oro" },
   { id: 'sponsors', label: 'Sponsor' },
-  { id: 'strip', label: 'Striscia' },
   { id: 'settings', label: '⚙ Settings' },
 ];
 
 function AdminApp() {
   const [tab, setTab] = useState('live');
-  const [data, setData] = useState(() => rmGetAllData());
+  const [data, setData] = useState(() => {
+    const d = rmGetAllData();
+    return { ...d, ...computeStandings(d.matches_giornata, d.teams) };
+  });
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
     async function sync() {
       const remoteData = await rmLoadData();
       if (remoteData) {
-        setData(rmMergeDefaults(remoteData));
+        const merged = rmMergeDefaults(remoteData);
+        setData({ ...merged, ...computeStandings(merged.matches_giornata, merged.teams) });
       }
     }
     sync();
@@ -1325,7 +1437,6 @@ function AdminApp() {
         {tab === 'events' && <EventsSection    {...props} />}
         {tab === 'honors' && <HonorsSection    {...props} />}
         {tab === 'sponsors' && <SponsorsSection  {...props} />}
-        {tab === 'strip' && <StripSection     {...props} />}
         {tab === 'settings' && <SettingsSection  {...props} />}
       </main>
 
