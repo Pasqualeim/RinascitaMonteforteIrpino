@@ -171,37 +171,24 @@ Struttura `content` jsonb:
 
 ## Sistema multi-agente
 
-Agenti disponibili in `.claude/agents/`. Prima di qualsiasi modifica identifica
-quale agente è competente e delegagli il task. Un agente non tocca mai file
-fuori dalla sua competenza.
+Agenti in `.claude/agents/`. Organizzati per **tipo di task**, non per singolo file.
 
-### Competenze
+| Agente | Quando usarlo | File che può toccare |
+|--------|--------------|----------------------|
+| `feature-builder` | Nuova sezione/feature da zero che tocca 3+ file | data.js, admin.jsx, screens.jsx, components.jsx, CSS, CLAUDE.md |
+| `admin-fixer` | Bug fix o miglioramento mirato solo lato admin | admin.jsx, admin-styles.css |
+| `public-fixer` | Bug fix o miglioramento mirato solo sito pubblico | screens.jsx, components.jsx, styles.css, index.html |
+| `supabase` | Operazioni DB: query, RLS, sync, ispezione dati | Supabase (MCP `mcp__claude_ai_Supabase__*`, project_id=jummgmhkapvvibicnqos) |
+| `reviewer` | QA post-lavoro: verifica classi CSS, campi dati, update CLAUDE.md | Lettura tutto + scrittura CLAUDE.md |
 
-| Agente | File | Attivazione |
-|--------|------|-------------|
-| `styler` | admin-styles.css, styles.css | Automatica |
-| `storage` | data.js | Automatica |
-| `renderer` | admin.jsx, components.jsx | Automatica |
-| `router` | screens.jsx, index.html | Automatica |
-| `linter` | solo lettura, solo i file modificati | Automatica — sempre ultimo step |
-| `docs` | CLAUDE.md | Automatica — dopo ogni modifica |
-| `refactor` | tutti i file | Manuale — solo su richiesta esplicita |
-| `db` | Supabase | Manuale — solo su richiesta esplicita |
+### Quando usare gli agenti vs inline
 
-### Ordine di esecuzione
-
-Quando una modifica coinvolge più agenti, eseguili sempre in questo ordine:
-1. `storage` — prima i dati
-2. `renderer` — poi i componenti
-3. `router` — se coinvolte le schermate pubbliche
-4. `styler` — poi gli stili
-5. `linter` — sempre, come ultimo step
-6. `docs` — sempre, dopo linter
+- **Inline** (nessun agente): modifiche a 1-2 file, task semplici, piccoli fix
+- **Agente**: task grandi che proteggono il contesto principale, operazioni specializzate (DB), review indipendente
 
 ### Regole
 
-- `refactor` in modalità monitor segnala opportunità ma non esegue mai da solo
-- `db` non modifica schema o dati senza conferma esplicita dell'utente
-- Se una richiesta richiede modifiche cross-file non previste, fermati e chiedi conferma prima di procedere
-- Non usare comandi `/run` o `/tool` a meno che tu non sappia cosa stai facendo — di solito bastano le chiamate API interne
-- Se incontri un errore, correggilo e riprova; se persiste, consulta `CLAUDE.md` e riavvia il ciclo di ragionamento
+- `supabase` non modifica schema o dati senza conferma esplicita dell'utente
+- `reviewer` è read-only su tutti i file tranne CLAUDE.md
+- Per task che toccano sia admin che public, usa `feature-builder` o lavora inline
+- Se task richiede modifica a file fuori scope dell'agente scelto, fermati e chiedi conferma
