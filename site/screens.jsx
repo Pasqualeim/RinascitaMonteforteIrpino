@@ -191,8 +191,15 @@ function LiveScreen({ data }) {
 }
 
 function CalendarScreen({ data }) {
-  const [cat, setCat] = useState('all');
   const matchesGiornata = data?.matches_giornata || MATCHES_GIORNATA;
+  const allPhases = matchesGiornata.map(g => g.day);
+  const [selPhase, setSelPhase] = useState('all');
+
+  const filtered = useMemo(() =>
+    selPhase === 'all' ? matchesGiornata : matchesGiornata.filter(g => g.day === selPhase),
+    [selPhase, matchesGiornata]
+  );
+
   return (
     <div data-screen-label="calendar">
       <section className="rm-section">
@@ -202,13 +209,17 @@ function CalendarScreen({ data }) {
             <h3 className="rm-section-title">Calendario</h3>
           </div>
         </div>
-        <div className="rm-tabs">
-          {[{ id:'all',label:'Tutte'},{id:'senior',label:'Senior'},{id:'over40',label:'Over 40'},{id:'junior',label:'Junior'}]
-            .map(t => <button key={t.id} className={`rm-tab ${cat===t.id?'on':''}`} onClick={() => setCat(t.id)}>{t.label}</button>)}
-        </div>
-        {matchesGiornata.length === 0
+        {allPhases.length > 1 && (
+          <div className="rm-tabs">
+            <button className={`rm-tab ${selPhase === 'all' ? 'on' : ''}`} onClick={() => setSelPhase('all')}>Tutte</button>
+            {allPhases.map(p => (
+              <button key={p} className={`rm-tab ${selPhase === p ? 'on' : ''}`} onClick={() => setSelPhase(p)}>{p}</button>
+            ))}
+          </div>
+        )}
+        {filtered.length === 0
           ? <EmptyState icon="📅" title="Calendario non ancora disponibile" sub="Lo staff pubblicherà il calendario delle partite a breve."/>
-          : matchesGiornata.map((d, i) => (
+          : filtered.map((d, i) => (
             <div className="rm-match-day" key={i}>
               <div className="rm-match-day-head">
                 <div className="rm-match-day-num">{d.day}</div>

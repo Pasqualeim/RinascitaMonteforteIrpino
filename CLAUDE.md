@@ -26,11 +26,11 @@ assets/
 **Utenti:** solo visualizzazione. Nessun form iscrizione.
 
 **Sezioni:**
-- `home` — Hero, countdown, partita live, partite oggi, classifica, marcatori, bacheca, premi, sponsor
+- `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori, bacheca, premi, sponsor
 - `live` — Tabellone diretta + risultati oggi
-- `calendar` — Calendario partite con filtri categoria
-- `table` — Classifica Senior/Over40/Junior + marcatori
-- `teams` — Squadre filtrabili per categoria
+- `calendar` — Calendario partite con filtri dinamici per fase/girone
+- `table` — Classifica per girone (tab dinamici, auto-calcolati) + marcatori
+- `teams` — Squadre filtrabili per girone, con nazioni FIFA 2026
 - `events` — Timeline eventi
 - `news` — Bacheca avvisi
 - `honors` — Albo d'oro edizioni passate
@@ -56,12 +56,13 @@ assets/
 
 | Tab | Cosa gestisce |
 |-----|---------------|
+| Gironi | CRUD gironi con colore, auto-calcolo standings per girone |
 | Live 🔴 | Avvia/termina diretta, punteggio +/−, minuto +/−, eventi (⚽🟨🟥↻) |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
-| Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo |
-| Classifica | G/V/N/P/GF/GS/Pt/Forma per ogni squadra, per categoria |
+| Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
+| Classifica | G/V/N/P/GF/GS/Pt/Forma per ogni squadra, per girone (tab dinamici) |
 | Marcatori | CRUD capocannonieri con gol |
-| Squadre | Modifica info squadre: nome, capitano, statistiche, colore |
+| Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
 | Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
 | Albo d'oro | CRUD edizioni passate |
 | Sponsor | CRUD sponsor con tag |
@@ -89,7 +90,10 @@ Sito pubblico → rmLoadData() ogni 30s:
 Struttura `content` jsonb:
 ```js
 {
-  teams, standings_a, standings_o40, standings_jr,
+  teams,             // [{ id, name, group_id, nation (FIFA 2026), ... }]
+  groups,            // [{ id, name, color }] gironi creati dallo staff
+  standings_groups,  // [{ id, name, color, rows: [...] }] classifiche auto-calcolate per girone
+  standings_a, standings_o40, standings_jr,  // deprecati (sempre [])
   live_match,        // { active: bool, home, away, hs, as, minute, events[] }
   matches_today, matches_giornata,
   scorers, news, events, honors, sponsors,
@@ -98,7 +102,17 @@ Struttura `content` jsonb:
 }
 ```
 
+**Campi team:** `id, name, group_id, nation, capitano, statistics`
+(campo `category` rimosso — sostituito da `group_id`)
+
 **Nota:** `content={}` al primo avvio è normale. App usa default finché admin non salva.
+
+**Globals window (rifrescati da rmLoadData):**
+- `GROUPS` — array gironi
+- `STANDINGS_GROUPS` — classifiche calcolate per girone
+- `NATIONS_2026` — dict nazioni FIFA 2026 (name → {flag, short})
+- `TEAMS`, `MATCHES_TODAY`, `LIVE_MATCH`, ecc. — come prima
+
 **Note MCP:** il MCP locale (`mcp__supabase__*`) punta al progetto sbagliato ("Blockbuster rewind" — INACTIVE). Usare sempre `mcp__claude_ai_Supabase__*` con `project_id=jummgmhkapvvibicnqos`.
 
 ## Variabili CSS principali
@@ -111,6 +125,34 @@ Struttura `content` jsonb:
 --bg-canvas:   #000000
 --bg-surface:  #141414
 ```
+
+## Sistema gironi — flusso operativo
+
+**Workflow staff:**
+
+1. **Crea gironi** (tab "Gironi")
+   - Nome, colore per ogni girone
+   - `computeStandings()` auto-genera `standings_groups` quando partite finiscono
+
+2. **Crea squadre**
+   - `TeamForm` consente scegliere nazione FIFA 2026 (picker con flag emoji)
+   - Assegna squadra a `group_id`
+   - Campo `category` (Senior/Over40/Jr) rimosso
+
+3. **Inserisce partite**
+   - `MatchForm` mostra preset fasi dinamici (generati da gironi)
+   - Fasi knockout: Quarti, Semifinali, Finale 3°/4°, Finale (hardcodati)
+   - `computeStandings(giornata, teams, groups)` auto-calcola classifiche per girone
+
+4. **Visualizza classifica**
+   - `StandingsSection` mostra tab dinamici per girone
+   - Ogni tab: G/V/N/P/GF/GS/Pt/Forma
+
+**Schermate pubbliche aggiornate:**
+- `TableScreen` — classifica per-girone con tab dinamici
+- `TeamsScreen` — filtra per girone, mostra flag nazione
+- `CalendarScreen` — tab per fase/girone (filtro effettivo)
+- `HomeScreen` — mostra primo girone da `standings_groups[0]`
 
 ## Aggiungere nuova sezione pubblica
 
