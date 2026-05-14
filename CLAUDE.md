@@ -126,3 +126,40 @@ Struttura `content` jsonb:
 - Il sito funziona aprendo `index.html` direttamente nel browser (file://).
 - `admin.html` va aperto sullo stesso browser del sito pubblico (stesso localStorage).
 - Responsive breakpoints: mobile default, tablet `@600px`, desktop `@900px`.
+
+## Sistema multi-agente
+
+Agenti disponibili in `.claude/agents/`. Prima di qualsiasi modifica identifica
+quale agente è competente e delegagli il task. Un agente non tocca mai file
+fuori dalla sua competenza.
+
+### Competenze
+
+| Agente | File | Attivazione |
+|--------|------|-------------|
+| `styler` | admin-styles.css, styles.css | Automatica |
+| `storage` | data.js | Automatica |
+| `renderer` | admin.jsx, components.jsx | Automatica |
+| `router` | screens.jsx, index.html | Automatica |
+| `linter` | solo lettura, tutti i file | Automatica — sempre ultimo step |
+| `docs` | CLAUDE.md | Automatica — dopo ogni modifica |
+| `refactor` | tutti i file | Manuale — solo su richiesta esplicita |
+| `db` | Supabase | Manuale — solo su richiesta esplicita |
+
+### Ordine di esecuzione
+
+Quando una modifica coinvolge più agenti, eseguili sempre in questo ordine:
+1. `storage` — prima i dati
+2. `renderer` — poi i componenti
+3. `router` — se coinvolte le schermate pubbliche
+4. `styler` — poi gli stili
+5. `linter` — sempre, come ultimo step
+6. `docs` — sempre, dopo linter
+
+### Regole
+
+- `refactor` in modalità monitor segnala opportunità ma non esegue mai da solo
+- `db` non modifica schema o dati senza conferma esplicita dell'utente
+- Se una richiesta richiede modifiche cross-file non previste, fermati e chiedi conferma prima di procedere
+- Non usare comandi `/run` o `/tool` a meno che tu non sappia cosa stai facendo — di solito bastano le chiamate API interne
+- Se incontri un errore, correggilo e riprova; se persiste, consulta `CLAUDE.md` e riavvia il ciclo di ragionamento

@@ -1,5 +1,66 @@
 /* global window */
+
+const DEFAULT_NATIONS_2026 = [
+  // Paesi ospitanti
+  { name: 'USA',           flag: '🇺🇸', short: 'USA' },
+  { name: 'Canada',        flag: '🇨🇦', short: 'CAN' },
+  { name: 'Messico',       flag: '🇲🇽', short: 'MEX' },
+  // CONMEBOL
+  { name: 'Argentina',     flag: '🇦🇷', short: 'ARG' },
+  { name: 'Brasile',       flag: '🇧🇷', short: 'BRA' },
+  { name: 'Colombia',      flag: '🇨🇴', short: 'COL' },
+  { name: 'Uruguay',       flag: '🇺🇾', short: 'URU' },
+  { name: 'Ecuador',       flag: '🇪🇨', short: 'ECU' },
+  { name: 'Venezuela',     flag: '🇻🇪', short: 'VEN' },
+  // UEFA
+  { name: 'Germania',      flag: '🇩🇪', short: 'GER' },
+  { name: 'Inghilterra',   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', short: 'ENG' },
+  { name: 'Francia',       flag: '🇫🇷', short: 'FRA' },
+  { name: 'Spagna',        flag: '🇪🇸', short: 'ESP' },
+  { name: 'Portogallo',    flag: '🇵🇹', short: 'POR' },
+  { name: 'Olanda',        flag: '🇳🇱', short: 'NED' },
+  { name: 'Croazia',       flag: '🇭🇷', short: 'CRO' },
+  { name: 'Austria',       flag: '🇦🇹', short: 'AUT' },
+  { name: 'Svizzera',      flag: '🇨🇭', short: 'SUI' },
+  { name: 'Ungheria',      flag: '🇭🇺', short: 'HUN' },
+  { name: 'Serbia',        flag: '🇷🇸', short: 'SRB' },
+  { name: 'Danimarca',     flag: '🇩🇰', short: 'DEN' },
+  { name: 'Scozia',        flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿', short: 'SCO' },
+  { name: 'Albania',       flag: '🇦🇱', short: 'ALB' },
+  { name: 'Ucraina',       flag: '🇺🇦', short: 'UKR' },
+  { name: 'Italia',        flag: '🇮🇹', short: 'ITA' },
+  // AFC
+  { name: 'Giappone',      flag: '🇯🇵', short: 'JPN' },
+  { name: 'Corea del Sud', flag: '🇰🇷', short: 'KOR' },
+  { name: 'Iran',          flag: '🇮🇷', short: 'IRN' },
+  { name: 'Australia',     flag: '🇦🇺', short: 'AUS' },
+  { name: 'Arabia Saudita',flag: '🇸🇦', short: 'KSA' },
+  { name: 'Qatar',         flag: '🇶🇦', short: 'QAT' },
+  { name: 'Uzbekistan',    flag: '🇺🇿', short: 'UZB' },
+  { name: 'Giordania',     flag: '🇯🇴', short: 'JOR' },
+  // CAF
+  { name: 'Marocco',       flag: '🇲🇦', short: 'MAR' },
+  { name: 'Nigeria',       flag: '🇳🇬', short: 'NGA' },
+  { name: 'Senegal',       flag: '🇸🇳', short: 'SEN' },
+  { name: 'Sud Africa',    flag: '🇿🇦', short: 'RSA' },
+  { name: 'Egitto',        flag: '🇪🇬', short: 'EGY' },
+  { name: 'Ghana',         flag: '🇬🇭', short: 'GHA' },
+  { name: "Costa d'Avorio",flag: '🇨🇮', short: 'CIV' },
+  { name: 'Camerun',       flag: '🇨🇲', short: 'CMR' },
+  { name: 'Tunisia',       flag: '🇹🇳', short: 'TUN' },
+  // CONCACAF (non-ospitanti)
+  { name: 'Panama',        flag: '🇵🇦', short: 'PAN' },
+  { name: 'Costa Rica',    flag: '🇨🇷', short: 'CRC' },
+  { name: 'Jamaica',       flag: '🇯🇲', short: 'JAM' },
+  { name: 'Honduras',      flag: '🇭🇳', short: 'HON' },
+  { name: 'El Salvador',   flag: '🇸🇻', short: 'SLV' },
+  // OFC
+  { name: 'Nuova Zelanda', flag: '🇳🇿', short: 'NZL' },
+];
+
 const DEFAULT_TEAMS            = [];
+const DEFAULT_GROUPS           = [];
+const DEFAULT_STANDINGS_GROUPS = [];
 const DEFAULT_STANDINGS_A      = [];
 const DEFAULT_STANDINGS_O40    = [];
 const DEFAULT_STANDINGS_JR     = [];
@@ -94,9 +155,11 @@ function buildStripItems(saved) {
 function rmMergeDefaults(saved) {
   return {
     teams:            saved?.teams            || DEFAULT_TEAMS,
-    standings_a:      saved?.standings_a      || DEFAULT_STANDINGS_A,
-    standings_o40:    saved?.standings_o40    || DEFAULT_STANDINGS_O40,
-    standings_jr:     saved?.standings_jr     || DEFAULT_STANDINGS_JR,
+    groups:           saved?.groups           || DEFAULT_GROUPS,
+    standings_groups: saved?.standings_groups || DEFAULT_STANDINGS_GROUPS,
+    standings_a:      [],
+    standings_o40:    [],
+    standings_jr:     [],
     live_match:       saved?.live_match       || DEFAULT_LIVE_MATCH,
     matches_today:    saved?.matches_today    || DEFAULT_MATCHES_TODAY,
     matches_giornata: saved?.matches_giornata || DEFAULT_MATCHES_GIORNATA,
@@ -123,9 +186,11 @@ Object.assign(window, {
   // Uppercase aliases — components/screens reference these as globals
   TEAMS:            _initialData.teams,
   T:                Object.fromEntries((_initialData.teams || []).map(t => [t.short, t])),
-  STANDINGS_A:      _initialData.standings_a,
-  STANDINGS_O40:    _initialData.standings_o40,
-  STANDINGS_JR:     _initialData.standings_jr,
+  GROUPS:           _initialData.groups,
+  STANDINGS_GROUPS: _initialData.standings_groups,
+  STANDINGS_A:      [],
+  STANDINGS_O40:    [],
+  STANDINGS_JR:     [],
   LIVE_MATCH:       _initialData.live_match,
   MATCHES_TODAY:    _initialData.matches_today,
   MATCHES_GIORNATA: _initialData.matches_giornata,
@@ -135,8 +200,10 @@ Object.assign(window, {
   HONORS:           _initialData.honors,
   SPONSORS:         _initialData.sponsors,
   STRIP_ITEMS:      _initialData.strip_items,
+  NATIONS_2026:     DEFAULT_NATIONS_2026,
   rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults,
-  DEFAULT_TEAMS, DEFAULT_STANDINGS_A, DEFAULT_STANDINGS_O40, DEFAULT_STANDINGS_JR,
+  DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_NATIONS_2026,
+  DEFAULT_STANDINGS_GROUPS,
   DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_MATCHES_GIORNATA,
   DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_EVENTS, DEFAULT_HONORS,
   DEFAULT_SPONSORS, DEFAULT_STRIP_ITEMS,

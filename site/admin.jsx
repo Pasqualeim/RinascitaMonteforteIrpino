@@ -1,5 +1,5 @@
-/* global React, window, rmLoadData, rmSaveData, rmGetAllData, DEFAULT_TEAMS,
-   DEFAULT_STANDINGS_A, DEFAULT_STANDINGS_O40, DEFAULT_STANDINGS_JR,
+/* global React, window, rmLoadData, rmSaveData, rmGetAllData, DEFAULT_TEAMS, DEFAULT_GROUPS,
+   DEFAULT_NATIONS_2026, DEFAULT_STANDINGS_GROUPS,
    DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_MATCHES_GIORNATA,
    DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_EVENTS, DEFAULT_HONORS,
    DEFAULT_SPONSORS, DEFAULT_STRIP_ITEMS */
@@ -484,24 +484,34 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
   );
 }
 
-// ── Compute Standings ─────────────────────────────────────────────────────
-function computeStandings(giornata, teams) {
-  const map = {};
+// ── Compute Standings per girone ─────────────────────────────────────────
+function computeStandings(giornata, teams, groups) {
+  const teamGroup = {};
+  for (const t of (teams || [])) {
+    if (t.group) teamGroup[t.short] = t.group;
+  }
+
+  const gMap = {};
+  for (const g of (groups || [])) {
+    gMap[g.id] = { id: g.id, name: g.name, color: g.color || '#00E676', rows: {} };
+  }
 
   for (const t of (teams || [])) {
-    map[t.short] = {
-      short: t.short, name: t.name, color: t.color,
-      category: t.category,
+    if (!t.group || !gMap[t.group]) continue;
+    gMap[t.group].rows[t.short] = {
+      short: t.short, name: t.name, color: t.color, flag: t.flag || '',
       g: 0, v: 0, n: 0, p: 0, gf: 0, gs: 0, pt: 0, form: []
     };
   }
 
   const allMatches = (giornata || []).flatMap(g => g.items || []);
-
   for (const m of allMatches) {
     if (m.status !== 'ft' || m.hs == null || m.as == null || !m.home || !m.away) continue;
-    const h = map[m.home.short];
-    const a = map[m.away.short];
+    const hg = teamGroup[m.home.short];
+    const ag = teamGroup[m.away.short];
+    if (!hg || hg !== ag || !gMap[hg]) continue;
+    const h = gMap[hg].rows[m.home.short];
+    const a = gMap[hg].rows[m.away.short];
     if (!h || !a) continue;
 
     h.g++; a.g++;
@@ -523,25 +533,19 @@ function computeStandings(giornata, teams) {
     }
   }
 
-  const sort = arr => arr.sort((a, b) => {
-    if (b.pt !== a.pt) return b.pt - a.pt;
-    const drA = a.gf - a.gs, drB = b.gf - b.gs;
-    if (drB !== drA) return drB - drA;
-    return b.gf - a.gf;
-  });
+  const sort = arr => arr.sort((a, b) =>
+    b.pt - a.pt || (b.gf - b.gs) - (a.gf - a.gs) || b.gf - a.gf
+  );
 
-  const rows = Object.values(map);
-  return {
-    standings_a:   sort(rows.filter(r => r.category === 'Senior')),
-    standings_o40: sort(rows.filter(r => r.category === 'Over 40')),
-    standings_jr:  sort(rows.filter(r => r.category === 'Junior')),
-  };
+  const standings_groups = Object.values(gMap).map(g => ({
+    id: g.id, name: g.name, color: g.color,
+    rows: sort(Object.values(g.rows)),
+  }));
+
+  return { standings_groups, standings_a: [], standings_o40: [], standings_jr: [] };
 }
 
-const PHASE_PRESETS = [
-  'Girone A', 'Girone B', 'Girone Over 40', 'Girone Junior',
-  'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'
-];
+const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 
 // ── Matches Section ───────────────────────────────────────────────────────
 function MatchesSection({ data, onSave }) {
@@ -553,6 +557,11 @@ function MatchesSection({ data, onSave }) {
   const [deleting, setDeleting] = useState(null);
   const [view, setView] = useState('lista');
   const teams = data.teams || DEFAULT_TEAMS;
+
+  const groups = data.groups || DEFAULT_GROUPS;
+  const groupPresets = groups.map(g => g.name);
+  const allPresets = [...groupPresets, ...KNOCKOUT_PRESETS];
+  const defaultPhase = allPresets[0] || 'Girone A';
 
   function saveMatch(updated) {
     let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
@@ -567,7 +576,7 @@ function MatchesSection({ data, onSave }) {
     }
 
     updated.pitch = 'Campo Sportivo';
-    const targetDay = updated._day || PHASE_PRESETS[0];
+    const targetDay = updated._day || defaultPhase;
     delete updated._isNew;
     delete updated._day;
 
@@ -577,7 +586,7 @@ function MatchesSection({ data, onSave }) {
     giornata = giornata.filter(x => x.items.length > 0);
 
     const matchesToday = giornata.flatMap(x => x.items.filter(m => m.date === 'Oggi' || m.date === updated.date));
-    const newStandings = computeStandings(giornata, data.teams);
+    const newStandings = computeStandings(giornata, data.teams, data.groups);
     onSave({ ...data, matches_giornata: giornata, matches_today: matchesToday.slice(0, 5), ...newStandings }, 'Partita e classifica aggiornate');
     setEditing(null);
   }
@@ -588,7 +597,7 @@ function MatchesSection({ data, onSave }) {
       g.items = g.items.filter(m => m.id !== matchId);
     }
     giornata = giornata.filter(x => x.items.length > 0);
-    const newStandings = computeStandings(giornata, data.teams);
+    const newStandings = computeStandings(giornata, data.teams, data.groups);
     onSave({ ...data, matches_giornata: giornata, ...newStandings }, 'Partita eliminata');
     setDeleting(null);
   }
@@ -596,7 +605,7 @@ function MatchesSection({ data, onSave }) {
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
 
   function newMatch() {
-    setEditing({ _isNew: true, _day: PHASE_PRESETS[0], status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '' });
+    setEditing({ _isNew: true, _day: defaultPhase, status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '' });
   }
 
   return (
@@ -638,20 +647,23 @@ function MatchesSection({ data, onSave }) {
 
       {view === 'bracket' && <BracketView giornata={data.matches_giornata} />}
 
-      {editing && <MatchForm match={editing} teams={teams} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
+      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
 
-function MatchForm({ match, teams, giornate, onSave, onClose }) {
+function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, onSave, onClose }) {
   const [form, setForm] = useState({ ...match });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const presets = allPresets && allPresets.length > 0 ? allPresets : KNOCKOUT_PRESETS;
 
   function submit() {
     if (!form.home || !form.away) { alert("Seleziona entrambe le squadre"); return; }
     onSave(form);
   }
+
+  const groupNames = (groups || []).map(g => g.name);
 
   return (
     <div className="adm-overlay" onClick={onClose}>
@@ -660,13 +672,25 @@ function MatchForm({ match, teams, giornate, onSave, onClose }) {
         <div className="adm-form">
           <div className="adm-form-group">
             <label className="adm-label">Fase / Giornata</label>
+            {groupNames.length > 0 && (
+              <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--fg-3)', letterSpacing: '0.08em' }}>GIRONI</div>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-              {PHASE_PRESETS.map(p => (
-                <button key={p} type="button"
-                  className={`adm-btn adm-btn-sm ${form._day === p ? '' : 'adm-btn-ghost'}`}
-                  style={{ fontSize: 11, padding: '4px 8px' }}
-                  onClick={() => set('_day', p)}>{p}</button>
-              ))}
+              {presets.map((p, i) => {
+                const isKnockout = KNOCKOUT_PRESETS.includes(p);
+                const isFirstKnockout = isKnockout && (i === 0 || !KNOCKOUT_PRESETS.includes(presets[i - 1]));
+                return (
+                  <React.Fragment key={p}>
+                    {isFirstKnockout && groupNames.length > 0 && (
+                      <div style={{ width: '100%', fontSize: 11, color: 'var(--fg-3)', letterSpacing: '0.08em', marginTop: 4 }}>ELIMINAZIONE DIRETTA</div>
+                    )}
+                    <button type="button"
+                      className={`adm-btn adm-btn-sm ${form._day === p ? '' : 'adm-btn-ghost'}`}
+                      style={{ fontSize: 11, padding: '4px 8px' }}
+                      onClick={() => set('_day', p)}>{p}</button>
+                  </React.Fragment>
+                );
+              })}
             </div>
             <input className="adm-input" value={form._day || ''} onChange={e => set('_day', e.target.value)} placeholder="Fase personalizzata..." />
           </div>
@@ -833,38 +857,45 @@ function BracketView({ giornata }) {
 
 // ── Standings Section ─────────────────────────────────────────────────────
 function StandingsSection({ data }) {
-  const [tab, setTab] = useState('senior');
+  const standings_groups = data.standings_groups || [];
+  const [selIdx, setSelIdx] = useState(0);
 
-  const sectionMap = {
-    senior: { key: 'standings_a', label: 'Senior', default: DEFAULT_STANDINGS_A },
-    over40: { key: 'standings_o40', label: 'Over 40', default: DEFAULT_STANDINGS_O40 },
-    junior: { key: 'standings_jr', label: 'Junior', default: DEFAULT_STANDINGS_JR },
-  };
+  if (standings_groups.length === 0) {
+    return (
+      <div>
+        <h2 className="adm-section-title">Classifica</h2>
+        <div className="adm-card">
+          <div className="adm-empty">Nessun girone configurato. Crea gironi dalla sezione Gironi e assegna le squadre.</div>
+        </div>
+      </div>
+    );
+  }
 
-  const { key, default: def } = sectionMap[tab];
-  const rows = data[key] || def;
+  const current = standings_groups[selIdx] || standings_groups[0];
 
   return (
     <div>
       <h2 className="adm-section-title">Classifica</h2>
       <div style={{ padding: '10px 16px', background: 'rgba(0,230,118,0.07)', border: '1px solid var(--border-brand)', borderRadius: 8, marginBottom: 16, fontSize: 13, color: 'var(--brand-green)' }}>
-        ⚡ Classifica calcolata automaticamente dai risultati delle partite terminate (FT).
+        ⚡ Calcolata automaticamente dai risultati FT, per partite tra squadre dello stesso girone.
       </div>
-      <div className="rm-tabs" style={{ marginBottom: 16 }}>
-        {Object.entries(sectionMap).map(([id, s]) => (
-          <button key={id} className={`rm-tab ${tab === id ? 'on' : ''}`} onClick={() => setTab(id)}>{s.label}</button>
-        ))}
-      </div>
+      {standings_groups.length > 1 && (
+        <div className="rm-tabs" style={{ marginBottom: 16 }}>
+          {standings_groups.map((g, i) => (
+            <button key={g.id} className={`rm-tab ${selIdx === i ? 'on' : ''}`} onClick={() => setSelIdx(i)}>{g.name}</button>
+          ))}
+        </div>
+      )}
       <div className="adm-card">
-        {rows.length === 0 ? (
-          <div className="adm-empty">Nessuna squadra in classifica. Aggiungi squadre e partite con risultato FT.</div>
+        {current.rows.length === 0 ? (
+          <div className="adm-empty">Nessuna partita FT per questo girone. I risultati appariranno automaticamente.</div>
         ) : (
-          rows.map((r, i) => (
+          current.rows.map((r, i) => (
             <div key={r.short} className="adm-item-row">
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--brand-green)', width: 28 }}>{i + 1}</div>
-              <div className="adm-crest" style={{ borderColor: r.color, color: r.color }}>{r.short}</div>
+              <div className="adm-crest" style={{ borderColor: r.color, color: r.color }}>{r.flag || r.short}</div>
               <div className="adm-item-row-body">
-                <div className="adm-item-title">{r.name}</div>
+                <div className="adm-item-title">{r.flag ? r.flag + ' ' : ''}{r.name}</div>
                 <div className="adm-item-meta">G{r.g} V{r.v} N{r.n} P{r.p} · GF{r.gf} GS{r.gs} · <b style={{ color: 'var(--brand-green)' }}>{r.pt}pt</b></div>
               </div>
             </div>
@@ -978,12 +1009,101 @@ function ScorersSection({ data, onSave }) {
   );
 }
 
+// ── Gironi Section ────────────────────────────────────────────────────────
+function GironiSection({ data, onSave }) {
+  const [groups, setGroups] = useState(data.groups || DEFAULT_GROUPS);
+  const [editing, setEditing] = useState(null);
+
+  function saveGroup(g) {
+    let updated;
+    if (g._isNew) {
+      const newG = { id: 'g' + Date.now(), name: g.name, color: g.color || '#00E676' };
+      updated = [...groups, newG];
+    } else {
+      updated = groups.map(x => x.id === g.id ? { id: g.id, name: g.name, color: g.color } : x);
+    }
+    setGroups(updated);
+    const newStandings = computeStandings(data.matches_giornata || [], data.teams, updated);
+    onSave({ ...data, groups: updated, ...newStandings }, 'Girone salvato');
+    setEditing(null);
+  }
+
+  function deleteGroup(id) {
+    if (!window.confirm('Eliminare questo girone? Le squadre assegnate perderanno il girone.')) return;
+    const updated = groups.filter(g => g.id !== id);
+    const updatedTeams = (data.teams || []).map(t => t.group === id ? { ...t, group: '' } : t);
+    setGroups(updated);
+    const newStandings = computeStandings(data.matches_giornata || [], updatedTeams, updated);
+    onSave({ ...data, groups: updated, teams: updatedTeams, ...newStandings }, 'Girone eliminato');
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+        <div>
+          <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
+          <p className="adm-section-sub" style={{ margin: 0 }}>Crea i gironi e assegna le squadre dalla sezione Squadre.</p>
+        </div>
+        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', color: '#00E676' })}>+ Nuovo Girone</button>
+      </div>
+
+      <div className="adm-card">
+        {groups.length === 0 ? (
+          <div className="adm-empty">Nessun girone. Crea un girone e poi assegna le squadre dalla sezione Squadre.</div>
+        ) : (
+          groups.map(g => {
+            const count = (data.teams || []).filter(t => t.group === g.id).length;
+            return (
+              <div key={g.id} className="adm-item-row">
+                <div className="adm-crest" style={{ borderColor: g.color || '#00E676', color: g.color || '#00E676', fontSize: 11 }}>
+                  {g.name.slice(0, 3).toUpperCase()}
+                </div>
+                <div className="adm-item-row-body">
+                  <div className="adm-item-title">{g.name}</div>
+                  <div className="adm-item-meta">{count} squadre assegnate</div>
+                </div>
+                <div className="adm-item-actions">
+                  <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...g })}><EditIcon size={16}/></button>
+                  <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteGroup(g.id)}><TrashIcon size={16}/></button>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {editing && (
+        <div className="adm-overlay" onClick={() => setEditing(null)}>
+          <div className="adm-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="adm-modal-title">{editing._isNew ? 'Nuovo Girone' : 'Modifica Girone'}</h3>
+            <div className="adm-form">
+              <div className="adm-form-group">
+                <label className="adm-label">Nome Girone</label>
+                <input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} placeholder="es. Girone A" autoFocus />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Colore identificativo</label>
+                <input type="color" className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f => ({ ...f, color: e.target.value }))} style={{ height: 40 }} />
+              </div>
+              <div className="adm-form-actions" style={{ marginTop: 24 }}>
+                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
+                <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name.trim()}>Salva</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Teams Section ─────────────────────────────────────────────────────────
-function TeamForm({ team, onSave, onClose }) {
+function TeamForm({ team, groups, onSave, onClose }) {
   const [editing, setEditing] = useState({ ...team, players: team.players || [] });
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerNum, setNewPlayerNum] = useState('');
-  const isNew = !team.short; // if short is empty, it's a new team
+  const isNew = !team.short;
+  const nations = window.NATIONS_2026 || DEFAULT_NATIONS_2026 || [];
 
   function addPlayer(e) {
     e.preventDefault();
@@ -998,11 +1118,28 @@ function TeamForm({ team, onSave, onClose }) {
     setEditing(f => ({ ...f, players: f.players.filter(p => p.id !== id) }));
   }
 
+  function pickNation(short) {
+    const n = nations.find(x => x.short === short);
+    if (!n) return;
+    setEditing(f => ({ ...f, name: n.name, flag: n.flag, short: n.short, color: f.color || '#00E676' }));
+  }
+
   return (
     <div className="adm-overlay" onClick={onClose}>
       <div className="adm-modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
-        <h3 className="adm-modal-title">{isNew ? 'Nuova Squadra' : editing.name}</h3>
+        <h3 className="adm-modal-title">{isNew ? 'Nuova Squadra' : (editing.flag ? editing.flag + ' ' : '') + editing.name}</h3>
         <div className="adm-form" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
+
+          {isNew && (
+            <div className="adm-form-group">
+              <label className="adm-label">Scegli Nazione FIFA 2026</label>
+              <select className="adm-select" value={editing.short || ''} onChange={e => pickNation(e.target.value)}>
+                <option value="">-- Seleziona nazione --</option>
+                {nations.map(n => <option key={n.short} value={n.short}>{n.flag} {n.name} ({n.short})</option>)}
+              </select>
+            </div>
+          )}
+
           <div className="adm-form-row">
             <div className="adm-form-group"><label className="adm-label">Nome squadra</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} /></div>
             <div className="adm-form-group"><label className="adm-label">Sigla (max 3 lett.)</label><input className="adm-input" value={editing.short} onChange={e => setEditing(f => ({ ...f, short: e.target.value.toUpperCase().slice(0, 3) }))} disabled={!isNew} /></div>
@@ -1010,11 +1147,10 @@ function TeamForm({ team, onSave, onClose }) {
           <div className="adm-form-row">
             <div className="adm-form-group"><label className="adm-label">Bandiera (Emoji)</label><input className="adm-input" value={editing.flag || ''} onChange={e => setEditing(f => ({ ...f, flag: e.target.value }))} placeholder="🇮🇹" /></div>
             <div className="adm-form-group">
-              <label className="adm-label">Categoria</label>
-              <select className="adm-input" value={editing.category} onChange={e => setEditing(f => ({ ...f, category: e.target.value }))}>
-                <option value="Senior">Senior</option>
-                <option value="Over 40">Over 40</option>
-                <option value="Junior">Junior</option>
+              <label className="adm-label">Girone</label>
+              <select className="adm-select" value={editing.group || ''} onChange={e => setEditing(f => ({ ...f, group: e.target.value }))}>
+                <option value="">-- Nessun girone --</option>
+                {(groups || []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
           </div>
@@ -1062,10 +1198,12 @@ function TeamForm({ team, onSave, onClose }) {
 function TeamsSection({ data, onSave }) {
   const [teams, setTeams] = useState(data.teams || DEFAULT_TEAMS);
   const [editing, setEditing] = useState(null);
+  const [filterGroup, setFilterGroup] = useState('all');
+  const groups = data.groups || DEFAULT_GROUPS;
 
   function saveItem(item) {
     if (!item.short) {
-      alert("Devi inserire una sigla per la squadra (es. RM)");
+      alert("Devi inserire una sigla per la squadra (es. ITA)");
       return;
     }
     let updated;
@@ -1075,7 +1213,8 @@ function TeamsSection({ data, onSave }) {
       updated = [...teams, item];
     }
     setTeams(updated);
-    onSave({ ...data, teams: updated }, 'Squadra salvata');
+    const newStandings = computeStandings(data.matches_giornata || [], updated, data.groups);
+    onSave({ ...data, teams: updated, ...newStandings }, 'Squadra salvata');
     setEditing(null);
   }
 
@@ -1083,39 +1222,63 @@ function TeamsSection({ data, onSave }) {
     if (!window.confirm('Sicuro di voler eliminare questa squadra?')) return;
     const updated = teams.filter(t => t.short !== short);
     setTeams(updated);
-    onSave({ ...data, teams: updated }, 'Squadra eliminata');
+    const newStandings = computeStandings(data.matches_giornata || [], updated, data.groups);
+    onSave({ ...data, teams: updated, ...newStandings }, 'Squadra eliminata');
   }
 
   function newTeam() {
-    setEditing({
-      short: '', name: '', category: 'Senior', captain: '',
-      played: 0, won: 0, goals: 0, points: 0, color: '#00E676', flag: '', players: []
-    });
+    setEditing({ short: '', name: '', group: '', flag: '', color: '#00E676', players: [], played: 0, won: 0, goals: 0, points: 0 });
   }
+
+  const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
+  const filtered = filterGroup === 'all' ? teams
+    : filterGroup === 'none' ? teams.filter(t => !t.group)
+    : teams.filter(t => t.group === filterGroup);
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
-        <h2 className="adm-section-title" style={{ margin: 0 }}>Squadre</h2>
+        <div>
+          <h2 className="adm-section-title" style={{ margin: 0 }}>Squadre</h2>
+          <p className="adm-section-sub" style={{ margin: 0 }}>{teams.length} squadre registrate</p>
+        </div>
         <button className="adm-btn adm-btn-sm" onClick={newTeam}>+ Nuova Squadra</button>
       </div>
+
+      {groups.length > 0 && (
+        <div className="rm-tabs" style={{ marginBottom: 12 }}>
+          <button className={`rm-tab ${filterGroup === 'all' ? 'on' : ''}`} onClick={() => setFilterGroup('all')}>Tutte ({teams.length})</button>
+          {groups.map(g => (
+            <button key={g.id} className={`rm-tab ${filterGroup === g.id ? 'on' : ''}`} onClick={() => setFilterGroup(g.id)}>
+              {g.name} ({teams.filter(t => t.group === g.id).length})
+            </button>
+          ))}
+          <button className={`rm-tab ${filterGroup === 'none' ? 'on' : ''}`} onClick={() => setFilterGroup('none')}>
+            Senza girone ({teams.filter(t => !t.group).length})
+          </button>
+        </div>
+      )}
+
       <div className="adm-card">
-        {teams.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra registrata</div>}
-        {teams.map(t => (
-          <div key={t.short} className="adm-item-row">
-            <div className="adm-crest" style={{ borderColor: t.color, color: t.color }}>{t.short}</div>
-            <div className="adm-item-row-body">
-              <div className="adm-item-title">{t.flag ? t.flag + ' ' : ''}{t.name}</div>
-              <div className="adm-item-meta">{t.category} · {t.players?.length || 0} Giocatori · {t.played}G {t.won}V {t.points}pt</div>
+        {filtered.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra{filterGroup !== 'all' ? ' in questo girone' : ' registrata'}</div>}
+        {filtered.map(t => {
+          const gName = groupMap[t.group] || (t.group ? t.group : 'Nessun girone');
+          return (
+            <div key={t.short} className="adm-item-row">
+              <div className="adm-crest" style={{ borderColor: t.color, color: t.color }}>{t.flag || t.short}</div>
+              <div className="adm-item-row-body">
+                <div className="adm-item-title">{t.flag ? t.flag + ' ' : ''}{t.name}</div>
+                <div className="adm-item-meta">{gName} · {t.players?.length || 0} giocatori</div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
+                <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteTeam(t.short)}><TrashIcon size={16}/></button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
-              <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteTeam(t.short)}><TrashIcon size={16}/></button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      {editing && <TeamForm team={editing} onSave={saveItem} onClose={() => setEditing(null)} />}
+      {editing && <TeamForm team={editing} groups={groups} onSave={saveItem} onClose={() => setEditing(null)} />}
     </div>
   );
 }
@@ -1389,13 +1552,17 @@ function DashboardMenu({ setTab }) {
       <p className="adm-section-sub">Gestisci le squadre, i calendari e le classifiche.</p>
       
       <div className="adm-grid-menu">
+        <div className="adm-grid-btn" onClick={() => setTab('gironi')}>
+          <GridIcon size={32} />
+          <span>Gironi</span>
+        </div>
         <div className="adm-grid-btn" onClick={() => setTab('teams')}>
           <UsersIcon size={32} />
           <span>Squadre & Rose</span>
         </div>
         <div className="adm-grid-btn" onClick={() => setTab('matches')}>
           <CalIcon size={32} />
-          <span>Gironi & Partite</span>
+          <span>Partite</span>
         </div>
         <div className="adm-grid-btn" onClick={() => setTab('standings')}>
           <GridIcon size={32} />
@@ -1430,7 +1597,7 @@ function AdminApp() {
   const [tab, setTab] = useState('dashboard');
   const [data, setData] = useState(() => {
     const d = rmGetAllData();
-    return { ...d, ...computeStandings(d.matches_giornata, d.teams) };
+    return { ...d, ...computeStandings(d.matches_giornata, d.teams, d.groups) };
   });
   const [toast, setToast] = useState(null);
 
@@ -1439,7 +1606,7 @@ function AdminApp() {
       const remoteData = await rmLoadData();
       if (remoteData) {
         const merged = rmMergeDefaults(remoteData);
-        setData({ ...merged, ...computeStandings(merged.matches_giornata, merged.teams) });
+        setData({ ...merged, ...computeStandings(merged.matches_giornata, merged.teams, merged.groups) });
       }
     }
     sync();
@@ -1482,6 +1649,7 @@ function AdminApp() {
         {tab === 'dashboard' && <DashboardMenu setTab={setTab} />}
         {tab === 'live' && <LiveSection      {...props} />}
         {tab === 'news' && <NewsSection      {...props} />}
+        {tab === 'gironi' && <GironiSection   {...props} />}
         {tab === 'matches' && <MatchesSection   {...props} />}
         {tab === 'standings' && <StandingsSection {...props} />}
         {tab === 'scorers' && <ScorersSection   {...props} />}

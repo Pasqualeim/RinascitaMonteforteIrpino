@@ -214,7 +214,7 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
       </div>
       <div className="rm-match-pitch">
         <span>{pitch}</span>
-        <b>{home.category || 'Senior'}</b>
+        <b>{home.pitch || 'Campo Sportivo'}</b>
       </div>
     </div>
   );
@@ -271,7 +271,7 @@ function StandingsTable({ rows, group, updatedLabel }) {
   return (
     <div className="rm-table-wrap">
       <div className="rm-table-head">
-        <h3 className="rm-table-title">Girone {group}</h3>
+        <h3 className="rm-table-title">{group && group.toLowerCase().startsWith('girone') ? group : `Girone ${group}`}</h3>
         <span className="rm-eyebrow muted">{updatedLabel}</span>
       </div>
       <div className="rm-table-scroll">
@@ -308,7 +308,7 @@ function TeamCard({ team }) {
       <div className="rm-team-crest-lg" style={{ borderColor: team.color, color: team.color }}>{team.short}</div>
       <div className="rm-team-meta">
         <div className="rm-team-card-name">{team.name}</div>
-        <div className="rm-team-card-sub">{team.category} · Cap. {team.captain}</div>
+        <div className="rm-team-card-sub">{team.captain ? 'Cap. ' + team.captain : team.flag || ''}</div>
         <div className="rm-team-stats">
           <span><b>{team.played}</b> G</span>
           <span><b>{team.won}</b> V</span>

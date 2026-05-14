@@ -1,4 +1,4 @@
-/* global React, window, MATCHES_GIORNATA, MATCHES_TODAY, LIVE_MATCH, STANDINGS_A, STANDINGS_O40, STANDINGS_JR, TEAMS, SCORERS, NEWS, EVENTS, HONORS, SPONSORS, STRIP_ITEMS */
+/* global React, window, MATCHES_GIORNATA, MATCHES_TODAY, LIVE_MATCH, STANDINGS_GROUPS, TEAMS, SCORERS, NEWS, EVENTS, HONORS, SPONSORS, STRIP_ITEMS, GROUPS */
 const { useState, useMemo } = React;
 
 function EmptyState({ icon, title, sub }) {
@@ -15,7 +15,8 @@ function HomeScreen({ onNav, data }) {
   const d = data || {};
   const liveMatch    = d.live_match       || LIVE_MATCH;
   const matchesToday = d.matches_today    || MATCHES_TODAY;
-  const standingsA   = d.standings_a      || STANDINGS_A;
+  const standingsGroups = d.standings_groups || STANDINGS_GROUPS || [];
+  const standingsA      = standingsGroups[0]?.rows || [];
   const scorers      = d.scorers          || SCORERS;
   const news         = d.news             || NEWS;
   const sponsors     = d.sponsors         || SPONSORS;
@@ -78,12 +79,12 @@ function HomeScreen({ onNav, data }) {
           <div>
             <div className="rm-section-head">
               <div>
-                <span className="rm-eyebrow">Senior · Girone A</span>
+                <span className="rm-eyebrow">{standingsGroups[0]?.name || 'Girone A'}</span>
                 <h3 className="rm-section-title">Classifica</h3>
               </div>
               <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
             </div>
-            <StandingsTable rows={standingsA} group="A" updatedLabel="Giornata 4"/>
+            <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso"/>
           </div>
           <div>
             <div className="rm-section-head">
@@ -225,26 +226,38 @@ function CalendarScreen({ data }) {
 }
 
 function TableScreen({ data }) {
-  const standingsA   = data?.standings_a   || STANDINGS_A;
-  const standingsO40 = data?.standings_o40 || STANDINGS_O40;
-  const standingsJr  = data?.standings_jr  || STANDINGS_JR;
-  const scorers      = data?.scorers       || SCORERS;
-  const catLabel = { Senior: 'Senior', 'Over 40': 'Over 40', Junior: 'Junior' };
+  const standingsGroups = data?.standings_groups || STANDINGS_GROUPS || [];
+  const scorers         = data?.scorers          || SCORERS;
+  const [selIdx, setSelIdx] = useState(0);
   const rowStyle = { fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#fff', marginBottom: 10 };
+
   return (
     <div data-screen-label="table">
       <section className="rm-section">
         <div className="rm-section-head">
           <div>
-            <span className="rm-eyebrow">Aggiornata · 29 Giugno 2026</span>
+            <span className="rm-eyebrow">Aggiornata in tempo reale</span>
             <h3 className="rm-section-title">Classifica</h3>
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <div><div style={rowStyle}>Senior</div><StandingsTable rows={standingsA} group="A" updatedLabel="Giornata 4 di 5"/></div>
-          <div><div style={rowStyle}>Over 40</div><StandingsTable rows={standingsO40} group="Unico" updatedLabel="Giornata 3 di 4"/></div>
-          <div><div style={rowStyle}>Junior</div><StandingsTable rows={standingsJr} group="Unico" updatedLabel="Giornata 2 di 3"/></div>
-        </div>
+        {standingsGroups.length === 0 ? (
+          <div className="rm-empty"><div className="rm-empty-icon">📊</div><div className="rm-empty-title">Classifica in arrivo</div><div className="rm-empty-sub">I gironi verranno pubblicati dallo staff.</div></div>
+        ) : standingsGroups.length === 1 ? (
+          <div><div style={rowStyle}>{standingsGroups[0].name}</div><StandingsTable rows={standingsGroups[0].rows} group={standingsGroups[0].name} updatedLabel="In corso"/></div>
+        ) : (
+          <div>
+            <div className="rm-tabs" style={{ marginBottom: 16 }}>
+              {standingsGroups.map((g, i) => (
+                <button key={g.id} className={`rm-tab ${selIdx === i ? 'on' : ''}`} onClick={() => setSelIdx(i)}>{g.name}</button>
+              ))}
+            </div>
+            {standingsGroups.map((g, i) => (
+              selIdx === i && (
+                <div key={g.id}><div style={rowStyle}>{g.name}</div><StandingsTable rows={g.rows} group={g.name} updatedLabel="In corso"/></div>
+              )
+            ))}
+          </div>
+        )}
       </section>
       <section className="rm-section">
         <div className="rm-section-head">
@@ -260,13 +273,21 @@ function TableScreen({ data }) {
 }
 
 function TeamsScreen({ data }) {
-  const [cat, setCat] = useState('all');
+  const [selGroup, setSelGroup] = useState('all');
   const teams = data?.teams || TEAMS;
-  const filtered = useMemo(() => cat==='all' ? teams : teams.filter(t =>
-    cat==='senior' ? t.category==='Senior' :
-    cat==='over40' ? t.category==='Over 40' :
-    cat==='junior' ? t.category==='Junior' : true
-  ), [cat, teams]);
+  const groups = data?.groups || GROUPS || [];
+
+  const filtered = useMemo(() => {
+    if (selGroup === 'all') return teams;
+    if (selGroup === 'none') return teams.filter(t => !t.group);
+    return teams.filter(t => t.group === selGroup);
+  }, [selGroup, teams]);
+
+  const tabs = [
+    { id: 'all', label: `Tutte (${teams.length})` },
+    ...groups.map(g => ({ id: g.id, label: `${g.name} (${teams.filter(t => t.group === g.id).length})` })),
+  ];
+
   return (
     <div data-screen-label="teams">
       <section className="rm-section">
@@ -276,10 +297,11 @@ function TeamsScreen({ data }) {
             <h3 className="rm-section-title">Squadre</h3>
           </div>
         </div>
-        <div className="rm-tabs">
-          {[{id:'all',label:`Tutte (${teams.length})`},{id:'senior',label:'Senior'},{id:'over40',label:'Over 40'},{id:'junior',label:'Junior'}]
-            .map(t => <button key={t.id} className={`rm-tab ${cat===t.id?'on':''}`} onClick={() => setCat(t.id)}>{t.label}</button>)}
-        </div>
+        {tabs.length > 1 && (
+          <div className="rm-tabs">
+            {tabs.map(t => <button key={t.id} className={`rm-tab ${selGroup===t.id?'on':''}`} onClick={() => setSelGroup(t.id)}>{t.label}</button>)}
+          </div>
+        )}
         {filtered.length === 0
           ? <EmptyState icon="👥" title="Nessuna squadra" sub="Le squadre partecipanti verranno pubblicate dallo staff."/>
           : <div className="rm-team-grid">{filtered.map(t => <TeamCard key={t.short} team={t}/>)}</div>
