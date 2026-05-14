@@ -1017,10 +1017,10 @@ function GironiSection({ data, onSave }) {
   function saveGroup(g) {
     let updated;
     if (g._isNew) {
-      const newG = { id: 'g' + Date.now(), name: g.name, color: g.color || '#00E676' };
+      const newG = { id: 'g' + Date.now(), name: g.name, category: g.category || 'over40' };
       updated = [...groups, newG];
     } else {
-      updated = groups.map(x => x.id === g.id ? { id: g.id, name: g.name, color: g.color } : x);
+      updated = groups.map(x => x.id === g.id ? { id: g.id, name: g.name, category: g.category } : x);
     }
     setGroups(updated);
     const newStandings = computeStandings(data.matches_giornata || [], data.teams, updated);
@@ -1044,7 +1044,7 @@ function GironiSection({ data, onSave }) {
           <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
           <p className="adm-section-sub" style={{ margin: 0 }}>Crea i gironi e assegna le squadre dalla sezione Squadre.</p>
         </div>
-        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', color: '#00E676' })}>+ Nuovo Girone</button>
+        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', category: 'over40' })}>+ Nuovo Girone</button>
       </div>
 
       <div className="adm-card">
@@ -1055,12 +1055,12 @@ function GironiSection({ data, onSave }) {
             const count = (data.teams || []).filter(t => t.group === g.id).length;
             return (
               <div key={g.id} className="adm-item-row">
-                <div className="adm-crest" style={{ borderColor: g.color || '#00E676', color: g.color || '#00E676', fontSize: 11 }}>
+                <div className="adm-crest" style={{ borderColor: 'var(--brand-green)', color: 'var(--brand-green)', fontSize: 11 }}>
                   {g.name.slice(0, 3).toUpperCase()}
                 </div>
                 <div className="adm-item-row-body">
                   <div className="adm-item-title">{g.name}</div>
-                  <div className="adm-item-meta">{count} squadre assegnate</div>
+                  <div className="adm-item-meta">{g.category === 'junior' ? 'Junior' : 'Over 40'} · {count} squadre assegnate</div>
                 </div>
                 <div className="adm-item-actions">
                   <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...g })}><EditIcon size={16}/></button>
@@ -1082,8 +1082,11 @@ function GironiSection({ data, onSave }) {
                 <input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} placeholder="es. Girone A" autoFocus />
               </div>
               <div className="adm-form-group">
-                <label className="adm-label">Colore identificativo</label>
-                <input type="color" className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f => ({ ...f, color: e.target.value }))} style={{ height: 40 }} />
+                <label className="adm-label">Categoria</label>
+                <select className="adm-select" value={editing.category || 'over40'} onChange={e => setEditing(f => ({ ...f, category: e.target.value }))}>
+                  <option value="over40">Over 40</option>
+                  <option value="junior">Junior</option>
+                </select>
               </div>
               <div className="adm-form-actions" style={{ marginTop: 24 }}>
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
@@ -1099,11 +1102,23 @@ function GironiSection({ data, onSave }) {
 
 // ── Teams Section ─────────────────────────────────────────────────────────
 function TeamForm({ team, groups, onSave, onClose }) {
-  const [editing, setEditing] = useState({ ...team, players: team.players || [] });
+  const [editing, setEditing] = useState({ ...team, players: team.players || [], category: team.category || 'over40' });
   const [newPlayerName, setNewPlayerName] = useState('');
   const [newPlayerNum, setNewPlayerNum] = useState('');
+  const [selectedNationShort, setSelectedNationShort] = useState(team.short ? team.short.split('-')[0] : '');
   const isNew = !team.short;
   const nations = window.NATIONS_2026 || DEFAULT_NATIONS_2026 || [];
+
+  function pickNationAndCategory(ns, cat) {
+    setSelectedNationShort(ns);
+    const n = nations.find(x => x.short === ns);
+    const suffix = cat === 'junior' ? 'JR' : 'O40';
+    if (n) {
+      setEditing(f => ({ ...f, category: cat, name: n.name, flag: n.flag, short: `${n.short}-${suffix}` }));
+    } else {
+      setEditing(f => ({ ...f, category: cat, name: '', flag: '', short: '' }));
+    }
+  }
 
   function addPlayer(e) {
     e.preventDefault();
@@ -1118,11 +1133,7 @@ function TeamForm({ team, groups, onSave, onClose }) {
     setEditing(f => ({ ...f, players: f.players.filter(p => p.id !== id) }));
   }
 
-  function pickNation(short) {
-    const n = nations.find(x => x.short === short);
-    if (!n) return;
-    setEditing(f => ({ ...f, name: n.name, flag: n.flag, short: n.short, color: f.color || '#00E676' }));
-  }
+  const availableGroups = (groups || []).filter(g => g.category === editing.category);
 
   return (
     <div className="adm-overlay" onClick={onClose}>
@@ -1130,31 +1141,45 @@ function TeamForm({ team, groups, onSave, onClose }) {
         <h3 className="adm-modal-title">{isNew ? 'Nuova Squadra' : (editing.flag ? editing.flag + ' ' : '') + editing.name}</h3>
         <div className="adm-form" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 8 }}>
 
-          {isNew && (
-            <div className="adm-form-group">
-              <label className="adm-label">Scegli Nazione FIFA 2026</label>
-              <select className="adm-select" value={editing.short || ''} onChange={e => pickNation(e.target.value)}>
-                <option value="">-- Seleziona nazione --</option>
-                {nations.map(n => <option key={n.short} value={n.short}>{n.flag} {n.name} ({n.short})</option>)}
-              </select>
+          {isNew ? (
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Scegli Nazione FIFA 2026</label>
+                <select className="adm-select" value={selectedNationShort} onChange={e => pickNationAndCategory(e.target.value, editing.category)}>
+                  <option value="">-- Seleziona nazione --</option>
+                  {nations.map(n => <option key={n.short} value={n.short}>{n.flag} {n.name} ({n.short})</option>)}
+                </select>
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Categoria</label>
+                <select className="adm-select" value={editing.category} onChange={e => pickNationAndCategory(selectedNationShort, e.target.value)}>
+                  <option value="over40">Over 40</option>
+                  <option value="junior">Junior</option>
+                </select>
+              </div>
+            </div>
+          ) : (
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Categoria (Non Modificabile)</label>
+                <input className="adm-input" value={editing.category === 'junior' ? 'Junior' : 'Over 40'} disabled />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Sigla (Non Modificabile)</label>
+                <input className="adm-input" value={editing.short} disabled />
+              </div>
             </div>
           )}
 
           <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Nome squadra</label><input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} /></div>
-            <div className="adm-form-group"><label className="adm-label">Sigla (max 3 lett.)</label><input className="adm-input" value={editing.short} onChange={e => setEditing(f => ({ ...f, short: e.target.value.toUpperCase().slice(0, 3) }))} disabled={!isNew} /></div>
-          </div>
-          <div className="adm-form-row">
-            <div className="adm-form-group"><label className="adm-label">Bandiera (Emoji)</label><input className="adm-input" value={editing.flag || ''} onChange={e => setEditing(f => ({ ...f, flag: e.target.value }))} placeholder="🇮🇹" /></div>
             <div className="adm-form-group">
               <label className="adm-label">Girone</label>
               <select className="adm-select" value={editing.group || ''} onChange={e => setEditing(f => ({ ...f, group: e.target.value }))}>
                 <option value="">-- Nessun girone --</option>
-                {(groups || []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                {availableGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
               </select>
             </div>
           </div>
-          <div className="adm-form-group"><label className="adm-label">Colore</label><input type="color" className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f => ({ ...f, color: e.target.value }))} style={{ height: 40 }} /></div>
 
           <h4 style={{ marginTop: 20, marginBottom: 10, color: '#fff', fontSize: 14 }}>Rosa Giocatori</h4>
           <div style={{ background: '#111', padding: 12, borderRadius: 8, marginBottom: 16 }}>
@@ -1227,7 +1252,7 @@ function TeamsSection({ data, onSave }) {
   }
 
   function newTeam() {
-    setEditing({ short: '', name: '', group: '', flag: '', color: '#00E676', players: [], played: 0, won: 0, goals: 0, points: 0 });
+    setEditing({ short: '', name: '', group: '', flag: '', category: 'over40', players: [], played: 0, won: 0, goals: 0, points: 0 });
   }
 
   const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
@@ -1265,10 +1290,10 @@ function TeamsSection({ data, onSave }) {
           const gName = groupMap[t.group] || (t.group ? t.group : 'Nessun girone');
           return (
             <div key={t.short} className="adm-item-row">
-              <div className="adm-crest" style={{ borderColor: t.color, color: t.color }}>{t.flag || t.short}</div>
+              <div className="adm-crest" style={{ borderColor: 'var(--brand-green)', color: 'var(--brand-green)' }}>{t.flag || t.short}</div>
               <div className="adm-item-row-body">
                 <div className="adm-item-title">{t.flag ? t.flag + ' ' : ''}{t.name}</div>
-                <div className="adm-item-meta">{gName} · {t.players?.length || 0} giocatori</div>
+                <div className="adm-item-meta">{t.category === 'junior' ? 'Junior' : 'Over 40'} · {gName} · {t.players?.length || 0} giocatori</div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>

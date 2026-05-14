@@ -183,7 +183,7 @@ fuori dalla sua competenza.
 | `storage` | data.js | Automatica |
 | `renderer` | admin.jsx, components.jsx | Automatica |
 | `router` | screens.jsx, index.html | Automatica |
-| `linter` | solo lettura, tutti i file | Automatica — sempre ultimo step |
+| `linter` | solo lettura, solo i file modificati | Automatica — sempre ultimo step |
 | `docs` | CLAUDE.md | Automatica — dopo ogni modifica |
 | `refactor` | tutti i file | Manuale — solo su richiesta esplicita |
 | `db` | Supabase | Manuale — solo su richiesta esplicita |
