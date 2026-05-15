@@ -1,6 +1,14 @@
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
 import { EmptyState, Countdown, SponsorWink, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
 
+function fmtDateIt(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  if (isNaN(dt)) return '';
+  const months = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+  return `${dt.getDate()} ${months[dt.getMonth()]}`;
+}
+
 export function HomeScreen({ onNav, data }) {
   const d = data || {};
   const liveMatch       = d.live_match       || DEFAULT_LIVE_MATCH;
@@ -12,7 +20,19 @@ export function HomeScreen({ onNav, data }) {
   const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
   const teams           = d.teams            || [];
   const groups          = d.groups           || [];
-  const kickoff = new Date('2026-06-15T20:00:00+02:00').getTime();
+
+  // Edition metadata — dynamic from bootstrap, hardcoded defaults as fallback
+  const edition      = d.edition || {};
+  const editionName  = edition.name        || 'Cup 2026 · 3ª Edizione';
+  const kickoffIso   = edition.kickoff_date || '2026-06-15T20:00:00+02:00';
+  const kickoff      = new Date(kickoffIso).getTime();
+  const startFmt     = fmtDateIt(edition.start_date) || '15 Giugno';
+  const endFmt       = fmtDateIt(edition.end_date)   || '15 Luglio';
+  const editionPeriod = `${startFmt} – ${endFmt}`;
+  const prize1 = edition.prize_first  ?? 1000;
+  const prize2 = edition.prize_second ?? 400;
+  const prize3 = edition.prize_third  ?? 250;
+  const kickoffLabel = `Calcio d'inizio · ${fmtDateIt(kickoffIso) || '15 Giugno 2026'}`;
 
   return (
     <div data-screen-label="home">
@@ -21,9 +41,9 @@ export function HomeScreen({ onNav, data }) {
         <div className="rm-hero-inner">
           <SponsorWink/>
           <h1 className="rm-hero-title">Rinascita<br/><span className="accent">Monteforte</span></h1>
-          <h2 className="rm-hero-sub">Cup 2026 · 3ª Edizione</h2>
+          <h2 className="rm-hero-sub">{editionName}</h2>
           <p className="rm-hero-meta">
-            <span><CalIcon size={15}/> 15 Giugno – 15 Luglio</span>
+            <span><CalIcon size={15}/> {editionPeriod}</span>
             <span><PinIcon size={15}/> Campo Sportivo, Monteforte Irpino</span>
             <span><UsersIcon size={15}/> {teams.length > 0 ? `${teams.length} squadre · ${groups.length} gironi` : 'Iscrizioni aperte'}</span>
           </p>
@@ -35,7 +55,7 @@ export function HomeScreen({ onNav, data }) {
               Calendario
             </button>
           </div>
-          <Countdown to={kickoff}/>
+          <Countdown to={kickoff} label={kickoffLabel}/>
         </div>
       </section>
 
@@ -111,23 +131,29 @@ export function HomeScreen({ onNav, data }) {
           </div>
         </div>
         <div className="rm-prize-row">
-          <div className="rm-prize gold">
-            <TrophyIcon size={36}/>
-            <div className="rm-prize-place">1° Posto Senior</div>
-            <div className="rm-prize-amt">1.000€</div>
-            <div className="rm-prize-foot">+ coppa + medaglie</div>
-          </div>
-          <div className="rm-prize">
-            <TrophyIcon size={28}/>
-            <div className="rm-prize-place">2° Posto Senior</div>
-            <div className="rm-prize-amt">400€</div>
-            <div className="rm-prize-foot">+ medaglie</div>
-          </div>
-          <div className="rm-prize alt">
-            <div className="rm-prize-place">Iscrizione Senior</div>
-            <div className="rm-prize-amt">250€</div>
-            <div className="rm-prize-foot">per squadra · arbitraggio incluso</div>
-          </div>
+          {prize1 > 0 && (
+            <div className="rm-prize gold">
+              <TrophyIcon size={36}/>
+              <div className="rm-prize-place">1° Posto</div>
+              <div className="rm-prize-amt">{prize1.toLocaleString('it-IT')}€</div>
+              <div className="rm-prize-foot">+ coppa + medaglie</div>
+            </div>
+          )}
+          {prize2 > 0 && (
+            <div className="rm-prize">
+              <TrophyIcon size={28}/>
+              <div className="rm-prize-place">2° Posto</div>
+              <div className="rm-prize-amt">{prize2.toLocaleString('it-IT')}€</div>
+              <div className="rm-prize-foot">+ medaglie</div>
+            </div>
+          )}
+          {prize3 > 0 && (
+            <div className="rm-prize alt">
+              <div className="rm-prize-place">3° Posto</div>
+              <div className="rm-prize-amt">{prize3.toLocaleString('it-IT')}€</div>
+              <div className="rm-prize-foot">+ medaglie</div>
+            </div>
+          )}
         </div>
       </section>
 

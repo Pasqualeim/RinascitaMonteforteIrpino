@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS } from '../../data.js';
+import { DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS, rmAdminDomain, rmGetTeamIdMap } from '../../data.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function LiveSection({ data, onSave }) {
+export function LiveSection({ data, onSave, editionId }) {
   const [lm, setLm] = useState(() => JSON.parse(JSON.stringify(data.live_match)));
   const [teams] = useState(data.teams || DEFAULT_TEAMS);
   const [addingEvent, setAddingEvent] = useState(false);
@@ -30,6 +30,20 @@ export function LiveSection({ data, onSave }) {
     if (updatedScorers) newData.scorers = updatedScorers;
     onSave(newData, updatedScorers ? 'Partita e marcatori aggiornati' : 'Partita live aggiornata');
     setLm({ ...newLm });
+    // Dual-write live state to relational table (fire-and-forget)
+    if (editionId) {
+      const teamIdMap = rmGetTeamIdMap();
+      rmAdminDomain.updateLive({
+        edition_id: editionId,
+        active: newLm.active ?? false,
+        home_team_id: teamIdMap[newLm.home?.short] || null,
+        away_team_id: teamIdMap[newLm.away?.short] || null,
+        home_score: newLm.hs ?? 0,
+        away_score: newLm.as ?? 0,
+        minute: newLm.minute ?? 0,
+        pitch: newLm.pitch || '',
+      }).catch(e => console.warn('Live sync relazionale:', e));
+    }
   }
 
   function updateScorer(playerName, teamShort, teamName, delta) {
@@ -92,6 +106,11 @@ export function LiveSection({ data, onSave }) {
     setAddingEvent(false);
     setEvPlayer('');
     setEvNote('');
+  }
+
+  function undoLastEvent() {
+    if (!lm.events || lm.events.length === 0) return;
+    removeEvent(lm.events.length - 1);
   }
 
   function removeEvent(idx) {
@@ -235,9 +254,11 @@ export function LiveSection({ data, onSave }) {
 
         {lm.active ? (
           <div className="adm-minute-control">
-            <button className="adm-min-btn" onClick={() => setMinute(-1)}>−</button>
+            <button className="adm-min-btn" onClick={() => setMinute(-1)} style={{ minWidth: 44 }}>−1'</button>
             <span className="adm-minute-badge">{lm.minute || 0}'</span>
-            <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(1)}>+</button>
+            <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(1)} style={{ minWidth: 44 }}>+1'</button>
+            <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(5)} style={{ minWidth: 44, fontSize: 13 }}>+5'</button>
+            <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(10)} style={{ minWidth: 44, fontSize: 13 }}>+10'</button>
           </div>
         ) : (
           <div className="adm-minute-control">
@@ -248,41 +269,60 @@ export function LiveSection({ data, onSave }) {
         {lm.active && (
           <div className="adm-score-controls">
             <div className="adm-score-ctrl-col">
-              <button className="adm-score-btn adm-score-btn--plus" onClick={() => setScore('hs', 1)}>
-                +1 <span>{lm.home?.short || 'CASA'}</span>
+              <button className="adm-score-btn adm-score-btn--plus" onClick={() => setScore('hs', 1)}
+                style={{ minHeight: 64, fontSize: 20 }}>
+                ⚽ +1<br/><span style={{ fontSize: 13 }}>{lm.home?.short || 'CASA'}</span>
               </button>
-              <button className="adm-score-btn adm-score-btn--minus" onClick={() => setScore('hs', -1)}>−1</button>
+              <button className="adm-score-btn adm-score-btn--minus" onClick={() => setScore('hs', -1)}
+                style={{ minHeight: 48 }}>−1</button>
             </div>
             <div className="adm-score-ctrl-col">
-              <button className="adm-score-btn adm-score-btn--plus" onClick={() => setScore('as', 1)}>
-                +1 <span>{lm.away?.short || 'OSPITE'}</span>
+              <button className="adm-score-btn adm-score-btn--plus" onClick={() => setScore('as', 1)}
+                style={{ minHeight: 64, fontSize: 20 }}>
+                ⚽ +1<br/><span style={{ fontSize: 13 }}>{lm.away?.short || 'OSPITE'}</span>
               </button>
-              <button className="adm-score-btn adm-score-btn--minus" onClick={() => setScore('as', -1)}>−1</button>
+              <button className="adm-score-btn adm-score-btn--minus" onClick={() => setScore('as', -1)}
+                style={{ minHeight: 48 }}>−1</button>
             </div>
           </div>
         )}
 
         {lm.active && (
           <>
-            <div className="adm-label" style={{ marginBottom: 8, marginTop: 4 }}>Registra evento</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, marginTop: 4 }}>
+              <span className="adm-label" style={{ margin: 0 }}>Registra evento</span>
+              {lm.events?.length > 0 && (
+                <button
+                  onClick={undoLastEvent}
+                  style={{ fontSize: 12, color: 'var(--fg-3)', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}
+                >
+                  ↩ Annulla ultimo
+                </button>
+              )}
+            </div>
             <div className="adm-live-event-btns">
-              <button className="adm-live-ev-btn adm-ev-goal" onClick={() => addEvent('goal')}>⚽<span>Gol</span></button>
-              <button className="adm-live-ev-btn adm-ev-yellow" onClick={() => addEvent('yellow')}>🟨<span>Giallo</span></button>
-              <button className="adm-live-ev-btn adm-ev-red" onClick={() => addEvent('red')}>🟥<span>Rosso</span></button>
+              <button className="adm-live-ev-btn adm-ev-goal" onClick={() => addEvent('goal')}
+                style={{ minHeight: 64, fontSize: 28 }}>⚽<span>Gol</span></button>
+              <button className="adm-live-ev-btn adm-ev-yellow" onClick={() => addEvent('yellow')}
+                style={{ minHeight: 64, fontSize: 28 }}>🟨<span>Giallo</span></button>
+              <button className="adm-live-ev-btn adm-ev-red" onClick={() => addEvent('red')}
+                style={{ minHeight: 64, fontSize: 28 }}>🟥<span>Rosso</span></button>
             </div>
           </>
         )}
 
         {lm.events?.length > 0 && (
           <div className="adm-events-log">
-            {lm.events.map((ev, i) => (
+            {[...lm.events].reverse().map((ev, i) => (
               <div key={i} className="adm-ev-row">
                 <span className="min">{ev.min}'</span>
                 <span>{ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : '🟥'}</span>
                 <span style={{ fontSize: 13, color: 'var(--fg-2)', flex: 1 }}>
                   <b style={{ color: '#fff' }}>{ev.player}</b> · {ev.team}
                 </span>
-                <button className="adm-ev-del" onClick={() => removeEvent(i)}>✕</button>
+                <button className="adm-ev-del"
+                  onClick={() => removeEvent(lm.events.length - 1 - i)}
+                  style={{ minWidth: 36, minHeight: 36 }}>✕</button>
               </div>
             ))}
           </div>

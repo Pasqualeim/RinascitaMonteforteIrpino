@@ -151,7 +151,7 @@ function StatusStrip({ items }) {
 }
 
 // ── Countdown ─────────────────────────────────────────────────────────────
-function Countdown({ to }) {
+function Countdown({ to, label }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -175,7 +175,7 @@ function Countdown({ to }) {
   const pad = (n) => String(n).padStart(2, '0');
   return (
     <div className="rm-countdown">
-      <span className="rm-eyebrow">Calcio d'inizio · 15 Giugno 2026</span>
+      <span className="rm-eyebrow">{label || "Calcio d'inizio · 15 Giugno 2026"}</span>
       <div className="rm-cd-row">
         <div className="rm-cd-cell"><b>{pad(d)}</b><span>giorni</span></div>
         <div className="rm-cd-sep">:</div>

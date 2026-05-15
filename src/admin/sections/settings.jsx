@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY } from '../../data.js';
+import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY, rmMigrateDataToRelational } from '../../data.js';
 import { isAdminSessionError, Confirm } from '../shared.jsx';
 
-export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
+export function SettingsSection({ data, onSave, adminUser, onUserChange, editionId, tournamentId }) {
   const [user, setUser] = useState(adminUser?.username || '');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [msg, setMsg] = useState('');
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const [migrateResult, setMigrateResult] = useState(null);
 
   useEffect(() => {
     setUser(adminUser?.username || '');
@@ -27,6 +29,20 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
       if (onUserChange) onUserChange(payload.user);
     } catch (error) {
       setMsg(isAdminSessionError(error) ? 'Sessione scaduta. Rientra nel pannello e riprova.' : (error?.message || 'Aggiornamento credenziali fallito'));
+    }
+  }
+
+  async function doMigrate() {
+    if (!editionId) { setMigrateResult({ error: 'Nessuna edizione attiva trovata. Verifica connessione Supabase.' }); return; }
+    setMigrating(true);
+    setMigrateResult(null);
+    try {
+      const results = await rmMigrateDataToRelational(data, editionId, tournamentId);
+      setMigrateResult(results);
+    } catch (e) {
+      setMigrateResult({ error: e?.message || 'Migrazione fallita' });
+    } finally {
+      setMigrating(false);
     }
   }
 
@@ -76,6 +92,38 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
           <div style={{ fontSize: 13, color: 'var(--fg-2)' }}>
             Utente corrente: <strong style={{ color: 'var(--fg-1)' }}>{adminUser?.username || 'staff'}</strong>
           </div>
+        </div>
+      </div>
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header"><span className="adm-card-title">Migrazione database</span></div>
+        <div className="adm-card-body">
+          <p style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 8 }}>
+            Copia tutti i dati attuali (gironi, squadre, partite, marcatori, ecc.) nel nuovo database relazionale.
+            {editionId
+              ? <span style={{ color: 'var(--brand-green)', display: 'block', marginTop: 4 }}>✓ Edizione 2026 rilevata</span>
+              : <span style={{ color: '#FF3D3D', display: 'block', marginTop: 4 }}>✗ Nessuna edizione attiva trovata</span>
+            }
+          </p>
+          {migrateResult && !migrateResult.error && (
+            <div style={{ fontSize: 12, color: 'var(--brand-green)', marginBottom: 10, lineHeight: 1.7 }}>
+              ✓ Gironi: {migrateResult.groups} · Squadre: {migrateResult.teams} · Partite: {migrateResult.matches} · Marcatori: {migrateResult.scorers} · News: {migrateResult.news} · Sponsor: {migrateResult.sponsors}
+              {migrateResult.errors?.length > 0 && (
+                <div style={{ color: '#F5C518', marginTop: 4 }}>
+                  {migrateResult.errors.length} errori: {migrateResult.errors.slice(0, 3).join('; ')}
+                </div>
+              )}
+            </div>
+          )}
+          {migrateResult?.error && (
+            <div style={{ fontSize: 12, color: '#FF3D3D', marginBottom: 10 }}>{migrateResult.error}</div>
+          )}
+          <button
+            className="adm-btn adm-btn-sm"
+            onClick={doMigrate}
+            disabled={migrating || !editionId}
+          >
+            {migrating ? 'Migrazione in corso…' : 'Migra al nuovo database'}
+          </button>
         </div>
       </div>
       <div className="adm-card">

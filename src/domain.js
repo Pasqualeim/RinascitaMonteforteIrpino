@@ -1,4 +1,4 @@
-export const RM_TOURNAMENT_SCHEMA_VERSION = 2;
+export const RM_TOURNAMENT_SCHEMA_VERSION = 3;
 export const RM_ADMIN_SESSION_KEY = 'rm_admin_session_v1';
 const GROUP_COLOR_FALLBACK = '#00E676';
 
@@ -35,6 +35,9 @@ export function rmNormalizeTournamentData(saved) {
   normalized.teams = Array.isArray(saved.teams) ? saved.teams.map(rmNormalizeTeam) : [];
   normalized.groups = Array.isArray(saved.groups) ? saved.groups.map(rmNormalizeGroup) : [];
   normalized.schema_version = RM_TOURNAMENT_SCHEMA_VERSION;
+  // V3 extras: preserve edition/tournament metadata if present
+  if (saved.edition) normalized.edition = saved.edition;
+  if (saved.tournament) normalized.tournament = saved.tournament;
   delete normalized._auth;
   delete normalized.matches_today;
   delete normalized.strip_items;

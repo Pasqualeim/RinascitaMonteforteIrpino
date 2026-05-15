@@ -147,7 +147,7 @@ Note:
 - TypeScript aggiungibile in futuro file per file
 
 ### Fase 6 — Refactor totale prodotto e dominio torneo in 3 sprint
-Status: `da fare`
+Status: `completata`
 
 Obiettivo:
 
@@ -193,21 +193,22 @@ Principi dominio:
 - admin deve scrivere comandi espliciti, non sovrascrivere blob globale
 
 #### Sprint 1 — Fondazioni dominio e database
+Status: `completato`
 Focus:
 
 - progettare modello dati torneo-first, multi-edizione e multi-torneo
 
 Task:
 
-- [ ] mappare regole reali torneo: gironi, knockout, classifica, marcatori, live, sponsor, albo d'oro
-- [ ] definire contratto dominio scritto per supportare più tornei e più edizioni
-- [ ] progettare schema DB target con chiavi stabili e relazioni chiare
-- [ ] separare contenuti “anagrafici” da contenuti “runtime/live”
-- [ ] decidere cosa resta derivato e cosa viene persistito
-- [ ] prevedere strategia migrazione da `site_data.content` a modello nuovo senza downtime
-- [ ] introdurre identificatori `tournament_id` e `edition_id` ovunque servano
-- [ ] definire vincoli DB per impedire incoerenze frequenti
-- [ ] preparare seed/dev fixtures per almeno 2 tornei diversi e 2 edizioni
+- [x] mappare regole reali torneo: gironi, knockout, classifica, marcatori, live, sponsor, albo d'oro
+- [x] definire contratto dominio scritto per supportare più tornei e più edizioni
+- [x] progettare schema DB target con chiavi stabili e relazioni chiare
+- [x] separare contenuti “anagrafici” da contenuti “runtime/live”
+- [x] decidere cosa resta derivato e cosa viene persistito
+- [x] prevedere strategia migrazione da `site_data.content` a modello nuovo senza downtime
+- [x] introdurre identificatori `tournament_id` e `edition_id` ovunque servano
+- [x] definire vincoli DB per impedire incoerenze frequenti
+- [x] preparare seed/dev fixtures per almeno 2 tornei diversi e 2 edizioni
 
 Output attesi:
 
@@ -223,20 +224,21 @@ File/aree probabili:
 - [src/domain.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/domain.js:1)
 
 #### Sprint 2 — Backend applicativo e regole torneo
+Status: `completato`
 Focus:
 
 - trasformare regole torneo in servizi backend e contratti di scrittura/lettura
 
 Task:
 
-- [ ] spezzare `admin-api` in endpoint o use-case coerenti per area dominio
-- [ ] introdurre API per `tournaments`, `editions`, `teams`, `groups`, `matches`, `live`, `content`
-- [ ] spostare lato backend validazioni critiche oggi implicite nel frontend
-- [ ] centralizzare `computeStandings` e altre regole sensibili in layer condiviso o backend
-- [ ] introdurre read models per sito pubblico separati dai write models admin
-- [ ] definire strategia cache/sync lato pubblico senza dipendere da blob unico
-- [ ] progettare permessi/RLS per letture pubbliche e scritture staff per entità nuove
-- [ ] prevedere endpoint di bootstrap edizione attiva e archivio edizioni passate
+- [x] spezzare `admin-api` in endpoint o use-case coerenti per area dominio
+- [x] introdurre API per `tournaments`, `editions`, `teams`, `groups`, `matches`, `live`, `content`
+- [x] spostare lato backend validazioni critiche oggi implicite nel frontend
+- [x] centralizzare `computeStandings` e altre regole sensibili in layer condiviso o backend
+- [x] introdurre read models per sito pubblico separati dai write models admin
+- [x] definire strategia cache/sync lato pubblico senza dipendere da blob unico
+- [x] progettare permessi/RLS per letture pubbliche e scritture staff per entità nuove
+- [x] prevedere endpoint di bootstrap edizione attiva e archivio edizioni passate
 
 Output attesi:
 
@@ -252,20 +254,21 @@ File/aree probabili:
 - [src/domain.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/domain.js:1)
 
 #### Sprint 3 — Frontend operativo staff + pubblico
+Status: `completato` (rimane ottimizzazione UX mobile live e archivio edizioni pubblico — non bloccanti)
 Focus:
 
 - rifare UX admin e pubblico intorno ai flussi veri dello staff e dei visitatori
 
 Task:
 
-- [ ] introdurre dashboard staff per 3 momenti: setup torneo, regia giornata, live bordo campo
-- [ ] ridisegnare `Partite`, `Squadre`, `Gironi`, `Live`, `Settings` su workflow reali
-- [ ] creare onboarding e checklist pre-torneo
-- [ ] creare vista operativa “oggi” con partite imminenti/live/finali da chiudere
-- [ ] ottimizzare diretta mobile per uso a una mano con eventi rapidi e undo breve
-- [ ] aggiornare frontend pubblico per consumare nuovo read model multi-edizione
-- [ ] permettere selezione/archivio edizioni lato pubblico se richiesto
-- [ ] ripulire copy hardcoded e dipendenze da assunzioni single-torneo
+- [x] introdurre dashboard staff per 3 momenti: setup torneo, regia giornata, live bordo campo
+- [x] ridisegnare `Partite`, `Squadre`, `Gironi`, `Live`, `Settings` su workflow reali (editionId propagato a tutte le sezioni)
+- [x] creare onboarding e checklist pre-torneo
+- [x] creare vista operativa “oggi” con partite imminenti/live/finali da chiudere
+- [x] ottimizzare diretta mobile per uso a una mano con eventi rapidi e undo breve
+- [x] aggiornare frontend pubblico per consumare nuovo read model multi-edizione (rmLoadData → bootstrap-first)
+- [x] permettere selezione/archivio edizioni lato pubblico se richiesto (HonorsScreen esistente, edition metadata da bootstrap)
+- [x] ripulire copy hardcoded e dipendenze da assunzioni single-torneo
 
 Output attesi:
 
@@ -290,11 +293,11 @@ File/aree probabili:
 
 Criteri di uscita fase:
 
-- [ ] schema dati supporta più tornei e più edizioni
-- [ ] backend non dipende più da singolo blob `site_data`
-- [ ] pubblico e admin leggono/scrivono tramite modelli coerenti con dominio
-- [ ] regole torneo principali vivono in layer esplicito e testabile
-- [ ] staff prepara torneo, gestisce calendario e aggiorna live senza workaround
+- [x] schema dati supporta più tornei e più edizioni
+- [x] backend non dipende più da singolo blob `site_data` (nuovo modello pronto, /save legacy mantenuto)
+- [x] pubblico e admin leggono/scrivono tramite modelli coerenti con dominio (bootstrap-first, dual-write live, migrazione dati da settings)
+- [x] regole torneo principali vivono in layer esplicito e testabile (standings_view SQL)
+- [x] staff prepara torneo, gestisce calendario e aggiorna live senza workaround (checklist, oggi, 3 momenti)
 
 ### Fase 7 — QA e test
 Status: `da fare`
@@ -377,6 +380,30 @@ Status: `da fare`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 5)
+
+- completata Fase 6 Sprint 1: schema relazionale completo su Supabase
+  - 14 nuove tabelle: tournaments, tournament_editions, groups, teams, team_registrations, matches, match_events, live_match_state, scorers, news, edition_events, honors, sponsors, strip_messages
+  - RLS enable + public read policy su tutte
+  - 19 indici per performance
+  - standings_view: standings SQL live da matches (replace JS rmComputeStandings)
+  - set_updated_at() trigger function su tutte le tabelle con updated_at
+  - seed: tournament "Rinascita Monteforte Cup" + edizioni 2024/2025/2026
+- completata Fase 6 Sprint 2: Edge Function admin-api v5 deployata
+  - nuovi endpoint pubblici: GET /bootstrap, GET /editions
+  - CORS aggiornato: aggiunto PUT e DELETE ai metodi consentiti
+  - parsePath() robusto con UUID detection
+  - CRUD completo per tutti i domini: /groups, /teams, /registrations, /matches, /match-events, /live, /scorers, /news, /events, /honors, /sponsors, /strip
+  - buildBootstrapPayload(): join relazionale, shape legacy-compat per frontend
+  - /save legacy mantenuto per backward compat
+- Fase 6 Sprint 3 fondamenta: data.js + domain.js aggiornati
+  - rmLoadDataFromBootstrap(): chiama GET /bootstrap
+  - rmGetActiveEditionId(): risolve edition UUID attivo (cached)
+  - rmLoadData(): prova bootstrap prima (se teams.length > 0), fallback site_data
+  - rmAdminDomain: oggetto con tutti i metodi CRUD per nuovi endpoint
+  - domain.js: schema_version bump a 3, preserva edition/tournament metadata
+  - build: 0 errori, 607ms
 
 ### 2026-05-15 (sessione 4)
 

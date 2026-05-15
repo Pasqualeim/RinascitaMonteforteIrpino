@@ -180,6 +180,188 @@ export async function rmAdminUpdateCredentials({ username, password }) {
   return payload;
 }
 
+// ── Team ID map (short → relational uuid, persisted after migration) ──
+export const RM_TEAM_ID_MAP_KEY = 'rm_team_id_map_v1';
+export function rmGetTeamIdMap() {
+  try { return JSON.parse(localStorage.getItem(RM_TEAM_ID_MAP_KEY) || '{}'); } catch { return {}; }
+}
+export function rmSetTeamIdMap(map) {
+  localStorage.setItem(RM_TEAM_ID_MAP_KEY, JSON.stringify(map));
+}
+
+// ── Migration: blob → relational tables ──────────────────────
+export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
+  const results = { groups: 0, teams: 0, registrations: 0, matches: 0, scorers: 0, news: 0, events: 0, honors: 0, sponsors: 0, errors: [] };
+  const groupIdMap = {};
+  const teamIdMap  = {};
+
+  for (const g of (data.groups || [])) {
+    try {
+      const res = await rmAdminDomain.createGroup({ edition_id: editionId, name: g.name, color: g.color || '#00E676' });
+      groupIdMap[g.id] = res.data.id;
+      results.groups++;
+    } catch (e) { results.errors.push(`Girone ${g.name}: ${e.message}`); }
+  }
+
+  for (const t of (data.teams || [])) {
+    try {
+      const res = await rmAdminDomain.createTeam({ name: t.name, short: t.short, nation: t.nation, flag: t.flag, color: t.color });
+      const teamId = res.data.id;
+      teamIdMap[t.short] = teamId;
+      results.teams++;
+      const localGroupId = t.group_id || t.group || '';
+      await rmAdminDomain.upsertRegistration({
+        team_id: teamId, edition_id: editionId,
+        group_id: groupIdMap[localGroupId] || null,
+        captain: t.captain || null,
+        players: t.players || [],
+      });
+      results.registrations++;
+    } catch (e) { results.errors.push(`Squadra ${t.name}: ${e.message}`); }
+  }
+  rmSetTeamIdMap(teamIdMap);
+
+  for (const phase of (data.matches_giornata || [])) {
+    const groupEntry = (data.groups || []).find(g => g.name === phase.day);
+    const groupId = groupEntry ? (groupIdMap[groupEntry.id] || null) : null;
+    for (const m of (phase.items || [])) {
+      try {
+        await rmAdminDomain.createMatch({
+          edition_id: editionId, group_id: groupId,
+          home_team_id: teamIdMap[m.home?.short] || null,
+          away_team_id: teamIdMap[m.away?.short] || null,
+          home_score: m.hs ?? null, away_score: m.as ?? null,
+          status: m.status || 'sch', phase: phase.day || 'Girone',
+          match_date: m.date || null, match_time: m.time || null,
+          pitch: m.pitch || 'Campo Sportivo',
+        });
+        results.matches++;
+      } catch (e) { results.errors.push(`Partita: ${e.message}`); }
+    }
+  }
+
+  for (const s of (data.scorers || [])) {
+    try {
+      await rmAdminDomain.createScorer({ edition_id: editionId, player_name: s.name, team_id: teamIdMap[s.short] || null, goals: s.goals || 0 });
+      results.scorers++;
+    } catch (e) { results.errors.push(`Marcatore ${s.name}: ${e.message}`); }
+  }
+
+  for (const n of (data.news || [])) {
+    try {
+      await rmAdminDomain.createNews({ edition_id: editionId, title: n.title, body: n.text || n.body || null, category: n.category, tone: n.tone, pinned: n.pinned ?? false });
+      results.news++;
+    } catch (e) { results.errors.push(`News: ${e.message}`); }
+  }
+
+  for (const ev of (data.events || [])) {
+    try {
+      await rmAdminDomain.createEvent({ edition_id: editionId, title: ev.title, event_date: ev.date || null, event_type: ev.type || 'partita', description: ev.desc || ev.description || null });
+      results.events++;
+    } catch (e) { results.errors.push(`Evento: ${e.message}`); }
+  }
+
+  for (const h of (data.honors || [])) {
+    try {
+      await rmAdminDomain.createHonor({
+        tournament_id: tournamentId || null,
+        edition_name: h.edition || h.name || String(h.year || ''),
+        year: parseInt(h.year) || 0,
+        winner: h.winner || null, runner_up: h.runner_up || h.second || null,
+        third_place: h.third || null, mvp: h.mvp || null, top_scorer: h.top_scorer || h.scorer || null,
+      });
+      results.honors++;
+    } catch (e) { results.errors.push(`Albo: ${e.message}`); }
+  }
+
+  for (const sp of (data.sponsors || [])) {
+    try {
+      await rmAdminDomain.createSponsor({ edition_id: editionId, name: sp.name, logo_url: sp.logo || null, website_url: sp.url || null, tag: sp.tag || null });
+      results.sponsors++;
+    } catch (e) { results.errors.push(`Sponsor ${sp.name}: ${e.message}`); }
+  }
+
+  return results;
+}
+
+// ── Bootstrap API (public, schema v3) ────────────────────────
+let _cachedEditionId = null;
+
+export async function rmLoadDataFromBootstrap() {
+  if (!SUPABASE_FUNCTIONS_URL) return null;
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/bootstrap`);
+    if (!res.ok) return null;
+    const { data } = await res.json();
+    if (!data || data.schema_version !== 3) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function rmGetActiveEditionId() {
+  if (_cachedEditionId) return _cachedEditionId;
+  const data = await rmLoadDataFromBootstrap();
+  if (data?.edition?.id) {
+    _cachedEditionId = data.edition.id;
+  }
+  return _cachedEditionId || null;
+}
+
+// ── Admin CRUD API (domain endpoints, auth required) ─────────
+async function rmAdminApiCrud(method, path, body) {
+  return rmAdminApi(path, { method, body });
+}
+
+export const rmAdminDomain = {
+  // Groups
+  createGroup: (p)    => rmAdminApiCrud('POST', '/groups', p),
+  updateGroup: (id,p) => rmAdminApiCrud('PUT', `/groups/${id}`, p),
+  deleteGroup: (id)   => rmAdminApiCrud('DELETE', `/groups/${id}`),
+  // Teams
+  createTeam: (p)     => rmAdminApiCrud('POST', '/teams', p),
+  updateTeam: (id,p)  => rmAdminApiCrud('PUT', `/teams/${id}`, p),
+  deleteTeam: (id)    => rmAdminApiCrud('DELETE', `/teams/${id}`),
+  // Registrations
+  upsertRegistration: (p)    => rmAdminApiCrud('POST', '/registrations', p),
+  updateRegistration: (id,p) => rmAdminApiCrud('PUT', `/registrations/${id}`, p),
+  deleteRegistration: (id)   => rmAdminApiCrud('DELETE', `/registrations/${id}`),
+  // Matches
+  createMatch: (p)    => rmAdminApiCrud('POST', '/matches', p),
+  updateMatch: (id,p) => rmAdminApiCrud('PUT', `/matches/${id}`, p),
+  deleteMatch: (id)   => rmAdminApiCrud('DELETE', `/matches/${id}`),
+  // Match events
+  createMatchEvent: (p)  => rmAdminApiCrud('POST', '/match-events', p),
+  deleteMatchEvent: (id) => rmAdminApiCrud('DELETE', `/match-events/${id}`),
+  // Live
+  updateLive: (p) => rmAdminApiCrud('PUT', '/live', p),
+  // Scorers
+  createScorer: (p)    => rmAdminApiCrud('POST', '/scorers', p),
+  updateScorer: (id,p) => rmAdminApiCrud('PUT', `/scorers/${id}`, p),
+  deleteScorer: (id)   => rmAdminApiCrud('DELETE', `/scorers/${id}`),
+  // News
+  createNews: (p)    => rmAdminApiCrud('POST', '/news', p),
+  updateNews: (id,p) => rmAdminApiCrud('PUT', `/news/${id}`, p),
+  deleteNews: (id)   => rmAdminApiCrud('DELETE', `/news/${id}`),
+  // Events
+  createEvent: (p)    => rmAdminApiCrud('POST', '/events', p),
+  updateEvent: (id,p) => rmAdminApiCrud('PUT', `/events/${id}`, p),
+  deleteEvent: (id)   => rmAdminApiCrud('DELETE', `/events/${id}`),
+  // Honors
+  createHonor: (p)    => rmAdminApiCrud('POST', '/honors', p),
+  updateHonor: (id,p) => rmAdminApiCrud('PUT', `/honors/${id}`, p),
+  deleteHonor: (id)   => rmAdminApiCrud('DELETE', `/honors/${id}`),
+  // Sponsors
+  createSponsor: (p)    => rmAdminApiCrud('POST', '/sponsors', p),
+  updateSponsor: (id,p) => rmAdminApiCrud('PUT', `/sponsors/${id}`, p),
+  deleteSponsor: (id)   => rmAdminApiCrud('DELETE', `/sponsors/${id}`),
+  // Strip messages
+  createStrip: (p)    => rmAdminApiCrud('POST', '/strip', p),
+  updateStrip: (id,p) => rmAdminApiCrud('PUT', `/strip/${id}`, p),
+  deleteStrip: (id)   => rmAdminApiCrud('DELETE', `/strip/${id}`),
+};
+
 // ── Data persistence ─────────────────────────────────────────
 function rmIsAdminPage() {
   try {
@@ -226,6 +408,22 @@ export function rmGetAllData() {
 }
 
 export async function rmLoadData() {
+  // Try bootstrap API first (schema v3 — relational tables)
+  // Only use if it has real teams data (migration complete)
+  if (SUPABASE_FUNCTIONS_URL) {
+    try {
+      const bootstrapData = await rmLoadDataFromBootstrap();
+      if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
+        const normalized = rmNormalizeTournamentData(bootstrapData);
+        localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
+      }
+    } catch (e) {
+      console.warn('Bootstrap API fallita, uso site_data:', e);
+    }
+  }
+
+  // Fallback: Supabase site_data direct read (legacy blob)
   if (!_supabase) return rmLoadLocal();
   try {
     const { data, error } = await _supabase
