@@ -381,6 +381,21 @@ Status: `da fare`
 
 ## Log modifiche
 
+### 2026-05-15 (sessione 6)
+
+- corretto modello dati: editions (container annuale) + tournaments (categorie: Senior, Over 40, Junior…) dentro edizione
+- droppate tutte le tabelle v1 (schema sbagliato, vuote), ricreate con schema corretto:
+  - tournaments.edition_id → FK su editions
+  - groups/matches/live_match_state/scorers/team_registrations → tournament_id
+  - news/events/honors/sponsors/strip_messages → edition_id (condivisi tra categorie)
+  - standings_view aggiornata con tournament_id
+- Edge Function v7: buildBootstrap ora ritorna tournaments[] con dati per-categoria + legacy flat
+- Admin: selettore categoria dropdown in topbar, DashboardSection mostra badge categorie
+- Settings: "Edizioni & Categorie" — crea edizioni, aggiungi/rimuovi categorie con premi separati
+- data.js: rmAdminDomain aggiornato (tournament_id dove serve), rmMigrateDataToRelational corretto
+- Seed: edizione 2026 con Senior (1000€) + Over 40 (500€)
+- CLAUDE.md: aggiornato con schema v3 completo, tabelle, endpoint, modello dati
+
 ### 2026-05-15 (sessione 5)
 
 - completata Fase 6 Sprint 1: schema relazionale completo su Supabase

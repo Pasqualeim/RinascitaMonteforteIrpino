@@ -74,76 +74,121 @@ dist/                   → Output build (non committare)
 - Sessione breve in `sessionStorage.rm_admin_session_v1`
 - Cambio username/password in tab "Settings" via endpoint protetto `/credentials`
 
+**Selettore categoria:** dropdown in topbar per scegliere categoria attiva (Senior, Over 40, ecc.) quando ci sono più tornei nell'edizione. Tutti i tab competizione operano sulla categoria selezionata.
+
 **Sezioni admin:**
 
 | Tab | Cosa gestisce |
 |-----|---------------|
 | Gironi | CRUD gironi con colore, auto-calcolo standings per girone |
-| Live 🔴 | Avvia/termina diretta, punteggio +/−, minuto +/−, eventi (⚽🟨🟥↻) |
+| Live 🔴 | Avvia/termina diretta, punteggio +/−, minuto +/−, eventi (⚽🟨🟥↻), undo, +5'/+10' |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
 | Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
-| Classifica | G/V/N/P/GF/GS/Pt/Forma per ogni squadra, per girone (tab dinamici) |
+| Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB) |
 | Marcatori | CRUD capocannonieri con gol |
 | Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
 | Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
 | Albo d'oro | CRUD edizioni passate |
 | Sponsor | CRUD sponsor con tag |
 | Striscia | Messaggi ticker verde in cima al sito |
-| Settings | Cambio username/password, reset dati a default |
+| Settings | Cambio username/password, reset dati, gestione edizioni+categorie, migrazione DB |
 
-## Flusso dati (Supabase + localStorage fallback)
+## Flusso dati (Supabase relazionale + localStorage fallback)
 
 ```
 Admin login → POST /functions/v1/admin-api/login
             → token sessione in sessionStorage["rm_admin_session_v1"]
 
 Admin salva → rmSaveData() → localStorage["rm_data_v2"] (immediato)
-                           → POST /functions/v1/admin-api/save
-                           → Supabase: site_data WHERE id=1 UPDATE content
+                           → POST /functions/v1/admin-api/save  (legacy blob)
+             Live dual-write → PUT /functions/v1/admin-api/live  (relazionale)
 
 Sito pubblico → rmLoadData() ogni 30s:
-  1. Prova Supabase site_data.content
-  2. Se fallisce → localStorage["rm_data_v2"]
-  3. Se entrambi vuoti → DEFAULT_* hardcodati in data.js
+  1. GET /functions/v1/admin-api/bootstrap → se teams.length > 0, usa dati relazionali
+  2. Altrimenti → Supabase site_data.content (legacy blob)
+  3. Altrimenti → localStorage["rm_data_v2"]
+  4. Altrimenti → DEFAULT_* hardcodati in data.js
+
+Migrazione dati (una-tantum, da Settings admin):
+  → rmMigrateDataToRelational(data, editionId, tournamentId)
+  → popola tutte le tabelle relazionali dal blob corrente
+  → salva rm_team_id_map_v1 in localStorage (short → uuid) per live dual-write
 ```
 
 **Supabase progetto:** `jummgmhkapvvibicnqos` ("Rinascita Cup") — `eu-west-1` — `ACTIVE_HEALTHY`
 **URL:** `https://jummgmhkapvvibicnqos.supabase.co`
-**Tabella:** `site_data` — colonne: `id bigint PK`, `content jsonb`, `updated_at timestamptz`
-**Tabelle auth custom:** `admin_users`, `admin_sessions`
-**Edge Function:** `admin-api`
-**Riga dati:** sempre `id=1` (upsert su riga singola)
-**RLS desiderata:** `site_data` leggibile dal client pubblico; scritture solo via Edge Function con `service_role`
 
-Struttura `content` jsonb:
+**Tabelle legacy (backward compat):**
+- `site_data` — `id bigint PK`, `content jsonb`, `updated_at timestamptz` — blob JSON schema v2
+- `admin_users`, `admin_sessions` — auth custom
+
+**Tabelle relazionali (schema v3 — Fase 6):**
+
+| Tabella | FK principale | Scopo |
+|---------|---------------|-------|
+| `editions` | — | Container annuale (es. "Rinascita Cup 2026") |
+| `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…) |
+| `groups` | `tournament_id` | Gironi dentro una categoria |
+| `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
+| `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria |
+| `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |
+| `match_events` | `match_id` | Goal, cartellini, cambi |
+| `live_match_state` | `tournament_id` UNIQUE | Stato live per categoria (una riga per torneo) |
+| `scorers` | `tournament_id` | Marcatori per categoria |
+| `news` | `edition_id` | Avvisi condivisi tra categorie |
+| `edition_events` | `edition_id` | Timeline eventi condivisi |
+| `honors` | `edition_id`, `tournament_id` | Albo d'oro |
+| `sponsors` | `edition_id` | Sponsor condivisi |
+| `strip_messages` | `edition_id` | Ticker condivisi |
+
+**Edge Function `admin-api` (v7) — endpoint:**
+
+| Metodo | Path | Auth | Scopo |
+|--------|------|------|-------|
+| GET | `/bootstrap[?edition=slug]` | No | Payload completo per edizione (multi-torneo) |
+| GET | `/editions` | No | Lista edizioni con categorie |
+| POST | `/login` | No | Login staff |
+| GET | `/me` | Sì | Sessione corrente |
+| POST | `/logout` | Sì | Logout |
+| POST | `/credentials` | Sì | Cambio username/password |
+| POST | `/save` | Sì | Salva blob legacy (backward compat) |
+| POST/PUT | `/editions[/:id]` | Sì | CRUD edizioni |
+| POST/PUT/DELETE | `/tournaments[/:id]` | Sì | CRUD categorie |
+| POST/PUT/DELETE | `/groups[/:id]` | Sì | CRUD gironi (tournament_id) |
+| POST/PUT/DELETE | `/teams[/:id]` | Sì | CRUD squadre globali |
+| POST/PUT/DELETE | `/registrations[/:id]` | Sì | CRUD iscrizioni (tournament_id) |
+| POST/PUT/DELETE | `/matches[/:id]` | Sì | CRUD partite (tournament_id) |
+| POST/DELETE | `/match-events[/:id]` | Sì | CRUD eventi partita |
+| PUT | `/live` | Sì | Aggiorna stato live (tournament_id) |
+| POST/PUT/DELETE | `/scorers[/:id]` | Sì | CRUD marcatori (tournament_id) |
+| POST/PUT/DELETE | `/news[/:id]` | Sì | CRUD news (edition_id) |
+| POST/PUT/DELETE | `/events[/:id]` | Sì | CRUD eventi (edition_id) |
+| POST/PUT/DELETE | `/honors[/:id]` | Sì | CRUD albo d'oro |
+| POST/PUT/DELETE | `/sponsors[/:id]` | Sì | CRUD sponsor (edition_id) |
+| POST/PUT/DELETE | `/strip[/:id]` | Sì | CRUD ticker (edition_id) |
+
+**Schema bootstrap response (schema_version: 3):**
 ```js
 {
-  schema_version,    // 2
-  teams,             // [{ id, name, group_id, nation (FIFA 2026), ... }]
-  groups,            // [{ id, name, color }] gironi creati dallo staff
-  standings_groups,  // [{ id, name, color, rows: [...] }] classifiche auto-calcolate per girone
-  live_match,        // { active: bool, home, away, hs, as, minute, events[] }
-  matches_giornata,
-  scorers, news, events, honors, sponsors,
-  updated_at         // ISO timestamp ultimo salvataggio
+  schema_version: 3,
+  edition: { id, name, year, slug, status, kickoff_date, start_date, end_date, location },
+  tournaments: [          // array categorie
+    {
+      id, name, slug, sort_order, prize_first, prize_second, prize_third,
+      groups, teams, standings_groups, live_match,
+      matches, matches_giornata, scorers
+    }
+  ],
+  // Legacy compat (primo torneo esposto flat per admin/public esistente):
+  groups, teams, standings_groups, live_match, matches, matches_giornata, scorers,
+  // Condivisi edizione:
+  news, events, honors, sponsors, strip_items, updated_at
 }
 ```
 
-**Derivati runtime, non persistiti:** `matches_today`, `strip_items`
-**Alias legacy runtime:** `standings_a`, `standings_o40`, `standings_jr` (sempre `[]`)
+**Seed DB attuale:** edizione 2026 con categorie Senior (1000€) e Over 40 (500€). Edizioni 2024/2025 come storico.
 
-**Nota `live_match`:** lo schema non include `phase` né `giornata` — la `LiveBoard` mostra solo `pitch`. Il tempo (1°/2° tempo) è calcolato automaticamente: `minute > 45 → "2° tempo"`, altrimenti `"1° tempo"`.
-
-**Campi team principali:** `short, name, group_id, nation, flag, players`
-(campo `category` rimosso — sostituito da `group_id`)
-
-**Nota:** `content={}` al primo avvio è normale. App usa default finché admin non salva.
-
-**Globals window (rifrescati da rmLoadData):**
-- `GROUPS` — array gironi
-- `STANDINGS_GROUPS` — classifiche calcolate per girone
-- `NATIONS_2026` — dict nazioni FIFA 2026 (name → {flag, short})
-- `TEAMS`, `MATCHES_TODAY`, `LIVE_MATCH`, ecc. — come prima
+**Nota:** `content={}` al primo avvio è normale. App usa default finché admin non migra al modello relazionale.
 
 **Note MCP:** usare sempre il progetto `jummgmhkapvvibicnqos` quando disponibile nel plugin/connector Supabase.
 
@@ -158,34 +203,38 @@ Struttura `content` jsonb:
 --bg-surface:  #141414
 ```
 
-## Sistema gironi — flusso operativo
+## Sistema edizione, categorie e gironi — flusso operativo
 
-**Workflow staff:**
+**Modello dati:**
+- **Edizione** = container annuale (es. "Rinascita Cup 2026"), una sola per anno
+- **Categoria/Torneo** = divisione dentro l'edizione (Senior, Over 40, Junior…), con propri premi
+- **Girone** = gruppo dentro una categoria (Girone A, B…)
+- Classifica calcolata live da SQL (`standings_view`) — non più da JS
 
-1. **Crea gironi** (tab "Gironi")
-   - Nome, colore per ogni girone
-   - `computeStandings()` auto-genera `standings_groups` quando partite finiscono
+**Workflow staff (modello relazionale):**
 
-2. **Crea squadre**
-   - `TeamForm` consente scegliere nazione FIFA 2026 (picker con flag emoji)
-   - La sigla squadra viene proposta dalla nazione ma resta indipendente dal vecchio campo `category`
-   - Assegna squadra a `group_id`
-   - Campo `category` (Senior/Over40/Jr) rimosso
+1. **Crea/seleziona edizione** (Settings → Edizioni & Categorie)
+   - Una edizione per anno, con stato: upcoming/active/completed/archived
+   - Aggiungi categorie (Senior, Over 40, Junior) con montepremi separati
 
-3. **Inserisce partite**
-   - `MatchForm` mostra preset fasi dinamici (generati da gironi)
-   - Fasi knockout: Quarti, Semifinali, Finale 3°/4°, Finale (hardcodati)
-   - `computeStandings(giornata, teams, groups)` auto-calcola classifiche per girone
+2. **Seleziona categoria** (dropdown topbar admin)
+   - Tutte le operazioni successive operano sulla categoria selezionata
 
-4. **Visualizza classifica**
-   - `StandingsSection` mostra tab dinamici per girone
-   - Ogni tab: G/V/N/P/GF/GS/Pt/Forma
+3. **Crea gironi** (tab "Gironi") — legati alla categoria corrente
+4. **Crea squadre + iscrivi** a categoria e girone
+5. **Inserisce partite** — legate a categoria/girone
+6. **Classifica** calcolata automaticamente da `standings_view` SQL
 
-**Schermate pubbliche aggiornate:**
+**Migrazione da blob a relazionale (una-tantum):**
+- Settings → "Migra al nuovo database" → copia tutto il blob corrente nelle tabelle relazionali
+- Salva mappa `short → uuid` in localStorage per live dual-write
+
+**Schermate pubbliche:**
+- `HomeScreen` — usa `data.edition` per nome/date/premi (dinamico da bootstrap)
 - `TableScreen` — classifica per-girone con tab dinamici
 - `TeamsScreen` — filtra per girone, mostra flag nazione
-- `CalendarScreen` — tab per fase/girone (filtro effettivo)
-- `HomeScreen` — mostra primo girone da `standings_groups[0]`
+- `CalendarScreen` — tab per fase/girone
+- `HonorsScreen` — picker edizioni da `/editions`, carica dati edizione specifica
 
 ## Aggiungere nuova sezione pubblica
 
@@ -194,17 +243,24 @@ Struttura `content` jsonb:
 3. Aggiungere voce in `BottomNav` in `src/components.jsx`
 4. Se ha dati gestibili: aggiungere sezione nella sezione admin appropriata
 
-## Valori hardcodati da aggiornare ogni edizione
+## Valori dinamici da bootstrap (schema v3)
 
-| File | Riga | Valore | Quando aggiornare |
-|------|------|--------|-------------------|
-| `src/public/screens/home.jsx` | ~13 | `new Date('2026-06-15T20:00:00+02:00')` | Data kick-off nuova edizione |
-| `src/public/screens/home.jsx` | ~22 | `"Cup 2026 · 3ª Edizione"` | Anno e numero edizione |
-| `src/public/screens/home.jsx` | ~24 | `"15 Giugno – 15 Luglio"` | Periodo torneo |
-| `src/public/screens/home.jsx` | premi | Importi 1000€ / 400€ / 250€ | Montepremi edizione |
-| `src/components.jsx` Countdown | ~167 | `"Calcio d'inizio · 15 Giugno 2026"` | Data kick-off |
+Con il modello relazionale attivo, `HomeScreen` legge da `data.edition`:
+- `edition.name` → titolo edizione (es. "Cup 2026 · 3ª Edizione")
+- `edition.kickoff_date` → countdown automatico
+- `edition.start_date` / `edition.end_date` → periodo formattato in italiano
+- `edition.prize_*` non più su edizione — premi ora su **categoria torneo** (`tournament.prize_first/second/third`)
 
-Il countdown mostra "In campo! ⚽" automaticamente dopo la data di kick-off, per tutto il periodo del torneo.
+Il `Countdown` accetta prop `label` per testo dinamico kick-off.
+
+**Fallback hardcodati** (usati solo quando bootstrap non ha dati):
+
+| File | Valore di fallback |
+|------|--------------------|
+| `src/public/screens/home.jsx` | `'2026-06-15T20:00:00+02:00'`, `'Cup 2026 · 3ª Edizione'`, `'15 Giugno'`/`'15 Luglio'` |
+| `src/components.jsx` Countdown | `"Calcio d'inizio · 15 Giugno 2026"` |
+
+Il countdown mostra "In campo! ⚽" automaticamente dopo la data kick-off.
 
 ## Note
 

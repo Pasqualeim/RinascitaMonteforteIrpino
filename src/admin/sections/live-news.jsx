@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS, rmAdminDomain, rmGetTeamIdMap } from '../../data.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function LiveSection({ data, onSave, editionId }) {
+export function LiveSection({ data, onSave, editionId, tournamentId }) {
   const [lm, setLm] = useState(() => JSON.parse(JSON.stringify(data.live_match)));
   const [teams] = useState(data.teams || DEFAULT_TEAMS);
   const [addingEvent, setAddingEvent] = useState(false);
@@ -31,10 +31,10 @@ export function LiveSection({ data, onSave, editionId }) {
     onSave(newData, updatedScorers ? 'Partita e marcatori aggiornati' : 'Partita live aggiornata');
     setLm({ ...newLm });
     // Dual-write live state to relational table (fire-and-forget)
-    if (editionId) {
+    if (tournamentId) {
       const teamIdMap = rmGetTeamIdMap();
       rmAdminDomain.updateLive({
-        edition_id: editionId,
+        tournament_id: tournamentId,
         active: newLm.active ?? false,
         home_team_id: teamIdMap[newLm.home?.short] || null,
         away_team_id: teamIdMap[newLm.away?.short] || null,

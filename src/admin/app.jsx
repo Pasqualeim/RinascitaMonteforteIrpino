@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap } from '../data.js';
+import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions } from '../data.js';
 import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, GridIcon, BellIcon, MenuIcon, CalIcon, BallIcon, StarIcon, TrophyIcon, UsersIcon } from './shared.jsx';
 import { LoginScreen } from './auth.jsx';
 import { LiveSection, NewsSection } from './sections/live-news.jsx';
@@ -16,7 +16,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-function DashboardSection({ data, editionId, setTab }) {
+function DashboardSection({ data, editionId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
   const todayMatches = (data.matches_today || []).filter(m => !liveMatch.active || m.status !== 'live');
 
@@ -39,6 +39,26 @@ function DashboardSection({ data, editionId, setTab }) {
       </div>
       <h2 className="adm-section-title" style={{ margin: 0 }}>Rinascita Cup 2026</h2>
       <p className="adm-section-sub">3ª Edizione · Campo Sportivo Monteforte Irpino</p>
+
+      {/* Categorie torneo */}
+      {tournamentCategories.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12, marginBottom: 4 }}>
+          {tournamentCategories.map(t => (
+            <span key={t.id} style={{
+              padding: '4px 12px', borderRadius: 16, fontSize: 12, fontWeight: 600,
+              background: 'rgba(0,230,118,0.1)', border: '1px solid var(--border-brand)',
+              color: 'var(--brand-green)',
+            }}>
+              {t.name}
+              {(t.prize_first || 0) > 0 && (
+                <span style={{ marginLeft: 6, color: 'var(--fg-3)', fontWeight: 400 }}>
+                  🏆 {t.prize_first}€
+                </span>
+              )}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Onboarding checklist */}
       {!allDone && (
@@ -188,6 +208,7 @@ function AdminApp() {
   const [adminUser, setAdminUser] = useState(getSessionUser);
   const [editionId, setEditionId] = useState(null);
   const [tournamentId, setTournamentId] = useState(null);
+  const [tournamentCategories, setTournamentCategories] = useState([]);
 
   function bounceToLogin(message = 'Sessione scaduta. Effettua di nuovo l\'accesso.') {
     setToast(message);
@@ -203,8 +224,11 @@ function AdminApp() {
         rmLoadDataFromBootstrap(),
       ]);
       if (remoteData) setData(rmMergeDefaults(remoteData));
-      if (bootstrapData?.edition?.id)  setEditionId(bootstrapData.edition.id);
-      if (bootstrapData?.tournament?.id) setTournamentId(bootstrapData.tournament.id);
+      if (bootstrapData?.edition?.id) setEditionId(bootstrapData.edition.id);
+      if (bootstrapData?.tournaments?.length) {
+        setTournamentCategories(bootstrapData.tournaments);
+        setTournamentId(bootstrapData.tournaments[0].id);
+      }
     }
     sync();
   }, []);
@@ -248,7 +272,7 @@ function AdminApp() {
     window.location.replace('admin.html');
   }
 
-  const props = { data, onSave: handleSave, adminUser, onUserChange: setAdminUser, editionId, tournamentId };
+  const props = { data, onSave: handleSave, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories };
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
 
@@ -260,7 +284,22 @@ function AdminApp() {
           <span className="adm-topbar-title">Admin Rinascita</span>
           <span className="adm-badge">Staff</span>
         </div>
-        <button className="adm-logout" onClick={logout}>Esci</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {tournamentCategories.length > 1 && (
+            <select
+              value={tournamentId || ''}
+              onChange={e => setTournamentId(e.target.value)}
+              className="adm-select"
+              style={{ fontSize: 12, padding: '4px 8px', minWidth: 90, height: 32 }}
+              title="Seleziona categoria torneo"
+            >
+              {tournamentCategories.map(t => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </select>
+          )}
+          <button className="adm-logout" onClick={logout}>Esci</button>
+        </div>
       </header>
 
       <div className="adm-desktop-nav" aria-label="Navigazione primaria admin">
@@ -286,7 +325,7 @@ function AdminApp() {
           </button>
         )}
 
-        {tab === 'dashboard' && <DashboardSection data={data} editionId={editionId} setTab={navigateTo} />}
+        {tab === 'dashboard' && <DashboardSection data={data} editionId={editionId} tournamentCategories={tournamentCategories} setTab={navigateTo} />}
         {tab === 'live' && <LiveSection {...props} />}
         {tab === 'news' && <NewsSection {...props} />}
         {tab === 'gironi' && <GironiSection {...props} />}

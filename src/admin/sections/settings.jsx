@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY, rmMigrateDataToRelational, rmGetAllEditions, rmAdminUpdateEdition, rmAdminCreateEdition, rmAdminGetTournaments, rmAdminCreateTournament } from '../../data.js';
+import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY, rmMigrateDataToRelational, rmGetAllEditions, rmAdminUpdateEdition, rmAdminCreateEdition, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
 import { isAdminSessionError, Confirm } from '../shared.jsx';
 
 export function SettingsSection({ data, onSave, adminUser, onUserChange, editionId, tournamentId }) {
@@ -11,24 +11,19 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
   const [migrating, setMigrating] = useState(false);
   const [migrateResult, setMigrateResult] = useState(null);
   const [editions, setEditions] = useState([]);
-  const [tournaments, setTournaments] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [editionStatusMsg, setEditionStatusMsg] = useState('');
   const [showNewEdition, setShowNewEdition] = useState(false);
-  const [newEdition, setNewEdition] = useState({ name: '', slug: '', year: new Date().getFullYear() + 1, edition_number: '', status: 'upcoming', tournament_id: '' });
-  const [showNewTournament, setShowNewTournament] = useState(false);
-  const [newTournament, setNewTournament] = useState({ name: '', slug: '', description: '', location: '' });
+  const [newEdition, setNewEdition] = useState({ name: '', slug: '', year: new Date().getFullYear() + 1, edition_number: '', status: 'upcoming' });
+  const [showNewCategory, setShowNewCategory] = useState(null); // edition_id to add category to
+  const [newCategory, setNewCategory] = useState({ name: '', slug: '', prize_first: '', prize_second: '', prize_third: '' });
 
   useEffect(() => { setUser(adminUser?.username || ''); }, [adminUser?.username]);
 
   useEffect(() => {
     setEditionsLoading(true);
-    Promise.all([rmGetAllEditions(), rmAdminGetTournaments().catch(() => ({ data: [] }))])
-      .then(([eds, tourRes]) => {
-        setEditions(eds);
-        setTournaments(tourRes?.data || []);
-        if (tourRes?.data?.[0]?.id) setNewEdition(f => ({ ...f, tournament_id: tourRes.data[0].id }));
-      })
+    rmGetAllEditions()
+      .then(eds => setEditions(eds))
       .finally(() => setEditionsLoading(false));
   }, []);
 
@@ -44,22 +39,48 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
   async function createEdition(e) {
     e.preventDefault();
     try {
-      const res = await rmAdminCreateEdition({ ...newEdition, year: parseInt(newEdition.year), edition_number: newEdition.edition_number ? parseInt(newEdition.edition_number) : null });
+      const res = await rmAdminCreateEdition({
+        ...newEdition,
+        year: parseInt(newEdition.year),
+        edition_number: newEdition.edition_number ? parseInt(newEdition.edition_number) : null,
+      });
       setEditions(prev => [res.data, ...prev]);
       setShowNewEdition(false);
       setNewEdition(f => ({ ...f, name: '', slug: '', year: f.year + 1 }));
     } catch (e) { setEditionStatusMsg('Errore creazione edizione: ' + (e?.message || '')); }
   }
 
-  async function createTournament(e) {
+  async function createCategory(e) {
     e.preventDefault();
+    if (!showNewCategory) return;
     try {
-      const res = await rmAdminCreateTournament(newTournament);
-      setTournaments(prev => [...prev, res.data]);
-      setNewEdition(f => ({ ...f, tournament_id: res.data.id }));
-      setShowNewTournament(false);
-      setNewTournament({ name: '', slug: '', description: '', location: '' });
-    } catch (e) { setEditionStatusMsg('Errore creazione torneo: ' + (e?.message || '')); }
+      const res = await rmAdminCreateTournamentCategory({
+        edition_id: showNewCategory,
+        name: newCategory.name,
+        slug: newCategory.slug,
+        prize_first: newCategory.prize_first ? parseInt(newCategory.prize_first) : null,
+        prize_second: newCategory.prize_second ? parseInt(newCategory.prize_second) : null,
+        prize_third: newCategory.prize_third ? parseInt(newCategory.prize_third) : null,
+      });
+      setEditions(prev => prev.map(ed =>
+        ed.id === showNewCategory
+          ? { ...ed, tournaments: [...(ed.tournaments || []), res.data] }
+          : ed
+      ));
+      setShowNewCategory(null);
+      setNewCategory({ name: '', slug: '', prize_first: '', prize_second: '', prize_third: '' });
+    } catch (e) { setEditionStatusMsg('Errore creazione categoria: ' + (e?.message || '')); }
+  }
+
+  async function deleteCategory(editionId, categoryId) {
+    try {
+      await rmAdminDeleteTournamentCategory(categoryId);
+      setEditions(prev => prev.map(ed =>
+        ed.id === editionId
+          ? { ...ed, tournaments: (ed.tournaments || []).filter(t => t.id !== categoryId) }
+          : ed
+      ));
+    } catch (e) { setEditionStatusMsg('Errore eliminazione categoria: ' + (e?.message || '')); }
   }
 
   async function save(e) {
@@ -141,55 +162,10 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
           </div>
         </div>
       </div>
-      {/* Gestione tornei */}
+      {/* Gestione edizioni + categorie */}
       <div className="adm-card" style={{ marginBottom: 16 }}>
         <div className="adm-card-header">
-          <span className="adm-card-title">Tornei</span>
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewTournament(v => !v)}>+ Nuovo torneo</button>
-        </div>
-        {showNewTournament && (
-          <div className="adm-card-body" style={{ borderBottom: '1px solid var(--border-1)' }}>
-            <form onSubmit={createTournament} className="adm-form">
-              <div className="adm-form-row">
-                <div className="adm-form-group">
-                  <label className="adm-label">Nome</label>
-                  <input className="adm-input" required value={newTournament.name} onChange={e => setNewTournament(f => ({ ...f, name: e.target.value }))} placeholder="Rinascita Monteforte Cup" />
-                </div>
-                <div className="adm-form-group">
-                  <label className="adm-label">Slug</label>
-                  <input className="adm-input" required value={newTournament.slug} onChange={e => setNewTournament(f => ({ ...f, slug: e.target.value }))} placeholder="rinascita-monteforte-cup" />
-                </div>
-              </div>
-              <div className="adm-form-group">
-                <label className="adm-label">Luogo</label>
-                <input className="adm-input" value={newTournament.location} onChange={e => setNewTournament(f => ({ ...f, location: e.target.value }))} placeholder="Monteforte Irpino (AV)" />
-              </div>
-              <div className="adm-form-actions">
-                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewTournament(false)}>Annulla</button>
-                <button type="submit" className="adm-btn adm-btn-sm">Crea torneo</button>
-              </div>
-            </form>
-          </div>
-        )}
-        <div style={{ padding: '4px 16px 12px' }}>
-          {tournaments.length === 0
-            ? <div className="adm-empty" style={{ fontSize: 13 }}>{editionsLoading ? 'Caricamento…' : 'Nessun torneo nel database relazionale'}</div>
-            : tournaments.map(t => (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-1)', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{t.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{t.slug}{t.location ? ` · ${t.location}` : ''}</div>
-                </div>
-              </div>
-            ))
-          }
-        </div>
-      </div>
-
-      {/* Gestione edizioni */}
-      <div className="adm-card" style={{ marginBottom: 16 }}>
-        <div className="adm-card-header">
-          <span className="adm-card-title">Edizioni</span>
+          <span className="adm-card-title">Edizioni & Categorie</span>
           <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewEdition(v => !v)}>+ Nuova edizione</button>
         </div>
         {editionStatusMsg && (
@@ -197,16 +173,10 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
             {editionStatusMsg}
           </div>
         )}
+
         {showNewEdition && (
           <div className="adm-card-body" style={{ borderBottom: '1px solid var(--border-1)' }}>
             <form onSubmit={createEdition} className="adm-form">
-              <div className="adm-form-group">
-                <label className="adm-label">Torneo</label>
-                <select className="adm-select" required value={newEdition.tournament_id} onChange={e => setNewEdition(f => ({ ...f, tournament_id: e.target.value }))}>
-                  <option value="">-- Seleziona torneo --</option>
-                  {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
               <div className="adm-form-row">
                 <div className="adm-form-group">
                   <label className="adm-label">Anno</label>
@@ -220,7 +190,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
               <div className="adm-form-row">
                 <div className="adm-form-group">
                   <label className="adm-label">Nome</label>
-                  <input className="adm-input" required value={newEdition.name} onChange={e => setNewEdition(f => ({ ...f, name: e.target.value }))} placeholder="Cup 2027 · 4ª Edizione" />
+                  <input className="adm-input" required value={newEdition.name} onChange={e => setNewEdition(f => ({ ...f, name: e.target.value }))} placeholder="Rinascita Cup 2027" />
                 </div>
                 <div className="adm-form-group">
                   <label className="adm-label">Slug</label>
@@ -234,26 +204,80 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
             </form>
           </div>
         )}
+
+        {showNewCategory && (
+          <div className="adm-card-body" style={{ borderBottom: '1px solid var(--border-1)', background: 'rgba(0,230,118,0.03)' }}>
+            <div className="adm-label" style={{ marginBottom: 8 }}>Nuova categoria nell'edizione</div>
+            <form onSubmit={createCategory} className="adm-form">
+              <div className="adm-form-row">
+                <div className="adm-form-group">
+                  <label className="adm-label">Nome</label>
+                  <input className="adm-input" required value={newCategory.name} onChange={e => setNewCategory(f => ({ ...f, name: e.target.value }))} placeholder="Senior, Over 40, Junior…" />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Slug</label>
+                  <input className="adm-input" required value={newCategory.slug} onChange={e => setNewCategory(f => ({ ...f, slug: e.target.value }))} placeholder="senior, over40, junior…" />
+                </div>
+              </div>
+              <div className="adm-form-row">
+                <div className="adm-form-group">
+                  <label className="adm-label">1° premio (€)</label>
+                  <input type="number" className="adm-input" value={newCategory.prize_first} onChange={e => setNewCategory(f => ({ ...f, prize_first: e.target.value }))} placeholder="1000" />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">2° (€)</label>
+                  <input type="number" className="adm-input" value={newCategory.prize_second} onChange={e => setNewCategory(f => ({ ...f, prize_second: e.target.value }))} placeholder="400" />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">3° (€)</label>
+                  <input type="number" className="adm-input" value={newCategory.prize_third} onChange={e => setNewCategory(f => ({ ...f, prize_third: e.target.value }))} placeholder="250" />
+                </div>
+              </div>
+              <div className="adm-form-actions">
+                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewCategory(null)}>Annulla</button>
+                <button type="submit" className="adm-btn adm-btn-sm">Aggiungi categoria</button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div style={{ padding: '4px 16px 12px' }}>
           {editions.length === 0
             ? <div className="adm-empty" style={{ fontSize: 13 }}>{editionsLoading ? 'Caricamento…' : 'Nessuna edizione nel database relazionale'}</div>
             : editions.map(e => {
               const STATUS_LABELS = { upcoming: 'In programma', active: '🔴 Attiva', completed: 'Completata', archived: 'Archiviata' };
               const STATUS_OPTS = ['upcoming', 'active', 'completed', 'archived'];
+              const cats = e.tournaments || [];
               return (
-                <div key={e.id} style={{ display: 'flex', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-1)', gap: 10 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{e.tournaments?.name} · {e.slug}</div>
+                <div key={e.id} style={{ borderBottom: '1px solid var(--border-1)', paddingBottom: 12, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '10px 0', gap: 10 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{e.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{e.slug}</div>
+                    </div>
+                    <select className="adm-select" style={{ fontSize: 12, padding: '4px 8px', width: 140 }} value={e.status}
+                      onChange={ev => setEditionStatus(e, ev.target.value)}>
+                      {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
+                    </select>
                   </div>
-                  <select
-                    className="adm-select"
-                    style={{ fontSize: 12, padding: '4px 8px', width: 140 }}
-                    value={e.status}
-                    onChange={ev => setEditionStatus(e, ev.target.value)}
-                  >
-                    {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                  </select>
+                  {/* Categorie (tornei) dentro questa edizione */}
+                  <div style={{ paddingLeft: 12 }}>
+                    {cats.map(t => (
+                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                        <span style={{ fontSize: 12, color: 'var(--brand-green)', flex: 1 }}>
+                          {t.name}
+                          <span style={{ color: 'var(--fg-3)', marginLeft: 6 }}>{t.slug}</span>
+                        </span>
+                        <button onClick={() => deleteCategory(e.id, t.id)}
+                          style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                      </div>
+                    ))}
+                    <button className="adm-btn adm-btn-ghost adm-btn-sm"
+                      style={{ fontSize: 11, marginTop: 4 }}
+                      onClick={() => { setShowNewCategory(e.id); setShowNewEdition(false); }}>
+                      + Aggiungi categoria
+                    </button>
+                  </div>
                 </div>
               );
             })

@@ -190,6 +190,8 @@ export function rmSetTeamIdMap(map) {
 }
 
 // ── Migration: blob → relational tables ──────────────────────
+// editionId = edizione (container annuale)
+// tournamentId = categoria (Senior, Over40...) dentro l'edizione
 export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
   const results = { groups: 0, teams: 0, registrations: 0, matches: 0, scorers: 0, news: 0, events: 0, honors: 0, sponsors: 0, errors: [] };
   const groupIdMap = {};
@@ -197,7 +199,7 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
 
   for (const g of (data.groups || [])) {
     try {
-      const res = await rmAdminDomain.createGroup({ edition_id: editionId, name: g.name, color: g.color || '#00E676' });
+      const res = await rmAdminDomain.createGroup({ tournament_id: tournamentId, name: g.name, color: g.color || '#00E676' });
       groupIdMap[g.id] = res.data.id;
       results.groups++;
     } catch (e) { results.errors.push(`Girone ${g.name}: ${e.message}`); }
@@ -211,10 +213,9 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
       results.teams++;
       const localGroupId = t.group_id || t.group || '';
       await rmAdminDomain.upsertRegistration({
-        team_id: teamId, edition_id: editionId,
+        team_id: teamId, tournament_id: tournamentId,
         group_id: groupIdMap[localGroupId] || null,
-        captain: t.captain || null,
-        players: t.players || [],
+        captain: t.captain || null, players: t.players || [],
       });
       results.registrations++;
     } catch (e) { results.errors.push(`Squadra ${t.name}: ${e.message}`); }
@@ -227,7 +228,7 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
     for (const m of (phase.items || [])) {
       try {
         await rmAdminDomain.createMatch({
-          edition_id: editionId, group_id: groupId,
+          tournament_id: tournamentId, group_id: groupId,
           home_team_id: teamIdMap[m.home?.short] || null,
           away_team_id: teamIdMap[m.away?.short] || null,
           home_score: m.hs ?? null, away_score: m.as ?? null,
@@ -242,11 +243,12 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
 
   for (const s of (data.scorers || [])) {
     try {
-      await rmAdminDomain.createScorer({ edition_id: editionId, player_name: s.name, team_id: teamIdMap[s.short] || null, goals: s.goals || 0 });
+      await rmAdminDomain.createScorer({ tournament_id: tournamentId, player_name: s.name, team_id: teamIdMap[s.short] || null, goals: s.goals || 0 });
       results.scorers++;
     } catch (e) { results.errors.push(`Marcatore ${s.name}: ${e.message}`); }
   }
 
+  // Edition-level content (shared)
   for (const n of (data.news || [])) {
     try {
       await rmAdminDomain.createNews({ edition_id: editionId, title: n.title, body: n.text || n.body || null, category: n.category, tone: n.tone, pinned: n.pinned ?? false });
@@ -264,7 +266,7 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
   for (const h of (data.honors || [])) {
     try {
       await rmAdminDomain.createHonor({
-        tournament_id: tournamentId || null,
+        edition_id: editionId, tournament_id: tournamentId || null,
         edition_name: h.edition || h.name || String(h.year || ''),
         year: parseInt(h.year) || 0,
         winner: h.winner || null, runner_up: h.runner_up || h.second || null,
@@ -321,11 +323,14 @@ export async function rmAdminUpdateEdition(id, updates) {
 export async function rmAdminCreateEdition(payload) {
   return rmAdminApi('/editions', { method: 'POST', body: payload });
 }
-export async function rmAdminGetTournaments() {
-  return rmAdminApi('/tournaments', { method: 'GET' });
-}
-export async function rmAdminCreateTournament(payload) {
+export async function rmAdminCreateTournamentCategory(payload) {
   return rmAdminApi('/tournaments', { method: 'POST', body: payload });
+}
+export async function rmAdminUpdateTournamentCategory(id, updates) {
+  return rmAdminApi(`/tournaments/${id}`, { method: 'PUT', body: updates });
+}
+export async function rmAdminDeleteTournamentCategory(id) {
+  return rmAdminApi(`/tournaments/${id}`, { method: 'DELETE' });
 }
 
 export async function rmGetActiveEditionId() {
@@ -343,49 +348,52 @@ async function rmAdminApiCrud(method, path, body) {
 }
 
 export const rmAdminDomain = {
-  // Groups
-  createGroup: (p)    => rmAdminApiCrud('POST', '/groups', p),
+  // Editions
+  createEdition: (p)    => rmAdminApiCrud('POST', '/editions', p),
+  updateEdition: (id,p) => rmAdminApiCrud('PUT', `/editions/${id}`, p),
+  // Tournaments (categories within edition)
+  createTournament: (p)    => rmAdminApiCrud('POST', '/tournaments', p),
+  updateTournament: (id,p) => rmAdminApiCrud('PUT', `/tournaments/${id}`, p),
+  deleteTournament: (id)   => rmAdminApiCrud('DELETE', `/tournaments/${id}`),
+  // Groups (per tournament)
+  createGroup: (p)    => rmAdminApiCrud('POST', '/groups', p),     // needs tournament_id
   updateGroup: (id,p) => rmAdminApiCrud('PUT', `/groups/${id}`, p),
   deleteGroup: (id)   => rmAdminApiCrud('DELETE', `/groups/${id}`),
   // Teams
   createTeam: (p)     => rmAdminApiCrud('POST', '/teams', p),
   updateTeam: (id,p)  => rmAdminApiCrud('PUT', `/teams/${id}`, p),
   deleteTeam: (id)    => rmAdminApiCrud('DELETE', `/teams/${id}`),
-  // Registrations
-  upsertRegistration: (p)    => rmAdminApiCrud('POST', '/registrations', p),
+  // Registrations (per tournament)
+  upsertRegistration: (p)    => rmAdminApiCrud('POST', '/registrations', p), // needs tournament_id
   updateRegistration: (id,p) => rmAdminApiCrud('PUT', `/registrations/${id}`, p),
   deleteRegistration: (id)   => rmAdminApiCrud('DELETE', `/registrations/${id}`),
-  // Matches
-  createMatch: (p)    => rmAdminApiCrud('POST', '/matches', p),
+  // Matches (per tournament)
+  createMatch: (p)    => rmAdminApiCrud('POST', '/matches', p),    // needs tournament_id
   updateMatch: (id,p) => rmAdminApiCrud('PUT', `/matches/${id}`, p),
   deleteMatch: (id)   => rmAdminApiCrud('DELETE', `/matches/${id}`),
   // Match events
   createMatchEvent: (p)  => rmAdminApiCrud('POST', '/match-events', p),
   deleteMatchEvent: (id) => rmAdminApiCrud('DELETE', `/match-events/${id}`),
-  // Live
-  updateLive: (p) => rmAdminApiCrud('PUT', '/live', p),
-  // Scorers
-  createScorer: (p)    => rmAdminApiCrud('POST', '/scorers', p),
+  // Live (per tournament)
+  updateLive: (p) => rmAdminApiCrud('PUT', '/live', p),            // needs tournament_id
+  // Scorers (per tournament)
+  createScorer: (p)    => rmAdminApiCrud('POST', '/scorers', p),   // needs tournament_id
   updateScorer: (id,p) => rmAdminApiCrud('PUT', `/scorers/${id}`, p),
   deleteScorer: (id)   => rmAdminApiCrud('DELETE', `/scorers/${id}`),
-  // News
-  createNews: (p)    => rmAdminApiCrud('POST', '/news', p),
+  // Edition-level content (shared across tournaments)
+  createNews: (p)    => rmAdminApiCrud('POST', '/news', p),        // needs edition_id
   updateNews: (id,p) => rmAdminApiCrud('PUT', `/news/${id}`, p),
   deleteNews: (id)   => rmAdminApiCrud('DELETE', `/news/${id}`),
-  // Events
-  createEvent: (p)    => rmAdminApiCrud('POST', '/events', p),
+  createEvent: (p)    => rmAdminApiCrud('POST', '/events', p),     // needs edition_id
   updateEvent: (id,p) => rmAdminApiCrud('PUT', `/events/${id}`, p),
   deleteEvent: (id)   => rmAdminApiCrud('DELETE', `/events/${id}`),
-  // Honors
   createHonor: (p)    => rmAdminApiCrud('POST', '/honors', p),
   updateHonor: (id,p) => rmAdminApiCrud('PUT', `/honors/${id}`, p),
   deleteHonor: (id)   => rmAdminApiCrud('DELETE', `/honors/${id}`),
-  // Sponsors
-  createSponsor: (p)    => rmAdminApiCrud('POST', '/sponsors', p),
+  createSponsor: (p)    => rmAdminApiCrud('POST', '/sponsors', p), // needs edition_id
   updateSponsor: (id,p) => rmAdminApiCrud('PUT', `/sponsors/${id}`, p),
   deleteSponsor: (id)   => rmAdminApiCrud('DELETE', `/sponsors/${id}`),
-  // Strip messages
-  createStrip: (p)    => rmAdminApiCrud('POST', '/strip', p),
+  createStrip: (p)    => rmAdminApiCrud('POST', '/strip', p),      // needs edition_id
   updateStrip: (id,p) => rmAdminApiCrud('PUT', `/strip/${id}`, p),
   deleteStrip: (id)   => rmAdminApiCrud('DELETE', `/strip/${id}`),
 };
