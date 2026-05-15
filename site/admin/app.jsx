@@ -45,6 +45,10 @@ function DashboardMenu({ setTab }) {
           <TrophyIcon size={32} />
           <span>Albo d'oro</span>
         </div>
+        <div className="adm-grid-btn" onClick={() => setTab('sponsors')}>
+          <StarIcon size={32} />
+          <span>Sponsor</span>
+        </div>
       </div>
     </>
   );

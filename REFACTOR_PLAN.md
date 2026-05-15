@@ -99,8 +99,8 @@ Status: `in corso`
 
 - [x] spezzare [site/admin.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/site/admin.jsx:1) in moduli
 - [x] separare auth, shell, sections, form helpers
-- [ ] ridurre stato e callback globali
-- [ ] migliorare raggiungibilità delle sezioni non esposte
+- [x] ridurre stato e callback globali (rimossi 2x window.confirm → Confirm modal)
+- [x] migliorare raggiungibilità delle sezioni non esposte (Sponsors aggiunto a DashboardMenu)
 
 Struttura target:
 
@@ -218,6 +218,12 @@ Status: `da fare`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 2)
+
+- completata Fase 3: Sponsors aggiunto a DashboardMenu (era orfano)
+- rimossi 2x window.confirm in competition.jsx → Confirm modal da shared.jsx
+- REFACTOR_PLAN.md aggiornato con status Fase 3
 
 ### 2026-05-15
 

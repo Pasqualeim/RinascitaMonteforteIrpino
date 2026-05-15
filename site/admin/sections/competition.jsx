@@ -455,6 +455,7 @@ function GironiSection({ data, onSave }) {
   const [groups, setGroups] = useState(data.groups || DEFAULT_GROUPS);
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
+  const [deletingGroupId, setDeletingGroupId] = useState(null);
 
   function saveGroup(g) {
     let updated;
@@ -470,7 +471,6 @@ function GironiSection({ data, onSave }) {
   }
 
   function deleteGroup(id) {
-    if (!window.confirm('Eliminare questo girone? Le squadre assegnate perderanno il girone.')) return;
     const updated = groups.filter(g => g.id !== id);
     const updatedTeams = (data.teams || []).map(t => (window.rmGetTeamGroupId(t) === id ? { ...t, group_id: '' } : t));
     setGroups(updated);
@@ -519,7 +519,7 @@ function GironiSection({ data, onSave }) {
                       {isOpen ? 'Chiudi' : '👥 Gestisci'}
                     </button>
                     <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...g })}><EditIcon size={16}/></button>
-                    <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteGroup(g.id)}><TrashIcon size={16}/></button>
+                    <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeletingGroupId(g.id)}><TrashIcon size={16}/></button>
                   </div>
                 </div>
 
@@ -589,6 +589,13 @@ function GironiSection({ data, onSave }) {
             </div>
           </div>
         </div>
+      )}
+      {deletingGroupId && (
+        <Confirm
+          msg="Eliminare questo girone? Le squadre assegnate perderanno il girone."
+          onOk={() => { deleteGroup(deletingGroupId); setDeletingGroupId(null); }}
+          onCancel={() => setDeletingGroupId(null)}
+        />
       )}
     </div>
   );
@@ -811,6 +818,7 @@ function TeamForm({ team, groups, onSave, onClose }) {
 function TeamsSection({ data, onSave }) {
   const [teams, setTeams] = useState(data.teams || DEFAULT_TEAMS);
   const [editing, setEditing] = useState(null);
+  const [deletingTeamShort, setDeletingTeamShort] = useState(null);
   const [filterGroup, setFilterGroup] = useState('all');
   const groups = data.groups || DEFAULT_GROUPS;
 
@@ -831,7 +839,6 @@ function TeamsSection({ data, onSave }) {
   }
 
   function deleteTeam(short) {
-    if (!window.confirm('Sicuro di voler eliminare questa squadra?')) return;
     const updated = teams.filter(t => t.short !== short);
     setTeams(updated);
     onSave({ ...data, teams: updated }, 'Squadra eliminata');
@@ -884,13 +891,20 @@ function TeamsSection({ data, onSave }) {
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
-                <button className="adm-btn-danger adm-btn-icon" onClick={() => deleteTeam(t.short)}><TrashIcon size={16}/></button>
+                <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeletingTeamShort(t.short)}><TrashIcon size={16}/></button>
               </div>
             </div>
           );
         })}
       </div>
       {editing && <TeamForm team={editing} groups={groups} onSave={saveItem} onClose={() => setEditing(null)} />}
+      {deletingTeamShort && (
+        <Confirm
+          msg="Eliminare questa squadra?"
+          onOk={() => { deleteTeam(deletingTeamShort); setDeletingTeamShort(null); }}
+          onCancel={() => setDeletingTeamShort(null)}
+        />
+      )}
     </div>
   );
 }
