@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
 import { rmGetAllData, rmLoadData, rmMergeDefaults } from '../data.js';
 import { StatusStrip, Header, Footer, BottomNav } from '../components.jsx';
