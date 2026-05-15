@@ -35,7 +35,7 @@ function EmptyState({ icon, title, sub }) {
 }
 
 // ── Header ─────────────────────────────────────────────────────────────────
-function Header({ current, onNav }) {
+function Header({ current, onNav, hasLive }) {
   const items = [
     { id: 'home',     label: 'Home' },
     { id: 'live',     label: 'Live' },
@@ -61,6 +61,7 @@ function Header({ current, onNav }) {
             className={`rm-nav-item ${current === i.id ? 'on' : ''}`}
             onClick={() => onNav(i.id)}>
             {i.label}
+            {i.id === 'live' && hasLive && <span className="rm-nav-live-dot"/>}
           </button>
         ))}
       </nav>
@@ -156,7 +157,17 @@ function Countdown({ to }) {
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
-  const diff = Math.max(0, to - now);
+  const diff = to - now;
+  if (diff <= 0) {
+    return (
+      <div className="rm-countdown">
+        <span className="rm-eyebrow">Torneo in corso · Estate 2026</span>
+        <div className="rm-cd-row" style={{ justifyContent: 'flex-start' }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px,5vw,30px)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--brand-green)' }}>In campo! ⚽</span>
+        </div>
+      </div>
+    );
+  }
   const d = Math.floor(diff / 86400000);
   const h = Math.floor(diff / 3600000) % 24;
   const m = Math.floor(diff / 60000) % 60;
@@ -223,8 +234,7 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
         <span className="rm-team-name">{away.name}</span>
       </div>
       <div className="rm-match-pitch">
-        <span>{pitch}</span>
-        <b>{home.pitch || 'Campo Sportivo'}</b>
+        <b>{pitch || 'Campo Sportivo'}</b>
       </div>
     </div>
   );
@@ -239,11 +249,12 @@ function LiveBoard({ match }) {
   );
   const { home, away, hs, as: as_, minute, pitch, events = [] } = match;
   if (!home || !away) return null;
+  const half = minute > 45 ? '2° tempo' : '1° tempo';
   return (
     <div className="rm-live-hero">
       <div className="rm-live-top">
         <span className="rm-live-badge"><span className="dot"></span>In diretta · {minute}'</span>
-        <span className="rm-live-pitch">{pitch} · Senior · Giornata 4</span>
+        {pitch && <span className="rm-live-pitch">{pitch}</span>}
       </div>
       <div className="rm-live-board">
         <div className="rm-live-team">
@@ -253,7 +264,7 @@ function LiveBoard({ match }) {
         </div>
         <div className="rm-live-score">
           <div className="rm-live-score-row">{hs}<i>–</i>{as_}</div>
-          <div className="rm-live-min">2° tempo · {minute}'</div>
+          <div className="rm-live-min">{half} · {minute}'</div>
         </div>
         <div className="rm-live-team">
           <div className="rm-live-crest" style={{ borderColor: away.color, color: away.color }}>{away.short}</div>

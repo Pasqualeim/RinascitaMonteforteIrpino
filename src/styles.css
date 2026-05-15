@@ -536,6 +536,11 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   .rm-nav-item:hover { color: #fff; background: rgba(255,255,255,0.04); }
   .rm-nav-item.on { color: var(--brand-green); }
   .rm-nav-item.on::after { content: ""; position: absolute; left: 12px; right: 12px; bottom: 4px; height: 2px; background: var(--brand-green); }
+  .rm-nav-live-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 999px;
+    background: #FF3D3D; animation: pulse 1.2s infinite;
+    margin-left: 5px; vertical-align: middle; flex-shrink: 0;
+  }
 
   .rm-hero { padding: 72px 32px 56px; max-width: 1280px; margin: 0 auto; }
   .rm-section { padding: 56px 32px; max-width: 1280px; margin: 0 auto; }

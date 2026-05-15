@@ -132,6 +132,8 @@ Struttura `content` jsonb:
 **Derivati runtime, non persistiti:** `matches_today`, `strip_items`
 **Alias legacy runtime:** `standings_a`, `standings_o40`, `standings_jr` (sempre `[]`)
 
+**Nota `live_match`:** lo schema non include `phase` né `giornata` — la `LiveBoard` mostra solo `pitch`. Il tempo (1°/2° tempo) è calcolato automaticamente: `minute > 45 → "2° tempo"`, altrimenti `"1° tempo"`.
+
 **Campi team principali:** `short, name, group_id, nation, flag, players`
 (campo `category` rimosso — sostituito da `group_id`)
 
@@ -191,6 +193,18 @@ Struttura `content` jsonb:
 2. Importarla in `src/public/app.jsx` e aggiungere id in `VALID_SCREENS` + route nel JSX
 3. Aggiungere voce in `BottomNav` in `src/components.jsx`
 4. Se ha dati gestibili: aggiungere sezione nella sezione admin appropriata
+
+## Valori hardcodati da aggiornare ogni edizione
+
+| File | Riga | Valore | Quando aggiornare |
+|------|------|--------|-------------------|
+| `src/public/screens/home.jsx` | ~13 | `new Date('2026-06-15T20:00:00+02:00')` | Data kick-off nuova edizione |
+| `src/public/screens/home.jsx` | ~22 | `"Cup 2026 · 3ª Edizione"` | Anno e numero edizione |
+| `src/public/screens/home.jsx` | ~24 | `"15 Giugno – 15 Luglio"` | Periodo torneo |
+| `src/public/screens/home.jsx` | premi | Importi 1000€ / 400€ / 250€ | Montepremi edizione |
+| `src/components.jsx` Countdown | ~167 | `"Calcio d'inizio · 15 Giugno 2026"` | Data kick-off |
+
+Il countdown mostra "In campo! ⚽" automaticamente dopo la data di kick-off, per tutto il periodo del torneo.
 
 ## Note
 

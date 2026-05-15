@@ -4,7 +4,7 @@ import { EmptyState, MatchRow } from '../../components.jsx';
 
 export function CalendarScreen({ data }) {
   const matchesGiornata = data?.matches_giornata || DEFAULT_MATCHES_GIORNATA;
-  const allPhases = matchesGiornata.map(g => g.day);
+  const allPhases = [...new Set(matchesGiornata.map(g => g.day))];
   const [selPhase, setSelPhase] = useState('all');
 
   const filtered = useMemo(() =>

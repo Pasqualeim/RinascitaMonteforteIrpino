@@ -30,10 +30,12 @@ function App() {
   useEffect(() => {
     refresh();
     const id = setInterval(refresh, 30000);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) refresh();
-    });
-    return () => clearInterval(id);
+    const onVisibility = () => { if (!document.hidden) refresh(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ function App() {
   return (
     <div className="rm-app">
       <StatusStrip items={data?.strip_items}/>
-      <Header current={screen} onNav={setScreen}/>
+      <Header current={screen} onNav={setScreen} hasLive={hasLive}/>
       {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data}/>}
       {screen === 'live'     && <LiveScreen                       data={data}/>}
       {screen === 'calendar' && <CalendarScreen                   data={data}/>}

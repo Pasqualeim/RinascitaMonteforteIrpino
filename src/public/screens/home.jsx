@@ -10,6 +10,8 @@ export function HomeScreen({ onNav, data }) {
   const scorers         = d.scorers          || DEFAULT_SCORERS;
   const news            = d.news             || DEFAULT_NEWS;
   const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
+  const teams           = d.teams            || [];
+  const groups          = d.groups           || [];
   const kickoff = new Date('2026-06-15T20:00:00+02:00').getTime();
 
   return (
@@ -23,7 +25,7 @@ export function HomeScreen({ onNav, data }) {
           <p className="rm-hero-meta">
             <span><CalIcon size={15}/> 15 Giugno – 15 Luglio</span>
             <span><PinIcon size={15}/> Campo Sportivo, Monteforte Irpino</span>
-            <span><UsersIcon size={15}/> 10 squadre · 3 categorie</span>
+            <span><UsersIcon size={15}/> {teams.length > 0 ? `${teams.length} squadre · ${groups.length} gironi` : 'Iscrizioni aperte'}</span>
           </p>
           <div className="rm-hero-ctas">
             <button className="rm-btn rm-btn-primary rm-btn-lg" onClick={() => onNav('live')}>
