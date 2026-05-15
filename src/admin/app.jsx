@@ -181,7 +181,7 @@ function AdminApp() {
           <BellIcon size={24}/><span>Bacheca</span>
         </button>
         <button className={`adm-bn-item ${bottomNav === 'settings' ? 'on' : ''}`} onClick={() => navigateTo('settings')}>
-          <MenuIcon size={24}/><span>Altro</span>
+          <MenuIcon size={24}/><span>Impost.</span>
         </button>
       </nav>
 

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY } from '../../data.js';
-import { isAdminSessionError } from '../shared.jsx';
+import { isAdminSessionError, Confirm } from '../shared.jsx';
 
 export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
   const [user, setUser] = useState(adminUser?.username || '');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [msg, setMsg] = useState('');
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   useEffect(() => {
     setUser(adminUser?.username || '');
@@ -29,8 +30,8 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
     }
   }
 
-  async function resetData() {
-    if (!window.confirm('Ripristinare tutti i dati ai valori iniziali? Questa operazione non può essere annullata.')) return;
+  async function doReset() {
+    setConfirmingReset(false);
     localStorage.removeItem(RM_STORAGE_KEY);
     try {
       await rmSaveData({}, { requireAdmin: true });
@@ -81,12 +82,19 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
         <div className="adm-card-header"><span className="adm-card-title">Dati sito</span></div>
         <div className="adm-card-body">
           <p style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 14 }}>Ripristina tutti i dati (classifica, partite, avvisi, ecc.) ai valori predefiniti. L'operazione è irreversibile.</p>
-          <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={resetData}>Ripristina dati iniziali</button>
+          <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setConfirmingReset(true)}>Ripristina dati iniziali</button>
         </div>
       </div>
       <div style={{ textAlign: 'center', marginTop: 24 }}>
         <a href="index.html" style={{ color: 'var(--brand-green)', fontSize: 14 }}>← Vai al sito pubblico</a>
       </div>
+      {confirmingReset && (
+        <Confirm
+          msg="Ripristinare tutti i dati ai valori iniziali? Questa operazione non può essere annullata."
+          onOk={doReset}
+          onCancel={() => setConfirmingReset(false)}
+        />
+      )}
     </div>
   );
 }

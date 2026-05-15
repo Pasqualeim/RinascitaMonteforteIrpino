@@ -215,11 +215,17 @@ export function LiveSection({ data, onSave }) {
           </div>
         </div>
 
-        <div className="adm-minute-control">
-          <button className="adm-min-btn" onClick={() => setMinute(-1)}>−</button>
-          <span className="adm-minute-badge">{lm.minute || 0}'</span>
-          <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(1)}>+</button>
-        </div>
+        {lm.active ? (
+          <div className="adm-minute-control">
+            <button className="adm-min-btn" onClick={() => setMinute(-1)}>−</button>
+            <span className="adm-minute-badge">{lm.minute || 0}'</span>
+            <button className="adm-min-btn adm-min-btn--plus" onClick={() => setMinute(1)}>+</button>
+          </div>
+        ) : (
+          <div className="adm-minute-control">
+            <span className="adm-minute-badge" style={{ color: 'var(--fg-3)', fontSize: 24 }}>{lm.minute || 0}'</span>
+          </div>
+        )}
 
         {lm.active && (
           <div className="adm-score-controls">
@@ -268,42 +274,47 @@ export function LiveSection({ data, onSave }) {
       {addingEvent && (
         <div className="adm-overlay" onClick={() => setAddingEvent(false)}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="adm-modal-title">
-              Aggiungi evento · {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : '🟥 Rosso'}
-            </h3>
-            <div className="adm-form">
-              <div className="adm-form-group">
-                <label className="adm-label">Squadra</label>
-                <select className="adm-select" value={evTeam} onChange={e => { setEvTeam(e.target.value); setEvPlayer(''); }}>
-                  {(lm.home || lm.away ? [lm.home, lm.away].filter(Boolean) : teams).map(t => (
-                    <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="adm-form-group">
-                <label className="adm-label">Giocatore</label>
-                {(() => {
-                  const tObj = teams.find(t => t.short === evTeam) || (lm.home?.short === evTeam ? lm.home : lm.away);
-                  const pList = tObj?.players || [];
-                  if (pList.length > 0) {
-                    return (
-                      <select className="adm-select" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} autoFocus>
-                        <option value="">-- Seleziona Giocatore --</option>
-                        {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number + '. ' : ''}{p.name}</option>)}
-                        <option value="Autogol">Autogol</option>
-                      </select>
-                    );
-                  }
-                  return <input className="adm-input" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} placeholder="Nome cognome" autoFocus />;
-                })()}
-              </div>
-              <div className="adm-form-group">
-                <label className="adm-label">Nota (opz.)</label>
-                <input className="adm-input" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="es. colpo di testa, doppietta..." />
-              </div>
-              <div className="adm-form-actions">
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setAddingEvent(false)}>Annulla</button>
-                <button className="adm-btn adm-btn-sm" onClick={confirmEvent} disabled={!evPlayer.trim()}>Salva evento</button>
+            <div className="adm-modal-header">
+              <h3 className="adm-modal-title">
+                {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : '🟥 Rosso'} · {lm.minute}'
+              </h3>
+              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setAddingEvent(false)}>✕</button>
+            </div>
+            <div className="adm-modal-scroll">
+              <div className="adm-form">
+                <div className="adm-form-group">
+                  <label className="adm-label">Squadra</label>
+                  <select className="adm-select" value={evTeam} onChange={e => { setEvTeam(e.target.value); setEvPlayer(''); }}>
+                    {(lm.home || lm.away ? [lm.home, lm.away].filter(Boolean) : teams).map(t => (
+                      <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Giocatore</label>
+                  {(() => {
+                    const tObj = teams.find(t => t.short === evTeam) || (lm.home?.short === evTeam ? lm.home : lm.away);
+                    const pList = tObj?.players || [];
+                    if (pList.length > 0) {
+                      return (
+                        <select className="adm-select" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} autoFocus>
+                          <option value="">-- Seleziona Giocatore --</option>
+                          {pList.map(p => <option key={p.id} value={p.name}>{p.number ? p.number + '. ' : ''}{p.name}</option>)}
+                          <option value="Autogol">Autogol</option>
+                        </select>
+                      );
+                    }
+                    return <input className="adm-input" value={evPlayer} onChange={e => setEvPlayer(e.target.value)} placeholder="Nome cognome" autoFocus />;
+                  })()}
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Nota (opz.)</label>
+                  <input className="adm-input" value={evNote} onChange={e => setEvNote(e.target.value)} placeholder="es. colpo di testa, doppietta..." />
+                </div>
+                <div className="adm-form-actions">
+                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setAddingEvent(false)}>Annulla</button>
+                  <button className="adm-btn adm-btn-sm" onClick={confirmEvent} disabled={!evPlayer.trim()}>Salva evento</button>
+                </div>
               </div>
             </div>
           </div>
@@ -365,8 +376,8 @@ export function NewsSection({ data, onSave }) {
                 <div className="adm-item-meta">{n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
               </div>
               <div className="adm-item-actions">
-                <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...n })}><EditIcon size={16}/></button>
-                <button className="adm-btn-danger adm-btn-icon" onClick={() => setDeleting(n.id)}><TrashIcon size={16}/></button>
+                <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...n })}><EditIcon size={16}/></button>
+                <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(n.id)}><TrashIcon size={16}/></button>
               </div>
             </div>
           ))
@@ -390,41 +401,46 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
   return (
     <div className="adm-overlay" onClick={onClose}>
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
-        <h3 className="adm-modal-title">{item.title ? 'Modifica avviso' : 'Nuovo avviso'}</h3>
-        <div className="adm-form">
-          <div className="adm-form-row">
-            <div className="adm-form-group">
-              <label className="adm-label">Categoria</label>
-              <select className="adm-select" value={form.cat} onChange={e => set('cat', e.target.value)}>
-                {catOpts.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+        <div className="adm-modal-header">
+          <h3 className="adm-modal-title">{item.title ? 'Modifica avviso' : 'Nuovo avviso'}</h3>
+          <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={onClose}>✕</button>
+        </div>
+        <div className="adm-modal-scroll">
+          <div className="adm-form">
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Categoria</label>
+                <select className="adm-select" value={form.cat} onChange={e => set('cat', e.target.value)}>
+                  {catOpts.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Tono</label>
+                <select className="adm-select" value={form.tone || ''} onChange={e => set('tone', e.target.value)}>
+                  {toneOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
             </div>
             <div className="adm-form-group">
-              <label className="adm-label">Tono</label>
-              <select className="adm-select" value={form.tone || ''} onChange={e => set('tone', e.target.value)}>
-                {toneOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
+              <label className="adm-label">Data</label>
+              <input className="adm-input" value={form.date} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
             </div>
-          </div>
-          <div className="adm-form-group">
-            <label className="adm-label">Data</label>
-            <input className="adm-input" value={form.date} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
-          </div>
-          <div className="adm-form-group">
-            <label className="adm-label">Titolo</label>
-            <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo dell'avviso" required />
-          </div>
-          <div className="adm-form-group">
-            <label className="adm-label">Testo</label>
-            <textarea className="adm-textarea" value={form.body} onChange={e => set('body', e.target.value)} placeholder="Descrizione..." rows={4} />
-          </div>
-          <label className="adm-checkbox-row">
-            <input type="checkbox" checked={!!form.pinned} onChange={e => set('pinned', e.target.checked)} />
-            In evidenza (📌)
-          </label>
-          <div className="adm-form-actions">
-            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-            <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim()}>Salva</button>
+            <div className="adm-form-group">
+              <label className="adm-label">Titolo</label>
+              <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo dell'avviso" required />
+            </div>
+            <div className="adm-form-group">
+              <label className="adm-label">Testo</label>
+              <textarea className="adm-textarea" value={form.body} onChange={e => set('body', e.target.value)} placeholder="Descrizione..." rows={4} />
+            </div>
+            <label className="adm-checkbox-row">
+              <input type="checkbox" checked={!!form.pinned} onChange={e => set('pinned', e.target.checked)} />
+              In evidenza (📌)
+            </label>
+            <div className="adm-form-actions">
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
+              <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim()}>Salva</button>
+            </div>
           </div>
         </div>
       </div>

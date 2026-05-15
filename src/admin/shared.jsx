@@ -41,12 +41,17 @@ export function Toast({ msg, onDone }) {
 export function Confirm({ msg, onOk, onCancel }) {
   return (
     <div className="adm-overlay" onClick={onCancel}>
-      <div className="adm-modal" style={{ maxWidth: 360 }} onClick={e => e.stopPropagation()}>
-        <h3 className="adm-modal-title" style={{ fontSize: 18 }}>Conferma</h3>
-        <p style={{ color: 'var(--fg-2)', fontSize: 14, marginBottom: 20 }}>{msg}</p>
-        <div className="adm-form-actions">
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={onCancel}>Annulla</button>
-          <button className="adm-btn adm-btn-danger adm-btn-sm" style={{ flex: 1 }} onClick={onOk}>Elimina</button>
+      <div className="adm-modal" style={{ maxWidth: 360, minHeight: 'auto', borderRadius: 12 }} onClick={e => e.stopPropagation()}>
+        <div className="adm-modal-header">
+          <h3 className="adm-modal-title" style={{ fontSize: 18 }}>Conferma</h3>
+          <button className="adm-btn adm-btn-ghost" style={{ minHeight: 44, width: 44, padding: 0 }} onClick={onCancel}>✕</button>
+        </div>
+        <div className="adm-modal-scroll" style={{ padding: '20px 20px 24px' }}>
+          <p style={{ color: 'var(--fg-2)', fontSize: 14, margin: '0 0 20px' }}>{msg}</p>
+          <div className="adm-form-actions" style={{ marginTop: 0, paddingBottom: 0 }}>
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={onCancel}>Annulla</button>
+            <button className="adm-btn adm-btn-danger adm-btn-sm" style={{ flex: 1 }} onClick={onOk}>Elimina</button>
+          </div>
         </div>
       </div>
     </div>
