@@ -897,7 +897,37 @@ select:disabled {
   border: 1px solid var(--border-subtle);
 }
 
-/* ── Success toast ──────────────────────────────────────────── */
+/* ── Focus-visible: keyboard navigation ring ────────────────── */
+.adm-btn:focus-visible,
+.adm-logout:focus-visible,
+.adm-back-link:focus-visible,
+.adm-desktop-nav-btn:focus-visible,
+.adm-bn-item:focus-visible,
+.rm-tab:focus-visible,
+.adm-live-ev-btn:focus-visible {
+  outline: 2px solid var(--brand-green);
+  outline-offset: 2px;
+}
+
+.adm-input:focus-visible,
+.adm-textarea:focus-visible,
+.adm-select:focus-visible {
+  border-color: var(--brand-green);
+  box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.18);
+  outline: none;
+}
+
+.adm-checkbox-row input:focus-visible {
+  outline: 2px solid var(--brand-green);
+  outline-offset: 2px;
+}
+
+.adm-topbar select:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.6);
+  outline-offset: 1px;
+}
+
+/* ── Toast variants ─────────────────────────────────────────── */
 .adm-toast {
   position: fixed;
   bottom: 80px;
@@ -933,6 +963,11 @@ select:disabled {
     opacity: 0;
     transform: translateX(-50%) translateY(10px);
   }
+}
+
+.adm-toast--error {
+  background: #FF3D3D;
+  color: #fff;
 }
 
 /* ── Crest mini ─────────────────────────────────────────────── */
@@ -1263,5 +1298,22 @@ select:disabled {
 
 .adm-ev-red:hover {
   background: rgba(255, 61, 61, 0.06) !important;
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .adm-modal { animation: none; }
+  .adm-toast { animation: none; opacity: 1; }
+  .adm-status.live .dot { animation: none; opacity: 1; }
+  .adm-btn,
+  .adm-logout,
+  .adm-desktop-nav-btn,
+  .adm-bn-item,
+  .adm-input,
+  .adm-textarea,
+  .adm-select,
+  .adm-live-ev-btn,
+  .adm-topbar select,
+  .rm-tab { transition: none; }
 }
 

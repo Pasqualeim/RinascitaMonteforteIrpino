@@ -37,8 +37,8 @@ function DashboardSection({ data, editionId, tournamentCategories, setTab }) {
       <div className="adm-eyebrow" style={{ marginTop: 10 }}>
         {editionId ? 'Database relazionale attivo' : 'Gestione torneo'}
       </div>
-      <h2 className="adm-section-title" style={{ margin: 0 }}>Rinascita Cup 2026</h2>
-      <p className="adm-section-sub">3ª Edizione · Campo Sportivo Monteforte Irpino</p>
+      <h2 className="adm-section-title" style={{ margin: 0 }}>{data.edition?.name || 'Rinascita Cup 2026'}</h2>
+      <p className="adm-section-sub">{data.edition?.location || 'Campo Sportivo Monteforte Irpino'}</p>
 
       {/* Categorie torneo */}
       {tournamentCategories.length > 0 && (
@@ -208,10 +208,10 @@ function AdminApp() {
   const [tournamentCategories, setTournamentCategories] = useState([]);
 
   function bounceToLogin(message = 'Sessione scaduta. Effettua di nuovo l\'accesso.') {
-    setToast(message);
+    setToast({ msg: message, type: 'error' });
     setTimeout(() => {
       window.location.replace('admin.html');
-    }, 1200);
+    }, 1800);
   }
 
   useEffect(() => {
@@ -246,16 +246,16 @@ function AdminApp() {
           bounceToLogin('Sessione scaduta. Accesso richiesto.');
           return;
         }
-        setToast(`Sync fallita: ${result.remoteError}`);
+        setToast({ msg: `Sync fallita: ${result.remoteError}`, type: 'error' });
         return;
       }
-      if (msg) setToast(msg);
+      if (msg) setToast({ msg, type: 'success' });
     } catch (error) {
       if (isAdminSessionError(error)) {
         bounceToLogin('Sessione scaduta. Accesso richiesto.');
         return;
       }
-      setToast(error?.message || 'Salvataggio fallito');
+      setToast({ msg: error?.message || 'Salvataggio fallito', type: 'error' });
     }
   }
 
@@ -353,7 +353,7 @@ function AdminApp() {
         </button>
       </nav>
 
-      {toast && <Toast msg={`✓ ${toast}`} onDone={() => setToast(null)} />}
+      {toast && <Toast msg={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
     </div>
   );
 }

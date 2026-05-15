@@ -191,6 +191,9 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-btn-ghost:hover { color: #fff; }
 .rm-btn-lg { font-size: 17px; padding: 16px 24px; min-height: 52px; }
 .rm-btn-sm { font-size: 12px; padding: 8px 12px; min-height: 36px; }
+.rm-btn:focus-visible { outline: 2px solid var(--brand-green); outline-offset: 3px; }
+.rm-bn-item:focus-visible { outline: 2px solid var(--brand-green); outline-offset: -2px; }
+.rm-drawer-item:focus-visible { outline: 2px solid var(--brand-green); outline-offset: 2px; }
 
 /* ── Countdown ─────────────────────────────────────────────── */
 .rm-countdown {
@@ -569,4 +572,14 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   .rm-footer-bot { max-width: 1280px; margin: 28px auto 0; }
   .rm-news-grid { grid-template-columns: 1.5fr 1fr 1fr; }
   .rm-news-card.featured { grid-column: auto; grid-row: span 2; }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .rm-strip-track { animation: none; }
+  .rm-bn-item .rm-live-dot { animation: none; opacity: 1; }
+  .rm-drawer-overlay { animation: none; }
+  .rm-drawer { animation: none; }
+  .rm-btn,
+  .rm-bn-item { transition: none; }
 }

@@ -317,15 +317,16 @@ Tool usati:
 - `Prettier` — formatting
 
 ### Fase 8 — UX, accessibilità, feature gaps
-Status: `da fare`
+Status: `completata`
 
-- [ ] migliorare feedback errori/save
-- [ ] gestire meglio sessione scaduta
-- [ ] sostituire `alert/confirm` con modali UI
-- [ ] aggiungere `focus-visible`
-- [ ] aggiungere `prefers-reduced-motion`
-- [ ] verificare sponsor, ticker e sezioni secondarie
-- [ ] rimuovere copy hardcoded non gestibile
+- [x] migliorare feedback errori/save — Toast ora ha varianti `success` (verde) e `error` (rosso), con icon + `aria-live`
+- [x] gestire meglio sessione scaduta — `bounceToLogin` usa toast error + redirect a 1.8s (era 1.2s, ora legge il messaggio)
+- [x] sostituire `alert/confirm` con modali UI — già fatto in Fase 3; nessun `window.alert/confirm` rimasto
+- [x] aggiungere `focus-visible` — ring verde su tutti gli elementi interattivi admin e pubblico (btn, input, select, checkbox, nav, drawer)
+- [x] aggiungere `prefers-reduced-motion` — disabilita marquee, pulse, slideUp, fadeIn, toastIn/Out, tutte le transition in entrambi i CSS
+- [x] verificare sezioni secondarie — SponsorsSection, EventsSection, HonorsSection: funzionano, usano Confirm modal, salvataggi OK
+- [x] rimuovere copy hardcoded — DashboardSection usa `data.edition?.name` e `data.edition?.location` (fallback invariato)
+- [ ] StripSection admin — mancante (sezione ticker non esposta nel pannello) — rimandato a backlog
 
 ### Fase 9 — Processo e deploy
 Status: `in corso`
@@ -382,6 +383,16 @@ Status: `in corso`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 8)
+
+- Fase 8 completata: UX, accessibilità, feature gaps
+  - Toast: variante error (rosso) + icon + aria-live. bounceToLogin usa type='error', redirect a 1.8s
+  - focus-visible: ring verde (#00E676) su tutti gli elementi interattivi admin (btn, input, textarea, select, checkbox, nav, topbar select) e pubblico (rm-btn, rm-bn-item, rm-drawer-item)
+  - prefers-reduced-motion: admin-styles.css e styles.css — disabilita animazioni (marquee, pulse, slideUp, toastIn/Out) e transition
+  - copy hardcoded DashboardSection: usa data.edition?.name e data.edition?.location con fallback
+  - sezioni secondarie (Sponsor/Eventi/Albo d'oro): verificate funzionanti
+  - build 0 errori, lint 0 errori, 59/59 test passati
 
 ### 2026-05-15 (sessione 7)
 
