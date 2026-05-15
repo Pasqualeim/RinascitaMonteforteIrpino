@@ -406,7 +406,7 @@ export function ScorersSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{scorers.length} marcatori</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ _idx: -1, name: '', team: '', short: '', color: '#00E676', goals: 0 })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _idx: -1, name: '', team: '', short: '', color: '#00E676', goals: 0 })}>+ Nuovo</button>
         </div>
         {scorers.map((s, i) => (
           <div key={i} className="adm-item-row">

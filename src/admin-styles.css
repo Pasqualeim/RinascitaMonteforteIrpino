@@ -191,9 +191,6 @@ select:disabled {
 
 .adm-btn:hover { background: #e0e0e0; }
 
-.adm-btn-brand { background: var(--brand-green); color: #000; }
-.adm-btn-brand:hover { background: #00c060; }
-
 .adm-btn-danger { background: rgba(255, 61, 61, 0.1); color: #FF3D3D; }
 .adm-btn-danger:hover { background: rgba(255, 61, 61, 0.2); }
 
@@ -282,6 +279,27 @@ select:disabled {
   transition: all 150ms;
 }
 
+.adm-topbar select {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(0,0,0,0.3);
+  color: #000;
+  border-radius: 6px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 14px;
+  padding: 4px 28px 4px 8px;
+  min-height: 30px;
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+  cursor: pointer;
+}
+
 /* ── Bottom Navigation & Dashboard Grids ────────────────────────────────────── */
 
 .adm-bottom-nav {
@@ -351,7 +369,8 @@ select:disabled {
   color: var(--fg-2);
   transition: all 150ms;
   cursor: pointer;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: auto;
+  min-height: 100px;
 }
 
 .adm-grid-btn:hover {
@@ -394,10 +413,6 @@ select:disabled {
 }
 .adm-tabs-wrap::-webkit-scrollbar { display: none; }
 
-.adm-tabs-wrap::-webkit-scrollbar {
-  display: none;
-}
-
 .adm-tabs {
   display: flex;
   min-width: max-content;
@@ -434,7 +449,7 @@ select:disabled {
 
 /* Main content */
 .adm-main {
-  padding: 32px 16px 48px;
+  padding: 20px 16px 48px;
   width: 100%;
   max-width: 600px; /* Center like mobile */
   margin: 0 auto;
@@ -469,7 +484,7 @@ select:disabled {
 /* ── Sections & cards ───────────────────────────────────────── */
 .adm-section-title {
   font-family: var(--font-display);
-  font-size: clamp(28px, 7vw, 44px);
+  font-size: clamp(20px, 4vw, 30px);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #fff;
@@ -481,7 +496,7 @@ select:disabled {
 .adm-section-sub {
   font-size: 14px;
   color: var(--fg-2);
-  margin: 0 0 24px;
+  margin: 0 0 16px;
   line-height: 1.4;
 }
 
@@ -777,112 +792,6 @@ select:disabled {
   box-sizing: border-box;
 }
 
-.adm-live-score-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-}
-
-.adm-live-team-box {
-  text-align: center;
-  flex: 1;
-  min-width: 0;
-}
-
-.adm-live-team-short {
-  font-family: var(--font-display);
-  font-size: 32px;
-  letter-spacing: 0.04em;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.adm-live-team-name {
-  font-size: 10px;
-  color: var(--fg-3);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.adm-live-score-center {
-  font-family: var(--font-display);
-  font-size: 56px;
-  letter-spacing: 0.02em;
-  color: #fff;
-  text-align: center;
-  line-height: 1;
-  flex: none;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.adm-live-score-center i {
-  font-style: normal;
-  color: var(--brand-green);
-  margin: 0 4px;
-}
-
-.adm-live-min-badge {
-  text-align: center;
-  font-family: var(--font-display);
-  font-size: 14px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--brand-green);
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.adm-live-btns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.adm-live-goal-btn {
-  padding: 16px 8px;
-  min-height: 64px;
-  background: #0a0a0a;
-  border: 1px solid var(--border-brand);
-  border-radius: 10px;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  color: var(--brand-green);
-  transition: all 150ms;
-}
-
-.adm-live-goal-btn:hover {
-  background: rgba(0, 230, 118, 0.08);
-}
-
-.adm-live-goal-btn .sub {
-  font-size: 9px;
-  color: var(--fg-3);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
 
 .adm-live-event-btns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 
@@ -1147,15 +1056,6 @@ select:disabled {
 
 /* ── Live section redesign ─────────────────────────────── */
 
-/* Header live con toggle */
-.adm-live-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
 /* Pulsante primario (verde) — variante mancante */
 .adm-btn-primary {
   background: var(--brand-green);
@@ -1337,58 +1237,6 @@ select:disabled {
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ── Match picker dal calendario ──────────────────────── */
-.adm-match-pick-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-1);
-  border-radius: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-  color: var(--fg-1);
-  text-align: left;
-  transition: border-color 0.15s, background 0.15s;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.adm-match-pick-btn:hover,
-.adm-match-pick-btn:active {
-  border-color: var(--brand-green);
-  background: rgba(0, 230, 118, 0.05);
-}
-
-.adm-match-pick-team {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-family: var(--font-display);
-  font-size: 15px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  flex: 1;
-  min-width: 0;
-}
-
-.adm-match-pick-sep {
-  color: var(--fg-3);
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.adm-match-pick-time {
-  font-size: 11px;
-  color: var(--brand-green);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
 /* ── Event buttons color variants ─────────────────────── */
 .adm-ev-goal {
   border-color: rgba(0, 230, 118, 0.5) !important;
@@ -1417,32 +1265,3 @@ select:disabled {
   background: rgba(255, 61, 61, 0.06) !important;
 }
 
-/* ── Live dot ─────────────────────────────────────────── */
-.adm-live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  background: #FF3D3D;
-  border-radius: 50%;
-  margin-right: 6px;
-  animation: livePulse 1.4s ease-in-out infinite;
-  vertical-align: middle;
-  position: relative;
-  top: -2px;
-}
-
-.adm-bn-live-dot {
-  position: absolute;
-  top: -2px;
-  right: -4px;
-  width: 7px;
-  height: 7px;
-  margin: 0;
-  top: 0;
-  right: -3px;
-}
-
-@keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}

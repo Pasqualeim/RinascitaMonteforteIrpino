@@ -289,9 +289,7 @@ function AdminApp() {
             <select
               value={tournamentId || ''}
               onChange={e => setTournamentId(e.target.value)}
-              className="adm-select"
-              style={{ fontSize: 12, padding: '4px 8px', minWidth: 90, height: 32 }}
-              title="Seleziona categoria torneo"
+              style={{ fontSize: 12, padding: '4px 28px 4px 8px', minWidth: 90, height: 30 }}
             >
               {tournamentCategories.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>

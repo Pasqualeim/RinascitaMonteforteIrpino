@@ -20,7 +20,7 @@ export function EventsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{events.length} eventi</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 'e' + Date.now(), day: '', month: '', kind: 'match', kindLabel: 'Partita', title: '', time: '', where: '', highlight: false })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ id: 'e' + Date.now(), day: '', month: '', kind: 'match', kindLabel: 'Partita', title: '', time: '', where: '', highlight: false })}>+ Nuovo</button>
         </div>
         {events.map((ev, i) => (
           <div key={ev.id} className="adm-item-row">
@@ -99,7 +99,7 @@ export function HonorsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{honors.length} edizioni</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 'h' + Date.now(), year: '', edition: '', winner: '', runner: '', topScorer: '', mvp: '', alt: false })}>+ Nuova edizione</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ id: 'h' + Date.now(), year: '', edition: '', winner: '', runner: '', topScorer: '', mvp: '', alt: false })}>+ Nuova edizione</button>
         </div>
         {honors.map((h, i) => (
           <div key={h.id} className="adm-item-row">
@@ -164,7 +164,7 @@ export function SponsorsSection({ data, onSave }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{sponsors.length} sponsor</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={() => setEditing({ id: 's' + Date.now(), name: '', tag: '' })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ id: 's' + Date.now(), name: '', tag: '' })}>+ Nuovo</button>
         </div>
         {sponsors.map((s, i) => (
           <div key={s.id} className="adm-item-row">
