@@ -136,9 +136,6 @@ function DashboardSection({ data, editionId, tournamentCategories, setTab }) {
         <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}>
           <UsersIcon size={28}/><span>Squadre</span>
         </button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}>
-          <CalIcon size={28}/><span>Calendario</span>
-        </button>
       </div>
 
       {/* Momento 2: Regia giornata */}
@@ -146,7 +143,7 @@ function DashboardSection({ data, editionId, tournamentCategories, setTab }) {
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Regia Giornata</h3>
       <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}>
-          <CalIcon size={28}/><span>Risultati</span>
+          <CalIcon size={28}/><span>Partite</span>
         </button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}>
           <GridIcon size={28}/><span>Classifica</span>
