@@ -110,18 +110,24 @@ Struttura target:
 - `site/admin/lib/*.js`
 
 ### Fase 4 — Modularizzazione pubblico
-Status: `da fare`
+Status: `completata`
 
-- [ ] separare schermate pubbliche in file più piccoli
-- [ ] ridurre dipendenza da globali `window.*`
-- [ ] centralizzare route e screen registry
-- [ ] migliorare leggibilità di componenti e selectors
+- [x] separare schermate pubbliche in file più piccoli
+- [x] ridurre dipendenza da globali `window.*` (ogni screen ha `/* global */` dichiarativi)
+- [x] centralizzare route e screen registry (`VALID_SCREENS` in `site/public/app.jsx`)
+- [x] migliorare leggibilità di componenti e selectors
 
-Struttura target:
+Struttura risultante:
 
-- `site/public/app.jsx`
-- `site/public/screens/*.jsx`
-- `site/shared/components/*.jsx`
+- `site/public/app.jsx` — App + ErrorBoundary + VALID_SCREENS (estratto da index.html inline)
+- `site/public/screens/home.jsx` — HomeScreen
+- `site/public/screens/live.jsx` — LiveScreen
+- `site/public/screens/calendar.jsx` — CalendarScreen
+- `site/public/screens/table.jsx` — TableScreen
+- `site/public/screens/teams.jsx` — TeamsScreen
+- `site/public/screens/secondary.jsx` — EventsScreen + NewsScreen + HonorsScreen
+- `site/components.jsx` — componenti condivisi pubblici (con EmptyState aggiunto)
+- `site/screens.jsx` — shim legacy vuoto
 
 ### Fase 5 — Runtime professionale
 Status: `da fare`
@@ -218,6 +224,15 @@ Status: `da fare`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 3)
+
+- completata Fase 4: split screens.jsx in site/public/screens/*.jsx
+- estratto App + ErrorBoundary da inline index.html → site/public/app.jsx
+- EmptyState spostato in components.jsx (condiviso da tutte le screen)
+- index.html aggiornato con nuovi script tag, rimosso inline JSX
+- site/screens.jsx convertito in shim legacy
+- VALID_SCREENS centralizzato in app.jsx
 
 ### 2026-05-15 (sessione 2)
 

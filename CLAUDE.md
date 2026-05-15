@@ -13,10 +13,20 @@ colors_and_type.css     → Design system: variabili CSS colori, font, spacing
 site/
   styles.css            → Stili pubblici, mobile-first (base=375px, desktop @900px)
   data.js               → Dati + localStorage persistence (chiave: rm_data_v2)
-  components.jsx        → Componenti condivisi: Header, BottomNav, LiveBoard, ecc.
-  screens.jsx           → Schermate pubbliche: Home, Live, Calendario, Classifica, ecc.
-  admin.jsx             → Shim legacy compatibile durante lo split Fase 3
+  domain.js             → Hydration, normalizzazione, derivazioni runtime
+  components.jsx        → Componenti condivisi pubblici: EmptyState, Header, BottomNav, LiveBoard, ecc.
+  screens.jsx           → Shim legacy (vuoto — le screen sono in site/public/screens/)
+  admin.jsx             → Shim legacy (vuoto — la logica è in site/admin/)
   admin-styles.css      → Stili pannello admin
+  public/
+    app.jsx             → App + ErrorBoundary + VALID_SCREENS (mount React pubblico)
+    screens/
+      home.jsx          → HomeScreen
+      live.jsx          → LiveScreen
+      calendar.jsx      → CalendarScreen
+      table.jsx         → TableScreen
+      teams.jsx         → TeamsScreen
+      secondary.jsx     → EventsScreen + NewsScreen + HonorsScreen
   admin/
     shared.jsx          → Helper admin condivisi: icone, toast, confirm, session helpers
     auth.jsx            → Login staff
@@ -175,15 +185,18 @@ Struttura `content` jsonb:
 
 ## Aggiungere nuova sezione pubblica
 
-1. Aggiungere screen in `site/screens.jsx` (pattern uguale agli altri)
-2. Aggiungere route in `App` in `index.html`
-3. Aggiungere voce in `BottomNav` (drawer "Altro") in `site/components.jsx`
-4. Se ha dati gestibili: aggiungere sezione in `site/admin.jsx`
+1. Aggiungere screen in `site/public/screens/` (nuovo file o in `secondary.jsx`)
+2. Esporre via `Object.assign(window, { NuovaScreen })` in fondo al file
+3. Aggiungere `<script type="text/babel" src="site/public/screens/nuovo.jsx">` in `index.html` prima di `app.jsx`
+4. Aggiungere id in `VALID_SCREENS` e route in `App` in `site/public/app.jsx`
+5. Aggiungere voce in `BottomNav` (drawer "Altro") in `site/components.jsx`
+6. Se ha dati gestibili: aggiungere sezione nella sezione admin appropriata
 
 ## Note
 
 - NO bundler. Modifica direttamente i file `.jsx` e `.css`.
-- `admin.html` ora carica più script Babel in ordine: `site/admin/shared.jsx` → `site/admin/auth.jsx` → `site/admin/sections/*.jsx` → `site/admin.jsx` → `site/admin/app.jsx`
+- `index.html` carica in ordine: `site/components.jsx` → `site/public/screens/*.jsx` → `site/public/app.jsx`
+- `admin.html` carica in ordine: `site/admin/shared.jsx` → `site/admin/auth.jsx` → `site/admin/sections/*.jsx` → `site/admin.jsx` → `site/admin/app.jsx`
 - Babel transpila JSX in-browser. Errori JSX visibili in console browser.
 - Il sito funziona aprendo `index.html` direttamente nel browser (file://).
 - `admin.html` e sito pubblico condividono `localStorage.rm_data_v2` solo come cache/fallback dati.
