@@ -287,10 +287,13 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
 // ── Bootstrap API (public, schema v3) ────────────────────────
 let _cachedEditionId = null;
 
-export async function rmLoadDataFromBootstrap() {
+export async function rmLoadDataFromBootstrap(editionSlug = null) {
   if (!SUPABASE_FUNCTIONS_URL) return null;
   try {
-    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/bootstrap`);
+    const url = editionSlug
+      ? `${SUPABASE_FUNCTIONS_URL}/bootstrap?edition=${encodeURIComponent(editionSlug)}`
+      : `${SUPABASE_FUNCTIONS_URL}/bootstrap`;
+    const res = await fetch(url);
     if (!res.ok) return null;
     const { data } = await res.json();
     if (!data || data.schema_version !== 3) return null;
@@ -298,6 +301,31 @@ export async function rmLoadDataFromBootstrap() {
   } catch {
     return null;
   }
+}
+
+export async function rmGetAllEditions() {
+  if (!SUPABASE_FUNCTIONS_URL) return [];
+  try {
+    const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/editions`);
+    if (!res.ok) return [];
+    const { data } = await res.json();
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function rmAdminUpdateEdition(id, updates) {
+  return rmAdminApi(`/editions/${id}`, { method: 'PUT', body: updates });
+}
+export async function rmAdminCreateEdition(payload) {
+  return rmAdminApi('/editions', { method: 'POST', body: payload });
+}
+export async function rmAdminGetTournaments() {
+  return rmAdminApi('/tournaments', { method: 'GET' });
+}
+export async function rmAdminCreateTournament(payload) {
+  return rmAdminApi('/tournaments', { method: 'POST', body: payload });
 }
 
 export async function rmGetActiveEditionId() {

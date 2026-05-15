@@ -278,8 +278,20 @@ Deno.serve(async (req: Request) => {
 
     // ── Public endpoints (no auth) ──────────────────────────
     if (method === "GET" && base === "/bootstrap") {
-      const edition = await getActiveEdition();
-      if (!edition) return json(req, 404, { error: "Nessuna edizione attiva trovata" });
+      const qs = new URL(req.url).searchParams;
+      const editionSlug = qs.get("edition");
+      let edition;
+      if (editionSlug) {
+        const { data } = await supabase
+          .from("tournament_editions")
+          .select("*, tournaments!inner(id, name, slug, location, description)")
+          .eq("slug", editionSlug)
+          .single();
+        edition = data;
+      } else {
+        edition = await getActiveEdition();
+      }
+      if (!edition) return json(req, 404, { error: "Nessuna edizione trovata" });
       const payload = await buildBootstrapPayload(edition.id);
       return json(req, 200, { ok: true, data: payload });
     }
@@ -287,7 +299,7 @@ Deno.serve(async (req: Request) => {
     if (method === "GET" && base === "/editions") {
       const { data, error } = await supabase
         .from("tournament_editions")
-        .select("*, tournaments!inner(id, name, slug)")
+        .select("*, tournaments!inner(id, name, slug, location)")
         .order("year", { ascending: false });
       if (error) throw error;
       return json(req, 200, { ok: true, data });
@@ -388,6 +400,44 @@ Deno.serve(async (req: Request) => {
       method !== "GET" && method !== "DELETE"
         ? await req.json().catch(() => ({}))
         : {};
+
+    // Editions (admin update)
+    if (base === "/editions") {
+      if (method === "PUT" && id) {
+        const allowed = ["status","name","kickoff_date","start_date","end_date","location","prize_first","prize_second","prize_third","format_notes"];
+        const upd: Record<string, unknown> = {};
+        for (const k of allowed) { if (k in body) upd[k] = body[k]; }
+        const { data, error } = await supabase
+          .from("tournament_editions").update(upd).eq("id", id).select("*, tournaments!inner(id,name,slug)").single();
+        if (error) throw error;
+        return json(req, 200, { ok: true, data });
+      }
+      if (method === "POST") {
+        const { tournament_id, year, edition_number, name, slug, status, kickoff_date, start_date, end_date, location, prize_first, prize_second, prize_third } = body;
+        if (!tournament_id || !year || !name || !slug) return json(req, 400, { error: "tournament_id, year, name, slug obbligatori" });
+        const { data, error } = await supabase.from("tournament_editions")
+          .insert({ tournament_id, year, edition_number, name, slug, status: status || "upcoming", kickoff_date, start_date, end_date, location, prize_first, prize_second, prize_third })
+          .select().single();
+        if (error) throw error;
+        return json(req, 201, { ok: true, data });
+      }
+    }
+
+    // Tournaments (admin update)
+    if (base === "/tournaments") {
+      if (method === "GET") {
+        const { data, error } = await supabase.from("tournaments").select("*").order("name");
+        if (error) throw error;
+        return json(req, 200, { ok: true, data });
+      }
+      if (method === "POST") {
+        const { name, slug, description, location } = body;
+        if (!name || !slug) return json(req, 400, { error: "name e slug obbligatori" });
+        const { data, error } = await supabase.from("tournaments").insert({ name, slug, description, location }).select().single();
+        if (error) throw error;
+        return json(req, 201, { ok: true, data });
+      }
+    }
 
     // Groups
     if (base === "/groups") {
