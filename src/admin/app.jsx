@@ -9,6 +9,13 @@ import { EventsSection, HonorsSection, SponsorsSection } from './sections/conten
 import { SettingsSection } from './sections/settings.jsx';
 import '../admin-styles.css';
 
+const PRIMARY_NAV_ITEMS = [
+  { id: 'dashboard', label: 'Torneo' },
+  { id: 'live', label: 'Live' },
+  { id: 'news', label: 'Bacheca' },
+  { id: 'settings', label: 'Impostazioni' },
+];
+
 function DashboardMenu({ setTab }) {
   return (
     <>
@@ -17,26 +24,26 @@ function DashboardMenu({ setTab }) {
       <p className="adm-section-sub">Gestisci le squadre, i calendari e le classifiche.</p>
 
       <div className="adm-grid-menu">
-        <div className="adm-grid-btn" onClick={() => setTab('teams')}>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}>
           <UsersIcon size={32} />
           <span>Squadre & Rose</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('gironi')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}>
           <GridIcon size={32} />
           <span>Gironi</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('matches')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}>
           <CalIcon size={32} />
           <span>Partite</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('standings')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}>
           <GridIcon size={32} />
           <span>Classifiche</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('scorers')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}>
           <BallIcon size={32} />
           <span>Marcatori</span>
-        </div>
+        </button>
       </div>
 
       <div className="adm-eyebrow" style={{ marginTop: 32 }}>Sito Pubblico</div>
@@ -44,18 +51,18 @@ function DashboardMenu({ setTab }) {
       <p className="adm-section-sub">Personalizza gli eventi, gli avvisi e l'albo d'oro del sito.</p>
 
       <div className="adm-grid-menu">
-        <div className="adm-grid-btn" onClick={() => setTab('events')}>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}>
           <CalIcon size={32} />
           <span>Eventi</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('honors')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('honors')}>
           <TrophyIcon size={32} />
           <span>Albo d'oro</span>
-        </div>
-        <div className="adm-grid-btn" onClick={() => setTab('sponsors')}>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('sponsors')}>
           <StarIcon size={32} />
           <span>Sponsor</span>
-        </div>
+        </button>
       </div>
     </>
   );
@@ -145,9 +152,25 @@ function AdminApp() {
         <button className="adm-logout" onClick={logout}>Esci</button>
       </header>
 
+      <div className="adm-desktop-nav" aria-label="Navigazione primaria admin">
+        {PRIMARY_NAV_ITEMS.map(item => {
+          const isActive = bottomNav === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`adm-desktop-nav-btn ${isActive ? 'on' : ''}`}
+              onClick={() => navigateTo(item.id)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+
       <main className="adm-main">
         {!isMainTab && (
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ marginBottom: 20, padding: 0 }} onClick={() => navigateTo('dashboard')}>
+          <button className="adm-back-link" type="button" onClick={() => navigateTo('dashboard')}>
             ← Torna al Menù
           </button>
         )}

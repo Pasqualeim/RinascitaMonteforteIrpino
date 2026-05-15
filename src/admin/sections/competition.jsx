@@ -64,12 +64,12 @@ export function MatchesSection({ data, onSave }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
+      <div className="adm-section-head">
         <div>
           <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
           <p className="adm-section-sub" style={{ margin: 0 }}>Risultati, fasi torneo e tabellone eliminazione.</p>
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div className="adm-section-actions">
           <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
           <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Bracket</button>
           <button className="adm-btn adm-btn-sm" onClick={newMatch}>+ Nuova</button>
@@ -112,9 +112,11 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, o
   const [error, setError] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const presets = allPresets && allPresets.length > 0 ? allPresets : KNOCKOUT_PRESETS;
+  const sameTeamsSelected = !!form.home?.short && form.home?.short === form.away?.short;
 
   function submit() {
     if (!form.home || !form.away) { setError('Seleziona entrambe le squadre'); return; }
+    if (sameTeamsSelected) { setError('Casa e ospite devono essere squadre diverse'); return; }
     setError('');
     onSave(form);
   }
@@ -160,17 +162,26 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, o
                 <label className="adm-label">Squadra Casa</label>
                 <select className="adm-select" value={form.home?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('home', t); }}>
                   <option value="">-- Seleziona --</option>
-                  {teams.map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                  {teams
+                    .filter(t => !form.away?.short || t.short === form.home?.short || t.short !== form.away.short)
+                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
                 </select>
               </div>
               <div className="adm-form-group">
                 <label className="adm-label">Squadra Ospite</label>
                 <select className="adm-select" value={form.away?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('away', t); }}>
                   <option value="">-- Seleziona --</option>
-                  {teams.map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                  {teams
+                    .filter(t => !form.home?.short || t.short === form.away?.short || t.short !== form.home.short)
+                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
                 </select>
               </div>
             </div>
+            {sameTeamsSelected && (
+              <p className="adm-inline-hint" style={{ marginTop: -4 }}>
+                Casa e ospite non possono coincidere.
+              </p>
+            )}
             <div className="adm-form-group">
               <label className="adm-label">Stato</label>
               <select className="adm-select" value={form.status} onChange={e => set('status', e.target.value)}>

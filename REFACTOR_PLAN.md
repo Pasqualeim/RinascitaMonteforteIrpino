@@ -146,7 +146,157 @@ Note:
 - `npm run dev` per sviluppo locale, `npm run build` per produzione
 - TypeScript aggiungibile in futuro file per file
 
-### Fase 6 — QA e test
+### Fase 6 — Refactor totale prodotto e dominio torneo in 3 sprint
+Status: `da fare`
+
+Obiettivo:
+
+- rifondare `database`, `backend` e `frontend` sulla base delle regole reali del torneo
+- separare chiaramente dominio `torneo`, `edizione`, `giornata`, `partita`, `squadra`, `evento live`
+- rendere piattaforma estendibile a più tornei e a più edizioni dello stesso torneo
+- allineare admin a uso reale staff: preparazione pre-torneo, regia giornata, diretta mobile bordo campo
+
+Vincolo architetturale:
+
+- stato attuale “single row JSON `site_data.id=1`” va trattato come step transitorio
+- target medio termine: modello relazionale o ibrido relazionale + viste/materializzazioni, con API coerenti
+- ogni scelta deve supportare almeno:
+  - più tornei distinti
+  - più edizioni per torneo
+  - configurazioni e regole diverse per formato competizione
+  - frontend pubblico e admin costruiti sopra stesso dominio dati
+
+#### Modello target da perseguire
+
+Entità minime:
+
+- `tournaments` — contenitore logico multi-torneo
+- `tournament_editions` — singola edizione annuale o stagionale
+- `teams`
+- `team_registrations` o equivalente per legare squadra a edizione
+- `groups`
+- `matches`
+- `match_events`
+- `standings_snapshots` o derivazioni calcolate
+- `news`
+- `events`
+- `sponsors`
+- `honors`
+- `admin_users`, `admin_sessions`
+
+Principi dominio:
+
+- una squadra non deve vivere “dentro payload JSON”, ma come entità riferibile
+- una partita appartiene sempre a una edizione
+- gironi, calendario, live e classifica devono dipendere da regole edizione-specifiche
+- il pubblico deve leggere projection/read models stabili
+- admin deve scrivere comandi espliciti, non sovrascrivere blob globale
+
+#### Sprint 1 — Fondazioni dominio e database
+Focus:
+
+- progettare modello dati torneo-first, multi-edizione e multi-torneo
+
+Task:
+
+- [ ] mappare regole reali torneo: gironi, knockout, classifica, marcatori, live, sponsor, albo d'oro
+- [ ] definire contratto dominio scritto per supportare più tornei e più edizioni
+- [ ] progettare schema DB target con chiavi stabili e relazioni chiare
+- [ ] separare contenuti “anagrafici” da contenuti “runtime/live”
+- [ ] decidere cosa resta derivato e cosa viene persistito
+- [ ] prevedere strategia migrazione da `site_data.content` a modello nuovo senza downtime
+- [ ] introdurre identificatori `tournament_id` e `edition_id` ovunque servano
+- [ ] definire vincoli DB per impedire incoerenze frequenti
+- [ ] preparare seed/dev fixtures per almeno 2 tornei diversi e 2 edizioni
+
+Output attesi:
+
+- schema target condiviso e verificabile
+- piano migrazione dati legacy → modello nuovo
+- base pronta per API e frontend non più accoppiati al blob JSON
+
+File/aree probabili:
+
+- `supabase/*.sql`
+- [supabase/functions/admin-api/index.ts](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/supabase/functions/admin-api/index.ts:1)
+- [src/data.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/data.js:1)
+- [src/domain.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/domain.js:1)
+
+#### Sprint 2 — Backend applicativo e regole torneo
+Focus:
+
+- trasformare regole torneo in servizi backend e contratti di scrittura/lettura
+
+Task:
+
+- [ ] spezzare `admin-api` in endpoint o use-case coerenti per area dominio
+- [ ] introdurre API per `tournaments`, `editions`, `teams`, `groups`, `matches`, `live`, `content`
+- [ ] spostare lato backend validazioni critiche oggi implicite nel frontend
+- [ ] centralizzare `computeStandings` e altre regole sensibili in layer condiviso o backend
+- [ ] introdurre read models per sito pubblico separati dai write models admin
+- [ ] definire strategia cache/sync lato pubblico senza dipendere da blob unico
+- [ ] progettare permessi/RLS per letture pubbliche e scritture staff per entità nuove
+- [ ] prevedere endpoint di bootstrap edizione attiva e archivio edizioni passate
+
+Output attesi:
+
+- backend coerente con regole torneo
+- scritture granulari e verificabili
+- base pronta per frontend più semplice e meno fragile
+
+File/aree probabili:
+
+- `supabase/*.sql`
+- [supabase/functions/admin-api/index.ts](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/supabase/functions/admin-api/index.ts:1)
+- [src/data.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/data.js:1)
+- [src/domain.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/domain.js:1)
+
+#### Sprint 3 — Frontend operativo staff + pubblico
+Focus:
+
+- rifare UX admin e pubblico intorno ai flussi veri dello staff e dei visitatori
+
+Task:
+
+- [ ] introdurre dashboard staff per 3 momenti: setup torneo, regia giornata, live bordo campo
+- [ ] ridisegnare `Partite`, `Squadre`, `Gironi`, `Live`, `Settings` su workflow reali
+- [ ] creare onboarding e checklist pre-torneo
+- [ ] creare vista operativa “oggi” con partite imminenti/live/finali da chiudere
+- [ ] ottimizzare diretta mobile per uso a una mano con eventi rapidi e undo breve
+- [ ] aggiornare frontend pubblico per consumare nuovo read model multi-edizione
+- [ ] permettere selezione/archivio edizioni lato pubblico se richiesto
+- [ ] ripulire copy hardcoded e dipendenze da assunzioni single-torneo
+
+Output attesi:
+
+- staff operativo da mobile e desktop senza attriti principali
+- pubblico coerente con nuova architettura dati
+- frontend disaccoppiato da struttura legacy
+
+File/aree probabili:
+
+- [src/admin/app.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/admin/app.jsx:1)
+- [src/admin/sections/competition.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/admin/sections/competition.jsx:1)
+- [src/admin/sections/live-news.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/admin/sections/live-news.jsx:1)
+- [src/public/app.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/public/app.jsx:1)
+- [src/public/screens/home.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/public/screens/home.jsx:1)
+- [src/public/screens/live.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/public/screens/live.jsx:1)
+- [src/public/screens/calendar.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/public/screens/calendar.jsx:1)
+- [src/components.jsx](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/components.jsx:1)
+- [src/admin-styles.css](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/admin-styles.css:1)
+- [src/styles.css](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/styles.css:1)
+- [src/data.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/data.js:1)
+- [src/domain.js](/Users/matteoercolino/IdeaProjects/RinascitaMonteforteIrpino/src/domain.js:1)
+
+Criteri di uscita fase:
+
+- [ ] schema dati supporta più tornei e più edizioni
+- [ ] backend non dipende più da singolo blob `site_data`
+- [ ] pubblico e admin leggono/scrivono tramite modelli coerenti con dominio
+- [ ] regole torneo principali vivono in layer esplicito e testabile
+- [ ] staff prepara torneo, gestisce calendario e aggiorna live senza workaround
+
+### Fase 7 — QA e test
 Status: `da fare`
 
 - [ ] unit test per standings e derivazioni
@@ -162,7 +312,7 @@ Tool target:
 - `ESLint`
 - `Prettier`
 
-### Fase 7 — UX, accessibilità, feature gaps
+### Fase 8 — UX, accessibilità, feature gaps
 Status: `da fare`
 
 - [ ] migliorare feedback errori/save
@@ -173,7 +323,7 @@ Status: `da fare`
 - [ ] verificare sponsor, ticker e sezioni secondarie
 - [ ] rimuovere copy hardcoded non gestibile
 
-### Fase 8 — Processo e deploy
+### Fase 9 — Processo e deploy
 Status: `da fare`
 
 - [ ] definire ambiente dev/prod

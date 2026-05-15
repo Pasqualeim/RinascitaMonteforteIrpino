@@ -14,6 +14,8 @@ export function LiveSection({ data, onSave }) {
   const todayMatches = (data.matches_giornata || [])
     .flatMap(g => (g.items || []).filter(m => m.date === 'Oggi' || m.status === 'sch'))
     .filter(m => m.home && m.away);
+  const sameTeamsSelected = !!lm.home?.short && lm.home?.short === lm.away?.short;
+  const canStartLive = !!lm.home?.short && !!lm.away?.short && !sameTeamsSelected;
 
   function getFlag(team) {
     if (team?.flag) return team.flag;
@@ -50,6 +52,7 @@ export function LiveSection({ data, onSave }) {
   }
 
   function toggleActive() {
+    if (!lm.active && !canStartLive) return;
     const updated = { ...lm, active: !lm.active };
     setLm(updated);
     save(updated);
@@ -108,7 +111,12 @@ export function LiveSection({ data, onSave }) {
   function setTeam(side, short) {
     const team = teams.find(t => t.short === short);
     if (team) {
-      const updated = { ...lm, [side]: team };
+      const opposite = side === 'home' ? 'away' : 'home';
+      const updated = {
+        ...lm,
+        [side]: team,
+        ...(lm[opposite]?.short === short ? { [opposite]: null } : {}),
+      };
       setLm(updated);
       save(updated);
     }
@@ -122,7 +130,7 @@ export function LiveSection({ data, onSave }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      <div className="adm-section-head">
         <div>
           <h2 className="adm-section-title" style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
             {lm.active && <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#FF3D3D', flexShrink: 0 }} />}
@@ -135,6 +143,7 @@ export function LiveSection({ data, onSave }) {
         <button
           className={`adm-btn adm-btn-sm ${lm.active ? 'adm-btn-danger' : 'adm-btn-primary'}`}
           onClick={toggleActive}
+          disabled={!lm.active && !canStartLive}
         >
           {lm.active ? '⏹ Termina' : '▶ Avvia'}
         </button>
@@ -182,7 +191,9 @@ export function LiveSection({ data, onSave }) {
                 <div className="adm-label" style={{ marginBottom: 4, textAlign: 'center' }}>Casa</div>
                 <select className="adm-select" value={lm.home?.short || ''} onChange={e => setTeam('home', e.target.value)}>
                   <option value="">-- Squadra --</option>
-                  {teams.map(t => <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>)}
+                  {teams
+                    .filter(t => !lm.away?.short || t.short === lm.home?.short || t.short !== lm.away.short)
+                    .map(t => <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>)}
                 </select>
               </div>
               <div style={{ textAlign: 'center', color: 'var(--fg-3)', paddingBottom: 10, fontFamily: 'var(--font-display)' }}>VS</div>
@@ -190,10 +201,17 @@ export function LiveSection({ data, onSave }) {
                 <div className="adm-label" style={{ marginBottom: 4, textAlign: 'center' }}>Ospite</div>
                 <select className="adm-select" value={lm.away?.short || ''} onChange={e => setTeam('away', e.target.value)}>
                   <option value="">-- Squadra --</option>
-                  {teams.map(t => <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>)}
+                  {teams
+                    .filter(t => !lm.home?.short || t.short === lm.away?.short || t.short !== lm.home.short)
+                    .map(t => <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>)}
                 </select>
               </div>
             </div>
+            {!canStartLive && (
+              <p className="adm-inline-hint">
+                Seleziona due squadre diverse prima di avviare la diretta.
+              </p>
+            )}
           </div>
         </div>
       )}
