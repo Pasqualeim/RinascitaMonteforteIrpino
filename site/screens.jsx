@@ -290,13 +290,13 @@ function TeamsScreen({ data }) {
 
   const filtered = useMemo(() => {
     if (selGroup === 'all') return teams;
-    if (selGroup === 'none') return teams.filter(t => !t.group);
-    return teams.filter(t => t.group === selGroup);
+    if (selGroup === 'none') return teams.filter(t => !window.rmGetTeamGroupId(t));
+    return teams.filter(t => window.rmGetTeamGroupId(t) === selGroup);
   }, [selGroup, teams]);
 
   const tabs = [
     { id: 'all', label: `Tutte (${teams.length})` },
-    ...groups.map(g => ({ id: g.id, label: `${g.name} (${teams.filter(t => t.group === g.id).length})` })),
+    ...groups.map(g => ({ id: g.id, label: `${g.name} (${teams.filter(t => window.rmGetTeamGroupId(t) === g.id).length})` })),
   ];
 
   return (

@@ -76,18 +76,140 @@ const DEFAULT_STRIP_ITEMS      = [];
 
 // ── Persistence ─────────────────────────────────────────────
 const RM_STORAGE_KEY = 'rm_data_v2';
+const RM_ADMIN_SESSION_KEY = window.RM_ADMIN_SESSION_KEY || 'rm_admin_session_v1';
 const SUPABASE_URL = 'https://jummgmhkapvvibicnqos.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp1bW1nbWhrYXB2dmliaWNucW9zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDMzMTUsImV4cCI6MjA5NDE3OTMxNX0.9kTpjZFC1FdH7pz_mU15YidkV7j24mD0P-KxKxqxCqM';
+const SUPABASE_FUNCTIONS_URL = `${SUPABASE_URL}/functions/v1/admin-api`;
 
 let _supabase = null;
 if (window.supabase) {
   _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
+function rmGetSupabaseClient() {
+  return _supabase;
+}
+
+function rmIsAdminPage() {
+  try {
+    const href = String(window.location.href || '').toLowerCase();
+    return href.includes('/admin.html') || href.endsWith('admin.html') || href.includes('admin.html#');
+  } catch (e) {
+    return false;
+  }
+}
+
+function rmGetAdminSession() {
+  try {
+    const raw = sessionStorage.getItem(RM_ADMIN_SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    const expiresAt = new Date(session?.expires_at || 0).getTime();
+    if (!session?.token || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      sessionStorage.removeItem(RM_ADMIN_SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch (e) {
+    return null;
+  }
+}
+
+function rmSetAdminSession(session) {
+  if (!session?.token || !session?.expires_at) throw new Error('Sessione admin non valida');
+  sessionStorage.setItem(RM_ADMIN_SESSION_KEY, JSON.stringify({
+    token: session.token,
+    expires_at: session.expires_at,
+    user: session.user || null,
+  }));
+  return rmGetAdminSession();
+}
+
+function rmClearAdminSession() {
+  try {
+    sessionStorage.removeItem(RM_ADMIN_SESSION_KEY);
+  } catch (e) {}
+}
+
+function rmHasAdminSession() {
+  return !!rmGetAdminSession();
+}
+
+function rmIsAdminSessionErrorMessage(message) {
+  return /sessione admin assente|sessione non valida|sessione scaduta|utente disattivato/i.test(String(message || ''));
+}
+
+async function rmAdminApi(path, options = {}) {
+  const session = rmGetAdminSession();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+    ...(options.headers || {}),
+  };
+
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}${path}`, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401) rmClearAdminSession();
+    throw new Error(payload?.error || 'Richiesta admin fallita');
+  }
+  return payload;
+}
+
+async function rmAdminLogin(username, password) {
+  const payload = await rmAdminApi('/login', {
+    method: 'POST',
+    body: { username: String(username || '').trim(), password: String(password || '') },
+  });
+  return rmSetAdminSession(payload.session);
+}
+
+async function rmAdminMe() {
+  const payload = await rmAdminApi('/me');
+  const current = rmGetAdminSession();
+  if (current) {
+    rmSetAdminSession({ ...current, user: payload.user });
+  }
+  return payload;
+}
+
+async function rmAdminLogout() {
+  try {
+    if (rmHasAdminSession()) {
+      await rmAdminApi('/logout', { method: 'POST' });
+    }
+  } finally {
+    rmClearAdminSession();
+  }
+}
+
+async function rmAdminUpdateCredentials({ username, password }) {
+  const payload = await rmAdminApi('/credentials', {
+    method: 'POST',
+    body: {
+      username: String(username || '').trim(),
+      password: password ? String(password) : undefined,
+    },
+  });
+  const current = rmGetAdminSession();
+  if (current) {
+    rmSetAdminSession({ ...current, user: payload.user });
+  }
+  return payload;
+}
+
 function rmLoadLocal() {
   try {
     const raw = localStorage.getItem(RM_STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(parsed) : parsed;
+    }
   } catch(e) {}
   return null;
 }
@@ -103,8 +225,9 @@ async function rmLoadData() {
     
     if (error) throw error;
     if (data && data.content && Object.keys(data.content).length > 0) {
-      localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(data.content));
-      return data.content;
+      const normalized = window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(data.content) : data.content;
+      localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
+      return normalized;
     }
   } catch(e) {
     console.warn('Errore caricamento da Supabase, uso cache locale:', e);
@@ -112,65 +235,66 @@ async function rmLoadData() {
   return rmLoadLocal();
 }
 
-async function rmSaveData(data) {
-  data.updated_at = new Date().toISOString();
-  const toSave = { ...data };
-  delete toSave.strip_items; // computed from matches_giornata, not persisted
-  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(toSave));
+async function rmSaveData(data, options = {}) {
+  const normalized = window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(data) : { ...data };
+  normalized.updated_at = new Date().toISOString();
+  localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
 
-  if (_supabase) {
-    try {
-      const { error } = await _supabase
-        .from('site_data')
-        .update({ content: toSave, updated_at: data.updated_at })
-        .eq('id', 1);
-
-      if (error) throw error;
-    } catch(e) {
-      console.error('Errore salvataggio su Supabase:', e);
-    }
+  const shouldAttemptRemote = options.remote !== false && rmIsAdminPage();
+  if (!shouldAttemptRemote) {
+    return { remoteSkipped: true, data: normalized };
   }
-}
 
-// Genera strip_items automaticamente da matches_giornata
-function buildStripItems(saved) {
-  const giornata = saved?.matches_giornata || [];
-  const items = [];
-  for (const g of giornata) {
-    for (const m of g.items || []) {
-      if (!m.home || !m.away) continue;
-      if (m.status === 'ft') {
-        items.push(`${m.home.short} ${m.hs ?? 0}–${m.as ?? 0} ${m.away.short} · Finale`);
-      } else if (m.status === 'live') {
-        items.push(`🔴 LIVE · ${m.home.short} ${m.hs ?? 0}–${m.as ?? 0} ${m.away.short} · ${m.minute}'`);
-      } else {
-        items.push(`${m.home.short} vs ${m.away.short} · ${m.date || ''} ${m.time || ''} · ${g.day}`);
-      }
-    }
+  if (options.requireAdmin && !rmHasAdminSession()) {
+    throw new Error('Sessione admin assente o scaduta');
   }
-  return items.length > 0 ? items : ['Rinascita Monteforte Cup 2026 · Al via il 15 Giugno · Campo Sportivo Monteforte Irpino'];
+
+  if (!rmHasAdminSession()) {
+    return { remoteSkipped: true, data: normalized };
+  }
+
+  try {
+    const payload = await rmAdminApi('/save', {
+      method: 'POST',
+      body: { content: normalized },
+    });
+    if (payload?.updated_at) normalized.updated_at = payload.updated_at;
+    localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
+  } catch(e) {
+    console.error('Errore salvataggio admin-api:', e);
+    return { remoteError: e?.message || 'Errore salvataggio remoto', data: normalized };
+  }
+
+  return { remoteSkipped: false, data: normalized };
 }
 
 // Merge saved data with defaults
 function rmMergeDefaults(saved) {
+  const normalized = window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(saved) : saved;
+  const derivedMatchesToday = window.rmDeriveMatchesToday
+    ? window.rmDeriveMatchesToday(normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA)
+    : DEFAULT_MATCHES_TODAY;
+  const derivedStripItems = window.rmBuildStripItems
+    ? window.rmBuildStripItems(normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA)
+    : DEFAULT_STRIP_ITEMS;
+
   return {
-    teams:            saved?.teams            || DEFAULT_TEAMS,
-    groups:           saved?.groups           || DEFAULT_GROUPS,
-    standings_groups: saved?.standings_groups || DEFAULT_STANDINGS_GROUPS,
+    teams:            normalized?.teams            || DEFAULT_TEAMS,
+    groups:           normalized?.groups           || DEFAULT_GROUPS,
+    standings_groups: normalized?.standings_groups || DEFAULT_STANDINGS_GROUPS,
     standings_a:      [],
     standings_o40:    [],
     standings_jr:     [],
-    live_match:       saved?.live_match       || DEFAULT_LIVE_MATCH,
-    matches_today:    saved?.matches_today    || DEFAULT_MATCHES_TODAY,
-    matches_giornata: saved?.matches_giornata || DEFAULT_MATCHES_GIORNATA,
-    scorers:          saved?.scorers          || DEFAULT_SCORERS,
-    news:             saved?.news             || DEFAULT_NEWS,
-    events:           saved?.events           || DEFAULT_EVENTS,
-    honors:           saved?.honors           || DEFAULT_HONORS,
-    sponsors:         saved?.sponsors         || DEFAULT_SPONSORS,
-    strip_items:      buildStripItems(saved),
-    _auth:            saved?._auth            || { username: 'Admin', password: 'pasale98' },
-    updated_at:       saved?.updated_at       || null,
+    live_match:       normalized?.live_match       || DEFAULT_LIVE_MATCH,
+    matches_today:    derivedMatchesToday,
+    matches_giornata: normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA,
+    scorers:          normalized?.scorers          || DEFAULT_SCORERS,
+    news:             normalized?.news             || DEFAULT_NEWS,
+    events:           normalized?.events           || DEFAULT_EVENTS,
+    honors:           normalized?.honors           || DEFAULT_HONORS,
+    sponsors:         normalized?.sponsors         || DEFAULT_SPONSORS,
+    strip_items:      derivedStripItems,
+    updated_at:       normalized?.updated_at       || null,
   };
 }
 
@@ -207,5 +331,8 @@ Object.assign(window, {
   DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_MATCHES_GIORNATA,
   DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_EVENTS, DEFAULT_HONORS,
   DEFAULT_SPONSORS, DEFAULT_STRIP_ITEMS,
-  RM_STORAGE_KEY,
+  RM_ADMIN_SESSION_KEY, RM_STORAGE_KEY,
+  rmGetSupabaseClient, rmAdminLogin, rmAdminLogout, rmAdminMe,
+  rmAdminUpdateCredentials, rmGetAdminSession, rmHasAdminSession,
+  rmClearAdminSession, rmIsAdminSessionErrorMessage,
 });

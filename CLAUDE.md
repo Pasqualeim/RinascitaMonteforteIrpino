@@ -1,7 +1,8 @@
 # Rinascita Monteforte Cup — Sito Torneo
 
 Sito statico per torneo calcio amatoriale "Rinascita Monteforte Cup", Monteforte Irpino (AV).
-React 18 via CDN + Babel standalone. Nessun bundler. Nessun backend. Tutto client-side.
+React 18 via CDN + Babel standalone. Nessun bundler.
+Pubblico client-side read-only, admin protetto da Edge Function Supabase con auth custom `username + password`.
 
 ## Struttura file
 
@@ -47,10 +48,10 @@ assets/
 ## Pannello admin (admin.html)
 
 **Auth:**
-- Credenziali in `localStorage.rm_admin_creds_v2` → `{ username, password }`
-- Default: `admin` / `rinascita2026`
-- Sessione in `sessionStorage.rm_admin_auth_v2` (scade chiudendo tab)
-- Cambio password in tab "Settings"
+- Login unico staff via Edge Function `admin-api`
+- Credenziali staff in tabella `public.admin_users` (`username`, `password_hash`, `role`)
+- Sessione breve in `sessionStorage.rm_admin_session_v1`
+- Cambio username/password in tab "Settings" via endpoint protetto `/credentials`
 
 **Sezioni admin:**
 
@@ -72,8 +73,12 @@ assets/
 ## Flusso dati (Supabase + localStorage fallback)
 
 ```
+Admin login → POST /functions/v1/admin-api/login
+            → token sessione in sessionStorage["rm_admin_session_v1"]
+
 Admin salva → rmSaveData() → localStorage["rm_data_v2"] (immediato)
-                           → Supabase: site_data WHERE id=1 UPDATE content (async)
+                           → POST /functions/v1/admin-api/save
+                           → Supabase: site_data WHERE id=1 UPDATE content
 
 Sito pubblico → rmLoadData() ogni 30s:
   1. Prova Supabase site_data.content
@@ -84,8 +89,10 @@ Sito pubblico → rmLoadData() ogni 30s:
 **Supabase progetto:** `jummgmhkapvvibicnqos` ("Rinascita Cup") — `eu-west-1` — `ACTIVE_HEALTHY`
 **URL:** `https://jummgmhkapvvibicnqos.supabase.co`
 **Tabella:** `site_data` — colonne: `id bigint PK`, `content jsonb`, `updated_at timestamptz`
+**Tabelle auth custom:** `admin_users`, `admin_sessions`
+**Edge Function:** `admin-api`
 **Riga dati:** sempre `id=1` (upsert su riga singola)
-**RLS:** SELECT/UPDATE/INSERT aperte al ruolo `public` (anon key sufficiente)
+**RLS desiderata:** `site_data` leggibile dal client pubblico; scritture solo via Edge Function con `service_role`
 
 Struttura `content` jsonb:
 ```js
@@ -113,7 +120,7 @@ Struttura `content` jsonb:
 - `NATIONS_2026` — dict nazioni FIFA 2026 (name → {flag, short})
 - `TEAMS`, `MATCHES_TODAY`, `LIVE_MATCH`, ecc. — come prima
 
-**Note MCP:** il MCP locale (`mcp__supabase__*`) punta al progetto sbagliato ("Blockbuster rewind" — INACTIVE). Usare sempre `mcp__claude_ai_Supabase__*` con `project_id=jummgmhkapvvibicnqos`.
+**Note MCP:** usare sempre il progetto `jummgmhkapvvibicnqos` quando disponibile nel plugin/connector Supabase.
 
 ## Variabili CSS principali
 
@@ -166,7 +173,8 @@ Struttura `content` jsonb:
 - NO bundler. Modifica direttamente i file `.jsx` e `.css`.
 - Babel transpila JSX in-browser. Errori JSX visibili in console browser.
 - Il sito funziona aprendo `index.html` direttamente nel browser (file://).
-- `admin.html` va aperto sullo stesso browser del sito pubblico (stesso localStorage).
+- `admin.html` e sito pubblico condividono `localStorage.rm_data_v2` solo come cache/fallback dati.
+- La sessione staff vive in `sessionStorage`, quindi chiudere la tab admin richiede nuovo login.
 - Responsive breakpoints: mobile default, tablet `@600px`, desktop `@900px`.
 
 ## Sistema multi-agente
@@ -178,7 +186,7 @@ Agenti in `.claude/agents/`. Organizzati per **tipo di task**, non per singolo f
 | `feature-builder` | Nuova sezione/feature da zero che tocca 3+ file | data.js, admin.jsx, screens.jsx, components.jsx, CSS, CLAUDE.md |
 | `admin-fixer` | Bug fix o miglioramento mirato solo lato admin | admin.jsx, admin-styles.css |
 | `public-fixer` | Bug fix o miglioramento mirato solo sito pubblico | screens.jsx, components.jsx, styles.css, index.html |
-| `supabase` | Operazioni DB: query, RLS, sync, ispezione dati | Supabase (MCP `mcp__claude_ai_Supabase__*`, project_id=jummgmhkapvvibicnqos) |
+| `supabase` | Operazioni DB: query, RLS, sync, ispezione dati | Supabase plugin/MCP sul progetto `jummgmhkapvvibicnqos` |
 | `reviewer` | QA post-lavoro: verifica classi CSS, campi dati, update CLAUDE.md | Lettura tutto + scrittura CLAUDE.md |
 
 ### Quando usare gli agenti vs inline

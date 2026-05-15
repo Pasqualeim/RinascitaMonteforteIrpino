@@ -7,21 +7,15 @@
 const { useState, useEffect, useCallback, useMemo } = React;
 
 // ── Auth ──────────────────────────────────────────────────────────────────
-const AUTH_KEY = 'rm_admin_auth_v2';
-const CREDS_KEY = 'rm_admin_creds_v2';
-
-function getStoredCreds() {
-  const data = rmGetAllData();
-  return data._auth || { username: 'Admin', password: 'pasale98' };
+function getSessionUser() {
+  return window.rmGetAdminSession ? window.rmGetAdminSession()?.user || null : null;
 }
 
-function checkLogin(user, pass) {
-  const creds = getStoredCreds();
-  return user === creds.username && pass === creds.password;
-}
-
-function isLoggedIn() {
-  return sessionStorage.getItem(AUTH_KEY) === '1';
+function isAdminSessionError(error) {
+  const message = error?.message || error;
+  return window.rmIsAdminSessionErrorMessage
+    ? window.rmIsAdminSessionErrorMessage(message)
+    : /sessione/i.test(String(message || ''));
 }
 
 // ── Icons ─────────────────────────────────────────────────────────────────
@@ -58,19 +52,23 @@ function LoginScreen({ onLogin }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Prova a sincronizzare i dati remoti prima del login
     rmLoadData();
   }, []);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    if (checkLogin(user.trim(), pass)) {
-      sessionStorage.setItem(AUTH_KEY, '1');
-      onLogin();
-    } else {
-      setErr('Credenziali non valide');
+    setErr('');
+    setLoading(true);
+    try {
+      const session = await rmAdminLogin(user.trim(), pass);
+      onLogin(session?.user || null);
+    } catch (error) {
+      setErr(error?.message || 'Credenziali non valide');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -96,7 +94,7 @@ function LoginScreen({ onLogin }) {
             <label className="adm-label">Password</label>
             <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" autoComplete="current-password" required />
           </div>
-          <button className="adm-btn" type="submit">Entra</button>
+          <button className="adm-btn" type="submit" disabled={loading}>{loading ? 'Accesso...' : 'Entra'}</button>
         </form>
         <p style={{ textAlign: 'center', marginTop: 20, fontSize: 12, color: 'var(--fg-3)' }}>
           <a href="index.html" style={{ color: 'var(--brand-green)' }}>← Torna al sito pubblico</a>
@@ -554,67 +552,6 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
   );
 }
 
-// ── Compute Standings per girone ─────────────────────────────────────────
-function computeStandings(giornata, teams, groups) {
-  const teamGroup = {};
-  for (const t of (teams || [])) {
-    if (t.group) teamGroup[t.short] = t.group;
-  }
-
-  const gMap = {};
-  for (const g of (groups || [])) {
-    gMap[g.id] = { id: g.id, name: g.name, color: g.color || '#00E676', rows: {} };
-  }
-
-  for (const t of (teams || [])) {
-    if (!t.group || !gMap[t.group]) continue;
-    gMap[t.group].rows[t.short] = {
-      short: t.short, name: t.name, color: t.color, flag: t.flag || '',
-      g: 0, v: 0, n: 0, p: 0, gf: 0, gs: 0, pt: 0, form: []
-    };
-  }
-
-  const allMatches = (giornata || []).flatMap(g => g.items || []);
-  for (const m of allMatches) {
-    if (m.status !== 'ft' || m.hs == null || m.as == null || !m.home || !m.away) continue;
-    const hg = teamGroup[m.home.short];
-    const ag = teamGroup[m.away.short];
-    if (!hg || hg !== ag || !gMap[hg]) continue;
-    const h = gMap[hg].rows[m.home.short];
-    const a = gMap[hg].rows[m.away.short];
-    if (!h || !a) continue;
-
-    h.g++; a.g++;
-    h.gf += m.hs; h.gs += m.as;
-    a.gf += m.as; a.gs += m.hs;
-
-    if (m.hs > m.as) {
-      h.v++; h.pt += 3; a.p++;
-      h.form = [...h.form.slice(-4), 'W'];
-      a.form = [...a.form.slice(-4), 'L'];
-    } else if (m.hs < m.as) {
-      a.v++; a.pt += 3; h.p++;
-      h.form = [...h.form.slice(-4), 'L'];
-      a.form = [...a.form.slice(-4), 'W'];
-    } else {
-      h.n++; h.pt++; a.n++; a.pt++;
-      h.form = [...h.form.slice(-4), 'D'];
-      a.form = [...a.form.slice(-4), 'D'];
-    }
-  }
-
-  const sort = arr => arr.sort((a, b) =>
-    b.pt - a.pt || (b.gf - b.gs) - (a.gf - a.gs) || b.gf - a.gf
-  );
-
-  const standings_groups = Object.values(gMap).map(g => ({
-    id: g.id, name: g.name, color: g.color,
-    rows: sort(Object.values(g.rows)),
-  }));
-
-  return { standings_groups, standings_a: [], standings_o40: [], standings_jr: [] };
-}
-
 const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 
 // ── Matches Section ───────────────────────────────────────────────────────
@@ -655,9 +592,8 @@ function MatchesSection({ data, onSave }) {
     g.items.push(updated);
     giornata = giornata.filter(x => x.items.length > 0);
 
-    const matchesToday = giornata.flatMap(x => x.items.filter(m => m.date === 'Oggi' || m.date === updated.date));
-    const newStandings = computeStandings(giornata, data.teams, data.groups);
-    onSave({ ...data, matches_giornata: giornata, matches_today: matchesToday.slice(0, 5), ...newStandings }, 'Partita e classifica aggiornate');
+    const newStandings = rmComputeStandings(giornata, data.teams, data.groups);
+    onSave({ ...data, matches_giornata: giornata, ...newStandings }, 'Partita e classifica aggiornate');
     setEditing(null);
   }
 
@@ -667,7 +603,7 @@ function MatchesSection({ data, onSave }) {
       g.items = g.items.filter(m => m.id !== matchId);
     }
     giornata = giornata.filter(x => x.items.length > 0);
-    const newStandings = computeStandings(giornata, data.teams, data.groups);
+    const newStandings = rmComputeStandings(giornata, data.teams, data.groups);
     onSave({ ...data, matches_giornata: giornata, ...newStandings }, 'Partita eliminata');
     setDeleting(null);
   }
@@ -1088,13 +1024,13 @@ function GironiSection({ data, onSave }) {
   function saveGroup(g) {
     let updated;
     if (g._isNew) {
-      const newG = { id: 'g' + Date.now(), name: g.name, category: g.category || 'over40' };
+      const newG = { id: 'g' + Date.now(), name: g.name, color: g.color || '#00E676' };
       updated = [...groups, newG];
     } else {
-      updated = groups.map(x => x.id === g.id ? { id: g.id, name: g.name, category: g.category } : x);
+      updated = groups.map(x => x.id === g.id ? { ...x, name: g.name, color: g.color || '#00E676' } : x);
     }
     setGroups(updated);
-    const newStandings = computeStandings(data.matches_giornata || [], data.teams, updated);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], data.teams, updated);
     onSave({ ...data, groups: updated, ...newStandings }, 'Girone salvato');
     setEditing(null);
   }
@@ -1102,21 +1038,21 @@ function GironiSection({ data, onSave }) {
   function deleteGroup(id) {
     if (!window.confirm('Eliminare questo girone? Le squadre assegnate perderanno il girone.')) return;
     const updated = groups.filter(g => g.id !== id);
-    const updatedTeams = (data.teams || []).map(t => t.group === id ? { ...t, group: '' } : t);
+    const updatedTeams = (data.teams || []).map(t => (window.rmGetTeamGroupId(t) === id ? { ...t, group_id: '' } : t));
     setGroups(updated);
-    const newStandings = computeStandings(data.matches_giornata || [], updatedTeams, updated);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], updatedTeams, updated);
     onSave({ ...data, groups: updated, teams: updatedTeams, ...newStandings }, 'Girone eliminato');
   }
 
   function assignTeam(groupId, teamShort) {
-    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group: groupId } : t);
-    const newStandings = computeStandings(data.matches_giornata || [], updatedTeams, groups);
+    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group_id: groupId } : t);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], updatedTeams, groups);
     onSave({ ...data, teams: updatedTeams, ...newStandings }, 'Squadra aggiunta al girone');
   }
 
   function removeTeamFromGroup(teamShort) {
-    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group: '' } : t);
-    const newStandings = computeStandings(data.matches_giornata || [], updatedTeams, groups);
+    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group_id: '' } : t);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], updatedTeams, groups);
     onSave({ ...data, teams: updatedTeams, ...newStandings }, 'Squadra rimossa dal girone');
   }
 
@@ -1129,7 +1065,7 @@ function GironiSection({ data, onSave }) {
           <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
           <p className="adm-section-sub" style={{ margin: 0 }}>Crea gironi e assegna le squadre.</p>
         </div>
-        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', category: 'over40' })}>+ Girone</button>
+        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', color: '#00E676' })}>+ Girone</button>
       </div>
 
       {groups.length === 0 ? (
@@ -1137,15 +1073,15 @@ function GironiSection({ data, onSave }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {groups.map(g => {
-            const groupTeams = allTeams.filter(t => t.group === g.id);
-            const freeTeams = allTeams.filter(t => !t.group || t.group === '');
+            const groupTeams = allTeams.filter(t => window.rmGetTeamGroupId(t) === g.id);
+            const freeTeams = allTeams.filter(t => !window.rmGetTeamGroupId(t));
             const isOpen = openGroup === g.id;
             return (
               <div key={g.id} className="adm-card">
                 <div className="adm-card-header">
                   <div>
                     <span className="adm-card-title">{g.name}</span>
-                    <span style={{ fontSize: 12, color: 'var(--fg-3)', marginLeft: 8 }}>{g.category === 'junior' ? 'Junior' : 'Over 40'} · {groupTeams.length} squadre</span>
+                    <span style={{ fontSize: 12, color: 'var(--fg-3)', marginLeft: 8 }}>{groupTeams.length} squadre</span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className={`adm-btn adm-btn-sm ${isOpen ? '' : 'adm-btn-ghost'}`} onClick={() => setOpenGroup(isOpen ? null : g.id)}>
@@ -1211,11 +1147,8 @@ function GironiSection({ data, onSave }) {
                 <input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} placeholder="es. Girone A" autoFocus />
               </div>
               <div className="adm-form-group">
-                <label className="adm-label">Categoria</label>
-                <select className="adm-select" value={editing.category || 'over40'} onChange={e => setEditing(f => ({ ...f, category: e.target.value }))}>
-                  <option value="over40">Over 40</option>
-                  <option value="junior">Junior</option>
-                </select>
+                <label className="adm-label">Colore</label>
+                <input className="adm-input" value={editing.color || '#00E676'} onChange={e => setEditing(f => ({ ...f, color: e.target.value }))} placeholder="#00E676" />
               </div>
               <div className="adm-form-actions" style={{ marginTop: 24 }}>
                 <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
@@ -1435,7 +1368,7 @@ function TeamsSection({ data, onSave }) {
       updated = [...teams, item];
     }
     setTeams(updated);
-    const newStandings = computeStandings(data.matches_giornata || [], updated, data.groups);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], updated, data.groups);
     onSave({ ...data, teams: updated, ...newStandings }, 'Squadra salvata');
     setEditing(null);
   }
@@ -1444,18 +1377,18 @@ function TeamsSection({ data, onSave }) {
     if (!window.confirm('Sicuro di voler eliminare questa squadra?')) return;
     const updated = teams.filter(t => t.short !== short);
     setTeams(updated);
-    const newStandings = computeStandings(data.matches_giornata || [], updated, data.groups);
+    const newStandings = rmComputeStandings(data.matches_giornata || [], updated, data.groups);
     onSave({ ...data, teams: updated, ...newStandings }, 'Squadra eliminata');
   }
 
   function newTeam() {
-    setEditing({ short: '', name: '', group: '', flag: '', category: 'over40', players: [], played: 0, won: 0, goals: 0, points: 0 });
+    setEditing({ short: '', name: '', group_id: '', flag: '', category: 'over40', players: [], played: 0, won: 0, goals: 0, points: 0 });
   }
 
   const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
   const filtered = filterGroup === 'all' ? teams
-    : filterGroup === 'none' ? teams.filter(t => !t.group)
-    : teams.filter(t => t.group === filterGroup);
+    : filterGroup === 'none' ? teams.filter(t => !window.rmGetTeamGroupId(t))
+    : teams.filter(t => window.rmGetTeamGroupId(t) === filterGroup);
 
   return (
     <div>
@@ -1472,11 +1405,11 @@ function TeamsSection({ data, onSave }) {
           <button className={`rm-tab ${filterGroup === 'all' ? 'on' : ''}`} onClick={() => setFilterGroup('all')}>Tutte ({teams.length})</button>
           {groups.map(g => (
             <button key={g.id} className={`rm-tab ${filterGroup === g.id ? 'on' : ''}`} onClick={() => setFilterGroup(g.id)}>
-              {g.name} ({teams.filter(t => t.group === g.id).length})
+              {g.name} ({teams.filter(t => window.rmGetTeamGroupId(t) === g.id).length})
             </button>
           ))}
           <button className={`rm-tab ${filterGroup === 'none' ? 'on' : ''}`} onClick={() => setFilterGroup('none')}>
-            Senza girone ({teams.filter(t => !t.group).length})
+            Senza girone ({teams.filter(t => !window.rmGetTeamGroupId(t)).length})
           </button>
         </div>
       )}
@@ -1484,13 +1417,14 @@ function TeamsSection({ data, onSave }) {
       <div className="adm-card">
         {filtered.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra{filterGroup !== 'all' ? ' in questo girone' : ' registrata'}</div>}
         {filtered.map(t => {
-          const gName = groupMap[t.group] || (t.group ? t.group : 'Nessun girone');
+          const teamGroupId = window.rmGetTeamGroupId(t);
+          const gName = groupMap[teamGroupId] || (teamGroupId ? teamGroupId : 'Nessun girone');
           return (
             <div key={t.short} className="adm-item-row">
               <div className="adm-crest" style={{ borderColor: 'var(--brand-green)', color: 'var(--brand-green)' }}>{t.flag || t.short}</div>
               <div className="adm-item-row-body">
                 <div className="adm-item-title">{t.flag ? t.flag + ' ' : ''}{t.name}</div>
-                <div className="adm-item-meta">{t.category === 'junior' ? 'Junior' : 'Over 40'} · {gName} · {t.players?.length || 0} giocatori</div>
+                <div className="adm-item-meta">{gName} · {t.players?.length || 0} giocatori</div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
@@ -1696,40 +1630,49 @@ function SponsorsSection({ data, onSave }) {
 }
 
 // ── Settings Section ──────────────────────────────────────────────────────
-function SettingsSection({ data, onSave }) {
-  const [user, setUser] = useState(data._auth.username);
+function SettingsSection({ data, onSave, adminUser, onUserChange }) {
+  const [user, setUser] = useState(adminUser?.username || '');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [msg, setMsg] = useState('');
 
+  useEffect(() => {
+    setUser(adminUser?.username || '');
+  }, [adminUser?.username]);
+
   async function save(e) {
     e.preventDefault();
     if (pass && pass !== confirm) { setMsg('Le password non coincidono'); return; }
-
-    const newAuth = {
-      username: user.trim(),
-      password: pass || data._auth.password
-    };
-
-    const newData = { ...data, _auth: newAuth };
-    await onSave(newData, 'Credenziali aggiornate');
-    setPass(''); setConfirm('');
-    setMsg('Salvato correttamente! Sarà attiva al prossimo login.');
-    setTimeout(() => setMsg(''), 3000);
+    try {
+      const payload = await rmAdminUpdateCredentials({
+        username: user.trim(),
+        password: pass || undefined,
+      });
+      setPass('');
+      setConfirm('');
+      setMsg('Credenziali staff aggiornate');
+      if (onUserChange) onUserChange(payload.user);
+    } catch (error) {
+      setMsg(isAdminSessionError(error) ? 'Sessione scaduta. Rientra nel pannello e riprova.' : (error?.message || 'Aggiornamento credenziali fallito'));
+    }
   }
 
   async function resetData() {
     if (!window.confirm('Ripristinare tutti i dati ai valori iniziali? Questa operazione non può essere annullata.')) return;
     localStorage.removeItem(window.RM_STORAGE_KEY);
-    await rmSaveData({});
-    window.location.reload();
+    try {
+      await rmSaveData({}, { requireAdmin: true });
+      window.location.reload();
+    } catch (error) {
+      setMsg(isAdminSessionError(error) ? 'Sessione scaduta. Rientra nel pannello e riprova.' : (error?.message || 'Reset fallito'));
+    }
   }
 
   return (
     <div>
       <h2 className="adm-section-title">Impostazioni</h2>
       <div className="adm-card" style={{ marginBottom: 16 }}>
-        <div className="adm-card-header"><span className="adm-card-title">Credenziali accesso</span></div>
+        <div className="adm-card-header"><span className="adm-card-title">Credenziali staff</span></div>
         <div className="adm-card-body">
           <form onSubmit={save} className="adm-form">
             <div className="adm-form-group">
@@ -1746,9 +1689,20 @@ function SettingsSection({ data, onSave }) {
                 <input type="password" className="adm-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" />
               </div>
             )}
-            {msg && <div style={{ color: msg.includes('non') ? '#FF3D3D' : 'var(--brand-green)', fontSize: 13 }}>{msg}</div>}
+            {msg && <div style={{ color: /non|fallit|errore|cort/i.test(msg) ? '#FF3D3D' : 'var(--brand-green)', fontSize: 13 }}>{msg}</div>}
             <button className="adm-btn adm-btn-sm" type="submit">Salva credenziali</button>
           </form>
+        </div>
+      </div>
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header"><span className="adm-card-title">Sessione admin</span></div>
+        <div className="adm-card-body">
+          <p style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 14 }}>
+            Login unico attivo. Questo account staff controlla sia l'accesso al pannello sia i salvataggi sul database.
+          </p>
+          <div style={{ fontSize: 13, color: 'var(--fg-2)' }}>
+            Utente corrente: <strong style={{ color: 'var(--fg-1)' }}>{adminUser?.username || 'staff'}</strong>
+          </div>
         </div>
       </div>
       <div className="adm-card">
@@ -1826,16 +1780,24 @@ function AdminApp() {
   const [tab, setTab] = useState(tabFromHash);
   const [data, setData] = useState(() => {
     const d = rmGetAllData();
-    return { ...d, ...computeStandings(d.matches_giornata, d.teams, d.groups) };
+    return { ...d, ...rmComputeStandings(d.matches_giornata, d.teams, d.groups) };
   });
   const [toast, setToast] = useState(null);
+  const [adminUser, setAdminUser] = useState(getSessionUser);
+
+  function bounceToLogin(message = 'Sessione scaduta. Effettua di nuovo l\'accesso.') {
+    setToast(message);
+    setTimeout(() => {
+      window.location.replace('admin.html');
+    }, 1200);
+  }
 
   useEffect(() => {
     async function sync() {
       const remoteData = await rmLoadData();
       if (remoteData) {
         const merged = rmMergeDefaults(remoteData);
-        setData({ ...merged, ...computeStandings(merged.matches_giornata, merged.teams, merged.groups) });
+        setData({ ...merged, ...rmComputeStandings(merged.matches_giornata, merged.teams, merged.groups) });
       }
     }
     sync();
@@ -1849,8 +1811,24 @@ function AdminApp() {
 
   async function handleSave(newData, msg) {
     setData(newData);
-    if (msg) setToast(msg);
-    await rmSaveData(newData);
+    try {
+      const result = await rmSaveData(newData, { requireAdmin: true });
+      if (result?.remoteError) {
+        if (isAdminSessionError({ message: result.remoteError })) {
+          bounceToLogin('Sessione scaduta. Accesso richiesto.');
+          return;
+        }
+        setToast(`Sync fallita: ${result.remoteError}`);
+        return;
+      }
+      if (msg) setToast(msg);
+    } catch (error) {
+      if (isAdminSessionError(error)) {
+        bounceToLogin('Sessione scaduta. Accesso richiesto.');
+        return;
+      }
+      setToast(error?.message || 'Salvataggio fallito');
+    }
   }
 
   function navigateTo(t) {
@@ -1858,12 +1836,12 @@ function AdminApp() {
     setTab(t);
   }
 
-  function logout() {
-    sessionStorage.removeItem(AUTH_KEY);
+  async function logout() {
+    await rmAdminLogout();
     window.location.replace('admin.html');
   }
 
-  const props = { data, onSave: handleSave };
+  const props = { data, onSave: handleSave, adminUser, onUserChange: setAdminUser };
 
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
@@ -1926,7 +1904,43 @@ function AdminApp() {
 
 // ── Root ──────────────────────────────────────────────────────────────────
 function Root() {
-  const [authed, setAuthed] = useState(isLoggedIn());
+  const [authed, setAuthed] = useState(false);
+  const [booting, setBooting] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    async function boot() {
+      if (!window.rmHasAdminSession || !window.rmHasAdminSession()) {
+        if (active) setBooting(false);
+        return;
+      }
+
+      try {
+        await rmAdminMe();
+        if (active) setAuthed(true);
+      } catch (error) {
+        await rmAdminLogout();
+      } finally {
+        if (active) setBooting(false);
+      }
+    }
+
+    boot();
+    return () => { active = false; };
+  }, []);
+
+  if (booting) {
+    return (
+      <div className="adm-login">
+        <div className="adm-login-box">
+          <h1 className="adm-login-title">Accesso staff</h1>
+          <p className="adm-login-sub">Verifica sessione in corso...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
   return <AdminApp />;
 }
