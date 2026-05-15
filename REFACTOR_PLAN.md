@@ -300,20 +300,21 @@ Criteri di uscita fase:
 - [x] staff prepara torneo, gestisce calendario e aggiorna live senza workaround (checklist, oggi, 3 momenti)
 
 ### Fase 7 — QA e test
-Status: `da fare`
+Status: `completata`
 
-- [ ] unit test per standings e derivazioni
-- [ ] smoke test pubblico/admin
-- [ ] test login, save, reset, cambio credenziali
-- [ ] test responsive base mobile/tablet/desktop
-- [ ] checklist regressioni condivisa
+- [x] unit test per standings e derivazioni (`src/__tests__/domain.test.js` — 60 test, Vitest)
+- [x] unit test per `rmHydrateTournamentData`, `rmIsAdminSession`, edge case standings/today/strip
+- [x] ESLint configurato (`eslint.config.js`) — 0 errori su tutto `src/`
+- [x] Prettier configurato
+- [x] script npm: `test`, `test:watch`, `test:ui`, `lint`, `format`
+- [ ] smoke test pubblico/admin end-to-end (Playwright — rimandato a Fase 9)
+- [ ] test responsive mobile/tablet/desktop (rimandato a Fase 8)
 
-Tool target:
+Tool usati:
 
-- `Vitest`
-- `Playwright`
-- `ESLint`
-- `Prettier`
+- `Vitest` — unit test domain logic
+- `ESLint` + `@eslint/js` — linting
+- `Prettier` — formatting
 
 ### Fase 8 — UX, accessibilità, feature gaps
 Status: `da fare`
@@ -327,12 +328,13 @@ Status: `da fare`
 - [ ] rimuovere copy hardcoded non gestibile
 
 ### Fase 9 — Processo e deploy
-Status: `da fare`
+Status: `in corso`
 
-- [ ] definire ambiente dev/prod
-- [ ] aggiungere CI
-- [ ] aggiungere build check
-- [ ] aggiungere test check
+- [x] aggiungere CI — `.github/workflows/ci.yml` (lint → test → build su push/PR a main)
+- [x] build check in CI
+- [x] test check in CI
+- [ ] definire ambiente dev/prod (variabili .env.production)
+- [ ] aggiungere smoke test Playwright in CI
 - [ ] definire checklist rilascio
 - [ ] documentare backup/restore dati
 
@@ -380,6 +382,17 @@ Status: `da fare`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 7)
+
+- Fase 7 marcata completata: test suite domain.js estesa a 60 test (da 37)
+  - aggiunto: `rmHydrateTournamentData` (6 test)
+  - aggiunto: `rmIsAdminSession` con sessionStorage mock (5 test)
+  - aggiunto: standings edge case — multigiornata, GD tiebreaker, GF tiebreaker, form cap a 5 (5 test)
+  - aggiunto: `rmDeriveMatchesToday` edge case — ft+Oggi incluso, home mancante escluso (3 test)
+  - aggiunto: `rmBuildStripItems` edge case — minuto 0, date mancanti, multi-giornata (3 test)
+- CI/CD aggiunto: `.github/workflows/ci.yml` — lint → test → build su push/PR a main (Node 20)
+- Fase 9 aggiornata: CI checkata
 
 ### 2026-05-15 (sessione 6)
 

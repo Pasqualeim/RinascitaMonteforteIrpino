@@ -1,0 +1,63 @@
+import js from '@eslint/js';
+
+export default [
+  js.configs.recommended,
+  {
+    files: ['src/__tests__/**'],
+    languageOptions: {
+      globals: {
+        global: 'writable',
+      },
+    },
+  },
+  {
+    ignores: ['dist/**', 'node_modules/**'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        localStorage: 'readonly',
+        sessionStorage: 'readonly',
+        fetch: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+        FormData: 'readonly',
+        history: 'readonly',
+        location: 'readonly',
+        navigator: 'readonly',
+        performance: 'readonly',
+        alert: 'readonly',
+        confirm: 'readonly',
+        Promise: 'readonly',
+        JSON: 'readonly',
+        Math: 'readonly',
+        Date: 'readonly',
+        Error: 'readonly',
+        Intl: 'readonly',
+        Object: 'readonly',
+        Array: 'readonly',
+        Number: 'readonly',
+        String: 'readonly',
+        Boolean: 'readonly',
+        Symbol: 'readonly',
+        Map: 'readonly',
+        Set: 'readonly',
+        WeakMap: 'readonly',
+        WeakSet: 'readonly',
+        RegExp: 'readonly',
+        Proxy: 'readonly',
+        Reflect: 'readonly',
+        AbortController: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-empty': ['warn', { allowEmptyCatch: true }],
+    },
+  },
+];
