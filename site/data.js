@@ -270,14 +270,28 @@ async function rmSaveData(data, options = {}) {
 
 // Merge saved data with defaults
 function rmMergeDefaults(saved) {
-  const normalized = window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(saved) : saved;
-  const derivedMatchesToday = window.rmDeriveMatchesToday
-    ? window.rmDeriveMatchesToday(normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA)
-    : DEFAULT_MATCHES_TODAY;
-  const derivedStripItems = window.rmBuildStripItems
-    ? window.rmBuildStripItems(normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA)
-    : DEFAULT_STRIP_ITEMS;
+  if (window.rmHydrateTournamentData) {
+    return window.rmHydrateTournamentData(saved, {
+      teams: DEFAULT_TEAMS,
+      groups: DEFAULT_GROUPS,
+      standings_groups: DEFAULT_STANDINGS_GROUPS,
+      standings_a: DEFAULT_STANDINGS_A,
+      standings_o40: DEFAULT_STANDINGS_O40,
+      standings_jr: DEFAULT_STANDINGS_JR,
+      live_match: DEFAULT_LIVE_MATCH,
+      matches_today: DEFAULT_MATCHES_TODAY,
+      matches_giornata: DEFAULT_MATCHES_GIORNATA,
+      scorers: DEFAULT_SCORERS,
+      news: DEFAULT_NEWS,
+      events: DEFAULT_EVENTS,
+      honors: DEFAULT_HONORS,
+      sponsors: DEFAULT_SPONSORS,
+      strip_items: DEFAULT_STRIP_ITEMS,
+      updated_at: null,
+    });
+  }
 
+  const normalized = window.rmNormalizeTournamentData ? window.rmNormalizeTournamentData(saved) : saved;
   return {
     teams:            normalized?.teams            || DEFAULT_TEAMS,
     groups:           normalized?.groups           || DEFAULT_GROUPS,
@@ -286,14 +300,14 @@ function rmMergeDefaults(saved) {
     standings_o40:    [],
     standings_jr:     [],
     live_match:       normalized?.live_match       || DEFAULT_LIVE_MATCH,
-    matches_today:    derivedMatchesToday,
+    matches_today:    DEFAULT_MATCHES_TODAY,
     matches_giornata: normalized?.matches_giornata || DEFAULT_MATCHES_GIORNATA,
     scorers:          normalized?.scorers          || DEFAULT_SCORERS,
     news:             normalized?.news             || DEFAULT_NEWS,
     events:           normalized?.events           || DEFAULT_EVENTS,
     honors:           normalized?.honors           || DEFAULT_HONORS,
     sponsors:         normalized?.sponsors         || DEFAULT_SPONSORS,
-    strip_items:      derivedStripItems,
+    strip_items:      DEFAULT_STRIP_ITEMS,
     updated_at:       normalized?.updated_at       || null,
   };
 }

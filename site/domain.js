@@ -1,6 +1,15 @@
 (function attachDomainHelpers(window) {
   const ADMIN_SESSION_KEY = 'rm_admin_session_v1';
   const GROUP_COLOR_FALLBACK = '#00E676';
+  const TOURNAMENT_SCHEMA_VERSION = 2;
+
+  /*
+    TournamentData schema v2
+    - teams[].group_id is the only supported team/group relation
+    - matches_today and strip_items are always derived at runtime
+    - standings_a / standings_o40 / standings_jr remain empty legacy aliases
+    - category is no longer persisted on teams
+  */
 
   function rmGetTeamGroupId(team) {
     return team?.group_id ?? team?.group ?? '';
@@ -13,6 +22,7 @@
     normalized.group_id = rmGetTeamGroupId(team);
     delete normalized.group;
     delete normalized._group;
+    delete normalized.category;
     return normalized;
   }
 
@@ -27,12 +37,33 @@
     const normalized = { ...saved };
     normalized.teams = Array.isArray(saved.teams) ? saved.teams.map(rmNormalizeTeam) : [];
     normalized.groups = Array.isArray(saved.groups) ? saved.groups.map(rmNormalizeGroup) : [];
+    normalized.schema_version = TOURNAMENT_SCHEMA_VERSION;
 
     delete normalized._auth;
     delete normalized.matches_today;
     delete normalized.strip_items;
+    delete normalized.standings_a;
+    delete normalized.standings_o40;
+    delete normalized.standings_jr;
 
     return normalized;
+  }
+
+  function rmHydrateTournamentData(saved, defaults = {}) {
+    const normalized = rmNormalizeTournamentData(saved) || {};
+    const matchesGiornata = normalized.matches_giornata || defaults.matches_giornata || [];
+    const teams = normalized.teams || defaults.teams || [];
+    const groups = normalized.groups || defaults.groups || [];
+    const computedStandings = rmComputeStandings(matchesGiornata, teams, groups);
+
+    return {
+      ...defaults,
+      ...normalized,
+      ...computedStandings,
+      matches_today: rmDeriveMatchesToday(matchesGiornata),
+      strip_items: rmBuildStripItems(matchesGiornata),
+      schema_version: TOURNAMENT_SCHEMA_VERSION,
+    };
   }
 
   function rmDeriveMatchesToday(matchesGiornata) {
@@ -183,6 +214,7 @@
   }
 
   Object.assign(window, {
+    RM_TOURNAMENT_SCHEMA_VERSION: TOURNAMENT_SCHEMA_VERSION,
     RM_ADMIN_SESSION_KEY: ADMIN_SESSION_KEY,
     rmBuildStripItems,
     rmCanAttemptRemoteSync,
@@ -192,5 +224,6 @@
     rmNormalizeGroup,
     rmNormalizeTeam,
     rmNormalizeTournamentData,
+    rmHydrateTournamentData,
   });
 })(window);

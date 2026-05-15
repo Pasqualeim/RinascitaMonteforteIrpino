@@ -14,8 +14,17 @@ site/
   data.js               → Dati + localStorage persistence (chiave: rm_data_v2)
   components.jsx        → Componenti condivisi: Header, BottomNav, LiveBoard, ecc.
   screens.jsx           → Schermate pubbliche: Home, Live, Calendario, Classifica, ecc.
-  admin.jsx             → App admin completa: login + CRUD tutte le sezioni
+  admin.jsx             → Shim legacy compatibile durante lo split Fase 3
   admin-styles.css      → Stili pannello admin
+  admin/
+    shared.jsx          → Helper admin condivisi: icone, toast, confirm, session helpers
+    auth.jsx            → Login staff
+    app.jsx             → Shell admin, routing tab, boot sessione, mount React
+    sections/
+      live-news.jsx     → Live match + avvisi
+      competition.jsx   → Partite, bracket, classifica, marcatori, gironi, squadre
+      content.jsx       → Eventi, albo d'oro, sponsor
+      settings.jsx      → Credenziali staff + reset dati
 assets/
   logo-rinascita-monteforte.jpg
   poster-qualificata-2024.png
@@ -96,19 +105,21 @@ Sito pubblico → rmLoadData() ogni 30s:
 Struttura `content` jsonb:
 ```js
 {
+  schema_version,    // 2
   teams,             // [{ id, name, group_id, nation (FIFA 2026), ... }]
   groups,            // [{ id, name, color }] gironi creati dallo staff
   standings_groups,  // [{ id, name, color, rows: [...] }] classifiche auto-calcolate per girone
-  standings_a, standings_o40, standings_jr,  // deprecati (sempre [])
   live_match,        // { active: bool, home, away, hs, as, minute, events[] }
-  matches_today, matches_giornata,
+  matches_giornata,
   scorers, news, events, honors, sponsors,
-  strip_items,       // array stringhe per ticker
   updated_at         // ISO timestamp ultimo salvataggio
 }
 ```
 
-**Campi team:** `id, name, group_id, nation, capitano, statistics`
+**Derivati runtime, non persistiti:** `matches_today`, `strip_items`
+**Alias legacy runtime:** `standings_a`, `standings_o40`, `standings_jr` (sempre `[]`)
+
+**Campi team principali:** `short, name, group_id, nation, flag, players`
 (campo `category` rimosso — sostituito da `group_id`)
 
 **Nota:** `content={}` al primo avvio è normale. App usa default finché admin non salva.
@@ -142,6 +153,7 @@ Struttura `content` jsonb:
 
 2. **Crea squadre**
    - `TeamForm` consente scegliere nazione FIFA 2026 (picker con flag emoji)
+   - La sigla squadra viene proposta dalla nazione ma resta indipendente dal vecchio campo `category`
    - Assegna squadra a `group_id`
    - Campo `category` (Senior/Over40/Jr) rimosso
 
@@ -170,6 +182,7 @@ Struttura `content` jsonb:
 ## Note
 
 - NO bundler. Modifica direttamente i file `.jsx` e `.css`.
+- `admin.html` ora carica più script Babel in ordine: `site/admin/shared.jsx` → `site/admin/auth.jsx` → `site/admin/sections/*.jsx` → `site/admin.jsx` → `site/admin/app.jsx`
 - Babel transpila JSX in-browser. Errori JSX visibili in console browser.
 - Il sito funziona aprendo `index.html` direttamente nel browser (file://).
 - `admin.html` e sito pubblico condividono `localStorage.rm_data_v2` per fallback locale.
