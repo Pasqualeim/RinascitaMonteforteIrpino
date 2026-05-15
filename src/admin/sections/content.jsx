@@ -1,8 +1,8 @@
-/* global React, DEFAULT_EVENTS, DEFAULT_HONORS, DEFAULT_SPONSORS */
+import { useState } from 'react';
+import { DEFAULT_EVENTS, DEFAULT_HONORS, DEFAULT_SPONSORS } from '../../data.js';
+import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-const { useState } = React;
-
-function EventsSection({ data, onSave }) {
+export function EventsSection({ data, onSave }) {
   const [events, setEvents] = useState(data.events || DEFAULT_EVENTS);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -76,7 +76,7 @@ function EventsSection({ data, onSave }) {
   );
 }
 
-function HonorsSection({ data, onSave }) {
+export function HonorsSection({ data, onSave }) {
   const [honors, setHonors] = useState(data.honors || DEFAULT_HONORS);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -136,7 +136,7 @@ function HonorsSection({ data, onSave }) {
   );
 }
 
-function SponsorsSection({ data, onSave }) {
+export function SponsorsSection({ data, onSave }) {
   const [sponsors, setSponsors] = useState(data.sponsors || DEFAULT_SPONSORS);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);

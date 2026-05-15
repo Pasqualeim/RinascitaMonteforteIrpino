@@ -1,16 +1,15 @@
-/* global React, LIVE_MATCH, MATCHES_TODAY, STANDINGS_GROUPS, SCORERS, NEWS, SPONSORS */
-/* global EmptyState, Countdown, SponsorWink, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard */
-/* global CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon */
+import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
+import { EmptyState, Countdown, SponsorWink, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
 
-function HomeScreen({ onNav, data }) {
+export function HomeScreen({ onNav, data }) {
   const d = data || {};
-  const liveMatch       = d.live_match       || LIVE_MATCH;
-  const matchesToday    = d.matches_today    || MATCHES_TODAY;
-  const standingsGroups = d.standings_groups || STANDINGS_GROUPS || [];
+  const liveMatch       = d.live_match       || DEFAULT_LIVE_MATCH;
+  const matchesToday    = d.matches_today    || DEFAULT_MATCHES_TODAY;
+  const standingsGroups = d.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
   const standingsA      = standingsGroups[0]?.rows || [];
-  const scorers         = d.scorers          || SCORERS;
-  const news            = d.news             || NEWS;
-  const sponsors        = d.sponsors         || SPONSORS;
+  const scorers         = d.scorers          || DEFAULT_SCORERS;
+  const news            = d.news             || DEFAULT_NEWS;
+  const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
   const kickoff = new Date('2026-06-15T20:00:00+02:00').getTime();
 
   return (
@@ -150,4 +149,3 @@ function HomeScreen({ onNav, data }) {
   );
 }
 
-Object.assign(window, { HomeScreen });

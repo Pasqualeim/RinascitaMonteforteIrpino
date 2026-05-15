@@ -1,9 +1,9 @@
-/* global React, LIVE_MATCH, MATCHES_TODAY */
-/* global EmptyState, LiveBoard, MatchRow */
+import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY } from '../../data.js';
+import { EmptyState, LiveBoard, MatchRow } from '../../components.jsx';
 
-function LiveScreen({ data }) {
-  const liveMatch    = data?.live_match    || LIVE_MATCH;
-  const matchesToday = data?.matches_today || MATCHES_TODAY;
+export function LiveScreen({ data }) {
+  const liveMatch    = data?.live_match    || DEFAULT_LIVE_MATCH;
+  const matchesToday = data?.matches_today || DEFAULT_MATCHES_TODAY;
   return (
     <div data-screen-label="live">
       <section className="rm-section">
@@ -32,4 +32,3 @@ function LiveScreen({ data }) {
   );
 }
 
-Object.assign(window, { LiveScreen });

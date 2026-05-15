@@ -1,10 +1,9 @@
-/* global React, MATCHES_GIORNATA */
-/* global EmptyState, MatchRow */
+import { useState, useMemo } from 'react';
+import { DEFAULT_MATCHES_GIORNATA } from '../../data.js';
+import { EmptyState, MatchRow } from '../../components.jsx';
 
-const { useState, useMemo } = React;
-
-function CalendarScreen({ data }) {
-  const matchesGiornata = data?.matches_giornata || MATCHES_GIORNATA;
+export function CalendarScreen({ data }) {
+  const matchesGiornata = data?.matches_giornata || DEFAULT_MATCHES_GIORNATA;
   const allPhases = matchesGiornata.map(g => g.day);
   const [selPhase, setSelPhase] = useState('all');
 
@@ -49,4 +48,3 @@ function CalendarScreen({ data }) {
   );
 }
 
-Object.assign(window, { CalendarScreen });

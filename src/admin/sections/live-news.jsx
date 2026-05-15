@@ -1,8 +1,8 @@
-/* global React, window, DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS */
+import { useState } from 'react';
+import { DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS } from '../../data.js';
+import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-const { useState } = React;
-
-function LiveSection({ data, onSave }) {
+export function LiveSection({ data, onSave }) {
   const [lm, setLm] = useState(() => JSON.parse(JSON.stringify(data.live_match)));
   const [teams] = useState(data.teams || DEFAULT_TEAMS);
   const [addingEvent, setAddingEvent] = useState(false);
@@ -313,7 +313,7 @@ function LiveSection({ data, onSave }) {
   );
 }
 
-function NewsSection({ data, onSave }) {
+export function NewsSection({ data, onSave }) {
   const [news, setNews] = useState(data.news || DEFAULT_NEWS);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);

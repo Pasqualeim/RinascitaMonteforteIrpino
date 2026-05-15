@@ -1,22 +1,22 @@
-/* global React, window, TEAMS, GROUPS */
-/* global EmptyState, TeamCard */
+import { useState, useMemo } from 'react';
+import { DEFAULT_TEAMS, DEFAULT_GROUPS } from '../../data.js';
+import { rmGetTeamGroupId } from '../../domain.js';
+import { EmptyState, TeamCard } from '../../components.jsx';
 
-const { useState, useMemo } = React;
-
-function TeamsScreen({ data }) {
+export function TeamsScreen({ data }) {
   const [selGroup, setSelGroup] = useState('all');
-  const teams  = data?.teams  || TEAMS;
-  const groups = data?.groups || GROUPS || [];
+  const teams  = data?.teams  || DEFAULT_TEAMS;
+  const groups = data?.groups || DEFAULT_GROUPS || [];
 
   const filtered = useMemo(() => {
     if (selGroup === 'all') return teams;
-    if (selGroup === 'none') return teams.filter(t => !window.rmGetTeamGroupId(t));
-    return teams.filter(t => window.rmGetTeamGroupId(t) === selGroup);
+    if (selGroup === 'none') return teams.filter(t => !rmGetTeamGroupId(t));
+    return teams.filter(t => rmGetTeamGroupId(t) === selGroup);
   }, [selGroup, teams]);
 
   const tabs = [
     { id: 'all', label: `Tutte (${teams.length})` },
-    ...groups.map(g => ({ id: g.id, label: `${g.name} (${teams.filter(t => window.rmGetTeamGroupId(t) === g.id).length})` })),
+    ...groups.map(g => ({ id: g.id, label: `${g.name} (${teams.filter(t => rmGetTeamGroupId(t) === g.id).length})` })),
   ];
 
   return (
@@ -42,4 +42,3 @@ function TeamsScreen({ data }) {
   );
 }
 
-Object.assign(window, { TeamsScreen });

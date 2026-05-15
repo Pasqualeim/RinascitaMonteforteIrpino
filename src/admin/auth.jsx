@@ -1,8 +1,7 @@
-/* global React, rmLoadData, rmAdminLogin */
+import { useState, useEffect } from 'react';
+import { rmLoadData, rmAdminLogin } from '../data.js';
 
-const { useState, useEffect } = React;
-
-function LoginScreen({ onLogin }) {
+export function LoginScreen({ onLogin }) {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [err, setErr] = useState('');

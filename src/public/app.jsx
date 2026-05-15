@@ -1,8 +1,14 @@
-/* global React, ReactDOM, rmGetAllData, rmLoadData, rmMergeDefaults */
-/* global StatusStrip, Header, Footer, BottomNav */
-/* global HomeScreen, LiveScreen, CalendarScreen, TableScreen, TeamsScreen, EventsScreen, NewsScreen, HonorsScreen */
-
-const { useState, useEffect, useCallback } = React;
+import { useState, useEffect, useCallback } from 'react';
+import { createRoot } from 'react-dom/client';
+import { rmGetAllData, rmLoadData, rmMergeDefaults } from '../data.js';
+import { StatusStrip, Header, Footer, BottomNav } from '../components.jsx';
+import { HomeScreen } from './screens/home.jsx';
+import { LiveScreen } from './screens/live.jsx';
+import { CalendarScreen } from './screens/calendar.jsx';
+import { TableScreen } from './screens/table.jsx';
+import { TeamsScreen } from './screens/teams.jsx';
+import { EventsScreen, NewsScreen, HonorsScreen } from './screens/secondary.jsx';
+import '../styles.css';
 
 const VALID_SCREENS = ['home','live','calendar','table','teams','events','news','honors'];
 
@@ -69,6 +75,6 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')).render(
   <ErrorBoundary><App/></ErrorBoundary>
 );

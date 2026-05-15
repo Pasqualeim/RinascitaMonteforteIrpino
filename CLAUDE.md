@@ -1,25 +1,26 @@
 # Rinascita Monteforte Cup — Sito Torneo
 
-Sito statico per torneo calcio amatoriale "Rinascita Monteforte Cup", Monteforte Irpino (AV).
-React 18 via CDN + Babel standalone. Nessun bundler.
+Sito per torneo calcio amatoriale "Rinascita Monteforte Cup", Monteforte Irpino (AV).
+**Stack:** Vite + React 18 (JSX, no TypeScript). `npm run dev` per sviluppo, `npm run build` per produzione.
 Pubblico client-side read-only, admin protetto da Edge Function Supabase con auth custom `username + password`.
 
 ## Struttura file
 
 ```
-index.html              → Sito pubblico (read-only per utenti)
-admin.html              → Pannello staff (login richiesto)
+index.html              → Entry sito pubblico (Vite)
+admin.html              → Entry pannello staff (Vite)
+vite.config.js          → Config Vite (multi-page: index + admin)
+package.json            → Dipendenze: react, react-dom, @supabase/supabase-js, vite
+.env                    → VITE_SUPABASE_URL, VITE_SUPABASE_KEY, VITE_ADMIN_API_URL
 colors_and_type.css     → Design system: variabili CSS colori, font, spacing
-site/
-  styles.css            → Stili pubblici, mobile-first (base=375px, desktop @900px)
-  data.js               → Dati + localStorage persistence (chiave: rm_data_v2)
-  domain.js             → Hydration, normalizzazione, derivazioni runtime
+src/
+  domain.js             → Hydration, normalizzazione, derivazioni runtime (ES module puro)
+  data.js               → Persistence, auth session, Supabase client, defaults
   components.jsx        → Componenti condivisi pubblici: EmptyState, Header, BottomNav, LiveBoard, ecc.
-  screens.jsx           → Shim legacy (vuoto — le screen sono in site/public/screens/)
-  admin.jsx             → Shim legacy (vuoto — la logica è in site/admin/)
+  styles.css            → Stili pubblici, mobile-first (base=375px, desktop @900px)
   admin-styles.css      → Stili pannello admin
   public/
-    app.jsx             → App + ErrorBoundary + VALID_SCREENS (mount React pubblico)
+    app.jsx             → Entry React pubblico: App + ErrorBoundary + VALID_SCREENS
     screens/
       home.jsx          → HomeScreen
       live.jsx          → LiveScreen
@@ -30,7 +31,7 @@ site/
   admin/
     shared.jsx          → Helper admin condivisi: icone, toast, confirm, session helpers
     auth.jsx            → Login staff
-    app.jsx             → Shell admin, routing tab, boot sessione, mount React
+    app.jsx             → Entry React admin: shell, routing tab, boot sessione
     sections/
       live-news.jsx     → Live match + avvisi
       competition.jsx   → Partite, bracket, classifica, marcatori, gironi, squadre
@@ -39,6 +40,7 @@ site/
 assets/
   logo-rinascita-monteforte.jpg
   poster-qualificata-2024.png
+dist/                   → Output build (non committare)
 ```
 
 ## Sito pubblico (index.html)
@@ -185,20 +187,17 @@ Struttura `content` jsonb:
 
 ## Aggiungere nuova sezione pubblica
 
-1. Aggiungere screen in `site/public/screens/` (nuovo file o in `secondary.jsx`)
-2. Esporre via `Object.assign(window, { NuovaScreen })` in fondo al file
-3. Aggiungere `<script type="text/babel" src="site/public/screens/nuovo.jsx">` in `index.html` prima di `app.jsx`
-4. Aggiungere id in `VALID_SCREENS` e route in `App` in `site/public/app.jsx`
-5. Aggiungere voce in `BottomNav` (drawer "Altro") in `site/components.jsx`
-6. Se ha dati gestibili: aggiungere sezione nella sezione admin appropriata
+1. Creare `src/public/screens/nuova.jsx` con `export function NuovaScreen({ data }) {...}`
+2. Importarla in `src/public/app.jsx` e aggiungere id in `VALID_SCREENS` + route nel JSX
+3. Aggiungere voce in `BottomNav` in `src/components.jsx`
+4. Se ha dati gestibili: aggiungere sezione nella sezione admin appropriata
 
 ## Note
 
-- NO bundler. Modifica direttamente i file `.jsx` e `.css`.
-- `index.html` carica in ordine: `site/components.jsx` → `site/public/screens/*.jsx` → `site/public/app.jsx`
-- `admin.html` carica in ordine: `site/admin/shared.jsx` → `site/admin/auth.jsx` → `site/admin/sections/*.jsx` → `site/admin.jsx` → `site/admin/app.jsx`
-- Babel transpila JSX in-browser. Errori JSX visibili in console browser.
-- Il sito funziona aprendo `index.html` direttamente nel browser (file://).
+- **Build:** `npm run dev` (dev server con HMR) · `npm run build` (output in `dist/`) · `npm run preview` (serve dist/ localmente)
+- Vite gestisce JSX automaticamente (`@vitejs/plugin-react`). Import CSS in JSX funziona.
+- Errori JSX visibili in console browser e nel terminale del dev server.
+- Il sito richiede `npm install` e `npm run dev` per funzionare localmente (non più file://).
 - `admin.html` e sito pubblico condividono `localStorage.rm_data_v2` solo come cache/fallback dati.
 - La sessione staff vive in `sessionStorage`, quindi chiudere la tab admin richiede nuovo login.
 - Responsive breakpoints: mobile default, tablet `@600px`, desktop `@900px`.

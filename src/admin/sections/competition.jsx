@@ -1,10 +1,11 @@
-/* global React, window, DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_NATIONS_2026, DEFAULT_MATCHES_GIORNATA, DEFAULT_SCORERS */
-
-const { useState, useEffect, useMemo } = React;
+import { useState, useEffect, useMemo } from 'react';
+import { DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_NATIONS_2026, DEFAULT_MATCHES_GIORNATA, DEFAULT_SCORERS } from '../../data.js';
+import { rmGetTeamGroupId } from '../../domain.js';
+import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 
-function MatchesSection({ data, onSave }) {
+export function MatchesSection({ data, onSave }) {
   const allMatches = useMemo(() => {
     const giornata = data.matches_giornata || DEFAULT_MATCHES_GIORNATA;
     return giornata.flatMap(g => g.items.map(m => ({ ...m, _day: g.day })));
@@ -302,7 +303,7 @@ function BracketView({ giornata }) {
   );
 }
 
-function StandingsSection({ data }) {
+export function StandingsSection({ data }) {
   const standings_groups = data.standings_groups || [];
   const [selIdx, setSelIdx] = useState(0);
 
@@ -352,7 +353,7 @@ function StandingsSection({ data }) {
   );
 }
 
-function ScorersSection({ data, onSave }) {
+export function ScorersSection({ data, onSave }) {
   const [scorers, setScorers] = useState(data.scorers || DEFAULT_SCORERS);
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -451,7 +452,7 @@ function ScorersSection({ data, onSave }) {
   );
 }
 
-function GironiSection({ data, onSave }) {
+export function GironiSection({ data, onSave }) {
   const [groups, setGroups] = useState(data.groups || DEFAULT_GROUPS);
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
@@ -472,7 +473,7 @@ function GironiSection({ data, onSave }) {
 
   function deleteGroup(id) {
     const updated = groups.filter(g => g.id !== id);
-    const updatedTeams = (data.teams || []).map(t => (window.rmGetTeamGroupId(t) === id ? { ...t, group_id: '' } : t));
+    const updatedTeams = (data.teams || []).map(t => (rmGetTeamGroupId(t) === id ? { ...t, group_id: '' } : t));
     setGroups(updated);
     onSave({ ...data, groups: updated, teams: updatedTeams }, 'Girone eliminato');
   }
@@ -504,8 +505,8 @@ function GironiSection({ data, onSave }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {groups.map(g => {
-            const groupTeams = allTeams.filter(t => window.rmGetTeamGroupId(t) === g.id);
-            const freeTeams = allTeams.filter(t => !window.rmGetTeamGroupId(t));
+            const groupTeams = allTeams.filter(t => rmGetTeamGroupId(t) === g.id);
+            const freeTeams = allTeams.filter(t => !rmGetTeamGroupId(t));
             const isOpen = openGroup === g.id;
             return (
               <div key={g.id} className="adm-card">
@@ -602,7 +603,7 @@ function GironiSection({ data, onSave }) {
 }
 
 function TeamForm({ team, groups, onSave, onClose }) {
-  const nations = window.NATIONS_2026 || DEFAULT_NATIONS_2026 || [];
+  const nations = DEFAULT_NATIONS_2026;
   const [editing, setEditing] = useState({
     ...team,
     nation: team.nation || team.name || '',
@@ -815,7 +816,7 @@ function TeamForm({ team, groups, onSave, onClose }) {
   );
 }
 
-function TeamsSection({ data, onSave }) {
+export function TeamsSection({ data, onSave }) {
   const [teams, setTeams] = useState(data.teams || DEFAULT_TEAMS);
   const [editing, setEditing] = useState(null);
   const [deletingTeamShort, setDeletingTeamShort] = useState(null);
@@ -850,8 +851,8 @@ function TeamsSection({ data, onSave }) {
 
   const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
   const filtered = filterGroup === 'all' ? teams
-    : filterGroup === 'none' ? teams.filter(t => !window.rmGetTeamGroupId(t))
-    : teams.filter(t => window.rmGetTeamGroupId(t) === filterGroup);
+    : filterGroup === 'none' ? teams.filter(t => !rmGetTeamGroupId(t))
+    : teams.filter(t => rmGetTeamGroupId(t) === filterGroup);
 
   return (
     <div>
@@ -868,11 +869,11 @@ function TeamsSection({ data, onSave }) {
           <button className={`rm-tab ${filterGroup === 'all' ? 'on' : ''}`} onClick={() => setFilterGroup('all')}>Tutte ({teams.length})</button>
           {groups.map(g => (
             <button key={g.id} className={`rm-tab ${filterGroup === g.id ? 'on' : ''}`} onClick={() => setFilterGroup(g.id)}>
-              {g.name} ({teams.filter(t => window.rmGetTeamGroupId(t) === g.id).length})
+              {g.name} ({teams.filter(t => rmGetTeamGroupId(t) === g.id).length})
             </button>
           ))}
           <button className={`rm-tab ${filterGroup === 'none' ? 'on' : ''}`} onClick={() => setFilterGroup('none')}>
-            Senza girone ({teams.filter(t => !window.rmGetTeamGroupId(t)).length})
+            Senza girone ({teams.filter(t => !rmGetTeamGroupId(t)).length})
           </button>
         </div>
       )}
@@ -880,7 +881,7 @@ function TeamsSection({ data, onSave }) {
       <div className="adm-card">
         {filtered.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra{filterGroup !== 'all' ? ' in questo girone' : ' registrata'}</div>}
         {filtered.map(t => {
-          const teamGroupId = window.rmGetTeamGroupId(t);
+          const teamGroupId = rmGetTeamGroupId(t);
           const gName = groupMap[teamGroupId] || (teamGroupId ? teamGroupId : 'Nessun girone');
           return (
             <div key={t.short} className="adm-item-row">

@@ -1,8 +1,8 @@
-/* global React, rmAdminUpdateCredentials, rmSaveData, window, localStorage */
+import { useState, useEffect } from 'react';
+import { rmAdminUpdateCredentials, rmSaveData, RM_STORAGE_KEY } from '../../data.js';
+import { isAdminSessionError } from '../shared.jsx';
 
-const { useState, useEffect } = React;
-
-function SettingsSection({ data, onSave, adminUser, onUserChange }) {
+export function SettingsSection({ data, onSave, adminUser, onUserChange }) {
   const [user, setUser] = useState(adminUser?.username || '');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -31,7 +31,7 @@ function SettingsSection({ data, onSave, adminUser, onUserChange }) {
 
   async function resetData() {
     if (!window.confirm('Ripristinare tutti i dati ai valori iniziali? Questa operazione non può essere annullata.')) return;
-    localStorage.removeItem(window.RM_STORAGE_KEY);
+    localStorage.removeItem(RM_STORAGE_KEY);
     try {
       await rmSaveData({}, { requireAdmin: true });
       window.location.reload();

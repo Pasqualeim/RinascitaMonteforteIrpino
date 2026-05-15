@@ -1,6 +1,13 @@
-/* global React, rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe */
-
-const { useState, useEffect } = React;
+import { useState, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
+import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession } from '../data.js';
+import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, GridIcon, BellIcon, MenuIcon, CalIcon, BallIcon, StarIcon, TrophyIcon, UsersIcon } from './shared.jsx';
+import { LoginScreen } from './auth.jsx';
+import { LiveSection, NewsSection } from './sections/live-news.jsx';
+import { GironiSection, MatchesSection, StandingsSection, ScorersSection, TeamsSection } from './sections/competition.jsx';
+import { EventsSection, HonorsSection, SponsorsSection } from './sections/content.jsx';
+import { SettingsSection } from './sections/settings.jsx';
+import '../admin-styles.css';
 
 function DashboardMenu({ setTab }) {
   return (
@@ -191,7 +198,7 @@ function Root() {
     let active = true;
 
     async function boot() {
-      if (!window.rmHasAdminSession || !window.rmHasAdminSession()) {
+      if (!rmHasAdminSession()) {
         if (active) setBooting(false);
         return;
       }
@@ -225,4 +232,4 @@ function Root() {
   return <AdminApp />;
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+createRoot(document.getElementById('root')).render(<Root />);

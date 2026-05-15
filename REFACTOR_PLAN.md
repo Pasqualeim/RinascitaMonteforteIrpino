@@ -130,18 +130,21 @@ Struttura risultante:
 - `site/screens.jsx` — shim legacy vuoto
 
 ### Fase 5 — Runtime professionale
-Status: `da fare`
+Status: `completata`
 
-- [ ] migrare a `Vite + React + TypeScript`
-- [ ] eliminare Babel standalone in browser
-- [ ] introdurre `package.json`
-- [ ] introdurre script `dev`, `build`, `preview`
-- [ ] spostare config sensibili in `.env`
+- [x] eliminare Babel standalone in browser + CDN React/ReactDOM/Supabase
+- [x] migrare a `Vite + React` (TypeScript escluso per scelta)
+- [x] introdurre `package.json` con scripts `dev`, `build`, `preview`
+- [x] spostare config sensibili in `.env` (VITE_SUPABASE_URL, VITE_SUPABASE_KEY)
+- [x] migrare `site/` → `src/` (struttura standard Vite)
+- [x] convertire tutti i file a ES modules (import/export, nessun window global)
+- [x] build verificata: 8 chunk output, 0 errori
 
 Note:
 
-- questa fase va fatta dopo la stabilizzazione del dominio
-- UI e comportamenti vanno preservati durante la migrazione
+- `lib/` rimossa — dipendenze gestite da npm
+- `npm run dev` per sviluppo locale, `npm run build` per produzione
+- TypeScript aggiungibile in futuro file per file
 
 ### Fase 6 — QA e test
 Status: `da fare`
@@ -224,6 +227,16 @@ Status: `da fare`
 - [ ] documentazione tecnica aggiornata se cambia il comportamento
 
 ## Log modifiche
+
+### 2026-05-15 (sessione 4)
+
+- completata Fase 5: migrazione a Vite + React (ES modules)
+- site/ → src/, lib/ rimossa
+- tutti i file convertiti: import/export, nessun window global rimasto
+- .env con VITE_SUPABASE_URL e VITE_SUPABASE_KEY
+- package.json + vite.config.js + .env.example
+- build: 8 chunk, 0 errori, 589ms
+- index.html e admin.html aggiornati (singolo <script type="module">)
 
 ### 2026-05-15 (sessione 3)
 

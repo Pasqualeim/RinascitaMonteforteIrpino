@@ -1,11 +1,10 @@
-/* global React, STANDINGS_GROUPS, SCORERS */
-/* global StandingsTable, TopScorers */
+import { useState } from 'react';
+import { DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS } from '../../data.js';
+import { StandingsTable, TopScorers } from '../../components.jsx';
 
-const { useState } = React;
-
-function TableScreen({ data }) {
-  const standingsGroups = data?.standings_groups || STANDINGS_GROUPS || [];
-  const scorers         = data?.scorers          || SCORERS;
+export function TableScreen({ data }) {
+  const standingsGroups = data?.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
+  const scorers         = data?.scorers          || DEFAULT_SCORERS;
   const [selIdx, setSelIdx] = useState(0);
   const rowStyle = { fontFamily: 'var(--font-display)', fontSize: 14, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#fff', marginBottom: 10 };
 
@@ -50,4 +49,3 @@ function TableScreen({ data }) {
   );
 }
 
-Object.assign(window, { TableScreen });

@@ -1,8 +1,8 @@
-/* global React, EVENTS, NEWS, HONORS */
-/* global EmptyState, EventRow, NewsCard, HonorCard */
+import { DEFAULT_EVENTS, DEFAULT_NEWS, DEFAULT_HONORS } from '../../data.js';
+import { EmptyState, EventRow, NewsCard, HonorCard } from '../../components.jsx';
 
-function EventsScreen({ data }) {
-  const events = data?.events || EVENTS;
+export function EventsScreen({ data }) {
+  const events = data?.events || DEFAULT_EVENTS;
   return (
     <div data-screen-label="events">
       <section className="rm-section">
@@ -21,8 +21,8 @@ function EventsScreen({ data }) {
   );
 }
 
-function NewsScreen({ data }) {
-  const news = data?.news || NEWS;
+export function NewsScreen({ data }) {
+  const news = data?.news || DEFAULT_NEWS;
   return (
     <div data-screen-label="news">
       <section className="rm-section">
@@ -41,8 +41,8 @@ function NewsScreen({ data }) {
   );
 }
 
-function HonorsScreen({ data }) {
-  const honors = data?.honors || HONORS;
+export function HonorsScreen({ data }) {
+  const honors = data?.honors || DEFAULT_HONORS;
   return (
     <div data-screen-label="honors">
       <section className="rm-section">
@@ -61,4 +61,3 @@ function HonorsScreen({ data }) {
   );
 }
 
-Object.assign(window, { EventsScreen, NewsScreen, HonorsScreen });

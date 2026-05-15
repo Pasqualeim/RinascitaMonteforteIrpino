@@ -1,5 +1,4 @@
-/* global React */
-const { useState, useEffect, useMemo } = React;
+import { useState, useEffect } from 'react';
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 const Icon = ({ children, size = 20 }) => (
@@ -138,7 +137,7 @@ function BottomNav({ current, onNav, hasLive }) {
 
 // ── Top marquee strip ──────────────────────────────────────────────────────
 function StatusStrip({ items }) {
-  const src = items && items.length > 0 ? items : (STRIP_ITEMS && STRIP_ITEMS.length > 0 ? STRIP_ITEMS : null);
+  const src = items && items.length > 0 ? items : null;
   if (!src) return null;
   const repeated = [...src, ...src, ...src, ...src];
   return (
@@ -451,11 +450,11 @@ function Footer({ onNav }) {
   );
 }
 
-Object.assign(window, {
+export {
   EmptyState,
   Header, BottomNav, StatusStrip, Countdown, SponsorWink, MatchRow, LiveBoard,
   StandingsTable, TeamCard, TopScorers, NewsCard, EventRow, HonorCard, Footer,
   TrophyIcon, BallIcon, CalIcon, PinIcon, UsersIcon, ArrowIcon, ClockIcon,
   BellIcon, InstaIcon, MailIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
   StarIcon, NewspaperIcon,
-});
+};
