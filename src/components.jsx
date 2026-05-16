@@ -457,6 +457,7 @@ function Footer({ onNav }) {
       <div style={{ textAlign: 'center', marginTop: 20 }}>
         <a href="admin.html" className="rm-footer-admin-btn">🔐 Area Staff — Accesso riservato</a>
       </div>
+      <p className="rm-footer-credit">Made with ❤️ by Pasquale Ercolino, Emanuele Iovane e Matteo Ercolino</p>
     </footer>
   );
 }
