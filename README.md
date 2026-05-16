@@ -503,18 +503,6 @@ Copertura attuale dei test:
 - derivazione match del giorno e ticker;
 - validazione sessione admin.
 
-## Estensione del progetto
-
-Punti principali in cui intervenire per estendere l'app:
-
-- nuova schermata pubblica: `src/public/screens/*` + `src/public/app.jsx` + `src/components.jsx`
-- nuova sezione admin: `src/admin/sections/*` + `src/admin/app.jsx`
-- nuova logica dati: `src/data.js`
-- nuova logica di dominio: `src/domain.js`
-- nuova persistenza/endpoint: `supabase/functions/admin-api/index.ts`
-
-Per creare il primo utente admin, il repository include un esempio commentato dentro `supabase/admin_auth_setup.sql`. Va adattato prima dell'esecuzione.
-
 ## Crediti
 
 Made with ❤️ by Pasquale Ercolino, Emanuele Iovane e Matteo Ercolino.
