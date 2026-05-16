@@ -1,0 +1,326 @@
+import React, { useState, useMemo } from 'react';
+import { DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_MATCHES_GIORNATA } from '../../data.js';
+import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
+
+const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
+
+export function MatchesSection({ data, onSave }) {
+  const allMatches = useMemo(() => {
+    const giornata = data.matches_giornata || DEFAULT_MATCHES_GIORNATA;
+    return giornata.flatMap(g => g.items.map(m => ({ ...m, _day: g.day })));
+  }, [data.matches_giornata]);
+  const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [view, setView] = useState('lista');
+  const teams = data.teams || DEFAULT_TEAMS;
+
+  const groups = data.groups || DEFAULT_GROUPS;
+  const groupPresets = groups.map(g => g.name);
+  const allPresets = [...groupPresets, ...KNOCKOUT_PRESETS];
+  const defaultPhase = allPresets[0] || 'Girone A';
+
+  function saveMatch(updated) {
+    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
+
+    if (!updated._isNew) {
+      for (let g of giornata) {
+        const idx = g.items.findIndex(m => m.id === updated.id);
+        if (idx >= 0) { g.items.splice(idx, 1); break; }
+      }
+    } else {
+      updated.id = Date.now().toString();
+    }
+
+    updated.pitch = updated.pitch || 'Campo Sportivo';
+    const targetDay = updated._day || defaultPhase;
+    delete updated._isNew;
+    delete updated._day;
+
+    let g = giornata.find(x => x.day === targetDay);
+    if (!g) { g = { day: targetDay, items: [] }; giornata.push(g); }
+    g.items.push(updated);
+    giornata = giornata.filter(x => x.items.length > 0);
+
+    onSave({ ...data, matches_giornata: giornata }, 'Partita e classifica aggiornate');
+    setEditing(null);
+  }
+
+  function deleteMatch(matchId) {
+    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
+    for (let g of giornata) {
+      g.items = g.items.filter(m => m.id !== matchId);
+    }
+    giornata = giornata.filter(x => x.items.length > 0);
+    onSave({ ...data, matches_giornata: giornata }, 'Partita eliminata');
+    setDeleting(null);
+  }
+
+  const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
+
+  function newMatch() {
+    setEditing({ _isNew: true, _day: defaultPhase, status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '', pitch: 'Campo Sportivo' });
+  }
+
+  return (
+    <div>
+      <div className="adm-section-head">
+        <div>
+          <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
+          <p className="adm-section-sub" style={{ margin: 0 }}>Risultati, fasi torneo e tabellone eliminazione.</p>
+        </div>
+        <div className="adm-section-actions">
+          <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
+          <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Bracket</button>
+          <button className="adm-btn adm-btn-sm" onClick={newMatch}>+ Nuova</button>
+        </div>
+      </div>
+
+      {view === 'lista' && (
+        <div className="adm-card">
+          {allMatches.length === 0 ? (
+            <div className="adm-empty">Nessuna partita nel calendario.</div>
+          ) : (
+            allMatches.map(m => (
+              <div key={m.id} className="adm-item-row">
+                <div className="adm-item-row-body">
+                  <div className="adm-item-title">
+                    {m.home?.short} {m.hs != null ? `${m.hs}–${m.as}` : 'VS'} {m.away?.short}
+                  </div>
+                  <div className="adm-item-meta">{m._day} · {m.time} · {statusLabel[m.status]}</div>
+                </div>
+                <div className="adm-item-actions">
+                  <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...m })}><EditIcon size={16}/></button>
+                  <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(m.id)}><TrashIcon size={16}/></button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {view === 'bracket' && <BracketView giornata={data.matches_giornata} />}
+
+      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
+      {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
+    </div>
+  );
+}
+
+function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, onSave, onClose }) {
+  const [form, setForm] = useState({ ...match });
+  const [error, setError] = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const presets = allPresets && allPresets.length > 0 ? allPresets : KNOCKOUT_PRESETS;
+  const sameTeamsSelected = !!form.home?.short && form.home?.short === form.away?.short;
+
+  function submit() {
+    if (!form.home || !form.away) { setError('Seleziona entrambe le squadre'); return; }
+    if (sameTeamsSelected) { setError('Casa e ospite devono essere squadre diverse'); return; }
+    setError('');
+    onSave(form);
+  }
+
+  const groupNames = (groups || []).map(g => g.name);
+
+  return (
+    <div className="adm-overlay" onClick={onClose}>
+      <div className="adm-modal" onClick={e => e.stopPropagation()}>
+        <div className="adm-modal-header">
+          <h3 className="adm-modal-title">{match._isNew ? 'Nuova Partita' : 'Modifica partita'}</h3>
+          <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={onClose}>✕</button>
+        </div>
+        <div className="adm-modal-scroll">
+          <div className="adm-form">
+            {error && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6 }}>{error}</div>}
+            <div className="adm-form-group">
+              <label className="adm-label">Fase / Giornata</label>
+              {groupNames.length > 0 && (
+                <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--fg-3)', letterSpacing: '0.08em' }}>GIRONI</div>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                {presets.map((p, i) => {
+                  const isKnockout = KNOCKOUT_PRESETS.includes(p);
+                  const isFirstKnockout = isKnockout && (i === 0 || !KNOCKOUT_PRESETS.includes(presets[i - 1]));
+                  return (
+                    <React.Fragment key={p}>
+                      {isFirstKnockout && groupNames.length > 0 && (
+                        <div style={{ width: '100%', fontSize: 11, color: 'var(--fg-3)', letterSpacing: '0.08em', marginTop: 4 }}>ELIMINAZIONE DIRETTA</div>
+                      )}
+                      <button type="button"
+                        className={`adm-btn adm-btn-sm ${form._day === p ? '' : 'adm-btn-ghost'}`}
+                        style={{ fontSize: 11, padding: '4px 8px' }}
+                        onClick={() => set('_day', p)}>{p}</button>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+              <input className="adm-input" value={form._day || ''} onChange={e => set('_day', e.target.value)} placeholder="Fase personalizzata..." />
+            </div>
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Squadra Casa</label>
+                <select className="adm-select" value={form.home?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('home', t); }}>
+                  <option value="">-- Seleziona --</option>
+                  {teams
+                    .filter(t => !form.away?.short || t.short === form.home?.short || t.short !== form.away.short)
+                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                </select>
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Squadra Ospite</label>
+                <select className="adm-select" value={form.away?.short || ''} onChange={e => { const t = teams.find(x => x.short === e.target.value); if (t) set('away', t); }}>
+                  <option value="">-- Seleziona --</option>
+                  {teams
+                    .filter(t => !form.home?.short || t.short === form.away?.short || t.short !== form.home.short)
+                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+            {sameTeamsSelected && (
+              <p className="adm-inline-hint" style={{ marginTop: -4 }}>
+                Casa e ospite non possono coincidere.
+              </p>
+            )}
+            <div className="adm-form-group">
+              <label className="adm-label">Stato</label>
+              <select className="adm-select" value={form.status} onChange={e => set('status', e.target.value)}>
+                <option value="sch">Programmata</option>
+                <option value="live">Live</option>
+                <option value="ft">Terminata</option>
+              </select>
+            </div>
+            {(form.status === 'live' || form.status === 'ft') && (
+              <div className="adm-form-row">
+                <div className="adm-form-group">
+                  <label className="adm-label">Gol Casa</label>
+                  <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Gol Ospite</label>
+                  <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+                </div>
+              </div>
+            )}
+            {form.status === 'live' && (
+              <div className="adm-form-group">
+                <label className="adm-label">Minuto</label>
+                <input type="number" className="adm-input" value={form.minute || ''} onChange={e => set('minute', parseInt(e.target.value))} min="0" max="120" />
+              </div>
+            )}
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Data</label>
+                <input className="adm-input" value={form.date || ''} onChange={e => set('date', e.target.value)} placeholder="es. 15 Lug" />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Orario</label>
+                <input className="adm-input" value={form.time || ''} onChange={e => set('time', e.target.value)} placeholder="es. 19:00" />
+              </div>
+            </div>
+            <div className="adm-form-group">
+              <label className="adm-label">Campo</label>
+              <input className="adm-input" value={form.pitch || ''} onChange={e => set('pitch', e.target.value)} placeholder="es. Campo Sportivo" />
+            </div>
+            <div className="adm-form-actions" style={{ marginTop: 24 }}>
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
+              <button className="adm-btn adm-btn-sm" onClick={submit}>Salva Partita</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BracketSlot({ match }) {
+  const home  = match?.home?.short || 'TBD';
+  const away  = match?.away?.short || 'TBD';
+  const score = match?.hs != null  ? `${match.hs}–${match.as}` : 'vs';
+  const isLive = match?.status === 'live';
+  const isDone = match?.status === 'ft';
+  const isTbd  = !match;
+
+  return (
+    <div style={{
+      background: '#0f0f0f',
+      border: `1px solid ${isDone ? 'var(--border-brand)' : 'var(--border-1)'}`,
+      borderRadius: 8,
+      padding: '10px 14px',
+      minWidth: 150,
+      position: 'relative',
+    }}>
+      {isLive && <span style={{ position: 'absolute', top: 4, right: 8, fontSize: 10, color: '#FF3D3D' }}>🔴</span>}
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, lineHeight: 1.4 }}>
+        <div style={{ color: isTbd ? 'var(--fg-3)' : '#fff' }}>{home}</div>
+        <div style={{ color: 'var(--fg-3)', fontSize: 13, textAlign: 'center', margin: '1px 0' }}>{score}</div>
+        <div style={{ color: isTbd ? 'var(--fg-3)' : '#fff' }}>{away}</div>
+      </div>
+    </div>
+  );
+}
+
+function BracketView({ giornata }) {
+  const getPhase = name => (giornata || []).find(g => g.day === name)?.items || [];
+  const pad = (arr, n) => [...arr, ...Array(Math.max(0, n - arr.length)).fill(null)];
+
+  const q  = pad(getPhase('Quarti di finale'), 4);
+  const s  = pad(getPhase('Semifinali'), 2);
+  const f  = pad(getPhase('Finale'), 1);
+  const t3 = pad(getPhase('Finale 3°/4° posto'), 1);
+
+  const hasAny = q.some(Boolean) || s.some(Boolean) || f.some(Boolean) || t3.some(Boolean);
+  if (!hasAny) {
+    return <div className="adm-empty">Nessuna partita nelle fasi eliminatorie. Aggiungi partite con fase "Quarti di finale", "Semifinali", "Finale 3°/4° posto" o "Finale".</div>;
+  }
+
+  const colHeader = txt => (
+    <div style={{ fontFamily: 'var(--font-display)', fontSize: 11, letterSpacing: '0.1em', color: 'var(--fg-3)', textAlign: 'center', marginBottom: 12, textTransform: 'uppercase' }}>{txt}</div>
+  );
+  const connector = () => (
+    <div style={{ width: 24, height: 2, background: 'var(--border-brand)', flexShrink: 0, alignSelf: 'center' }} />
+  );
+
+  return (
+    <div style={{ overflowX: 'auto', paddingBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 0, minWidth: 560, padding: '8px 4px', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Quarti di finale')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1, gap: 20 }}>
+            {q.map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                <BracketSlot match={m} />
+                {connector()}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Semifinali')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', flex: 1, gap: 20 }}>
+            {s.map((m, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                <BracketSlot match={m} />
+                {connector()}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+          {colHeader('Finali')}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', flex: 1, gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--brand-green)', marginBottom: 6, letterSpacing: '0.1em', fontFamily: 'var(--font-display)' }}>🏆 FINALE</div>
+              <BracketSlot match={f[0]} />
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: 'var(--fg-3)', marginBottom: 6, letterSpacing: '0.1em', fontFamily: 'var(--font-display)' }}>3°/4° POSTO</div>
+              <BracketSlot match={t3[0]} />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
