@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { DEFAULT_TEAMS, DEFAULT_NATIONS_2026, DEFAULT_NEWS, rmAdminDomain, rmGetTeamIdMap } from '../../data.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
@@ -10,6 +10,21 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   const [evTeam, setEvTeam] = useState(lm.home?.short || '');
   const [evNote, setEvNote] = useState('');
   const [evType, setEvType] = useState('goal');
+
+  const lmRef = useRef(lm);
+  useEffect(() => { lmRef.current = lm; }, [lm]);
+
+  // Auto-advance minute every 60s while match is active (display only, saves on events)
+  useEffect(() => {
+    if (!lm.active) return;
+    const id = setInterval(() => {
+      setLm(prev => {
+        if (!prev.active || prev.minute >= 120) return prev;
+        return { ...prev, minute: prev.minute + 1 };
+      });
+    }, 60000);
+    return () => clearInterval(id);
+  }, [lm.active]);
 
   const todayMatches = (data.matches_giornata || [])
     .flatMap(g => (g.items || []).filter(m => m.date === 'Oggi' || m.status === 'sch'))
@@ -24,6 +39,14 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     return n?.flag || '🏳️';
   }
 
+  function getTeamId(shortCode) {
+    if (!shortCode) return null;
+    const map = rmGetTeamIdMap();
+    if (map[shortCode]) return map[shortCode];
+    const t = (data.teams || []).find(t => t.short === shortCode);
+    return t?.id || null;
+  }
+
   function save(updatedLm, updatedScorers) {
     const newLm = updatedLm || lm;
     const newData = { ...data, live_match: newLm };
@@ -32,12 +55,11 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     setLm({ ...newLm });
     // Dual-write live state to relational table (fire-and-forget)
     if (tournamentId) {
-      const teamIdMap = rmGetTeamIdMap();
       rmAdminDomain.updateLive({
         tournament_id: tournamentId,
         active: newLm.active ?? false,
-        home_team_id: teamIdMap[newLm.home?.short] || null,
-        away_team_id: teamIdMap[newLm.away?.short] || null,
+        home_team_id: getTeamId(newLm.home?.short),
+        away_team_id: getTeamId(newLm.away?.short),
         home_score: newLm.hs ?? 0,
         away_score: newLm.as ?? 0,
         minute: newLm.minute ?? 0,
@@ -84,8 +106,9 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     save(updated);
   }
 
-  function addEvent(type) {
+  function addEvent(type, teamShort) {
     setEvType(type);
+    if (teamShort) setEvTeam(teamShort);
     setAddingEvent(true);
   }
 
@@ -300,13 +323,22 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                 </button>
               )}
             </div>
-            <div className="adm-live-event-btns">
-              <button className="adm-live-ev-btn adm-ev-goal" onClick={() => addEvent('goal')}
-                style={{ minHeight: 64, fontSize: 28 }}>⚽<span>Gol</span></button>
-              <button className="adm-live-ev-btn adm-ev-yellow" onClick={() => addEvent('yellow')}
-                style={{ minHeight: 64, fontSize: 28 }}>🟨<span>Giallo</span></button>
-              <button className="adm-live-ev-btn adm-ev-red" onClick={() => addEvent('red')}
-                style={{ minHeight: 64, fontSize: 28 }}>🟥<span>Rosso</span></button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {[lm.home, lm.away].filter(Boolean).map(team => (
+                <div key={team.short} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.08em' }}>
+                    {getFlag(team)} {team.short}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="adm-live-ev-btn adm-ev-goal" onClick={() => addEvent('goal', team.short)}
+                      style={{ flex: 1, minHeight: 52, fontSize: 22, padding: '4px 0' }}>⚽</button>
+                    <button className="adm-live-ev-btn adm-ev-yellow" onClick={() => addEvent('yellow', team.short)}
+                      style={{ flex: 1, minHeight: 52, fontSize: 22, padding: '4px 0' }}>🟨</button>
+                    <button className="adm-live-ev-btn adm-ev-red" onClick={() => addEvent('red', team.short)}
+                      style={{ flex: 1, minHeight: 52, fontSize: 22, padding: '4px 0' }}>🟥</button>
+                  </div>
+                </div>
+              ))}
             </div>
           </>
         )}
@@ -334,20 +366,12 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
             <div className="adm-modal-header">
               <h3 className="adm-modal-title">
-                {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : '🟥 Rosso'} · {lm.minute}'
+                {evType === 'goal' ? '⚽ Gol' : evType === 'yellow' ? '🟨 Giallo' : '🟥 Rosso'} · {evTeam} · {lm.minute}'
               </h3>
               <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setAddingEvent(false)}>✕</button>
             </div>
             <div className="adm-modal-scroll">
               <div className="adm-form">
-                <div className="adm-form-group">
-                  <label className="adm-label">Squadra</label>
-                  <select className="adm-select" value={evTeam} onChange={e => { setEvTeam(e.target.value); setEvPlayer(''); }}>
-                    {(lm.home || lm.away ? [lm.home, lm.away].filter(Boolean) : teams).map(t => (
-                      <option key={t.short} value={t.short}>{getFlag(t)} {t.name}</option>
-                    ))}
-                  </select>
-                </div>
                 <div className="adm-form-group">
                   <label className="adm-label">Giocatore</label>
                   {(() => {
