@@ -68,26 +68,40 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
 
   for (const n of (data.news || [])) {
     try {
-      await rmAdminDomain.createNews({ edition_id: editionId, title: n.title, body: n.text || n.body || null, category: n.category, tone: n.tone, pinned: n.pinned ?? false });
+      // Support both 'category' (new) and 'cat' (legacy blob field name)
+      await rmAdminDomain.createNews({ edition_id: editionId, title: n.title, body: n.text || n.body || null, category: n.category || n.cat || null, tone: n.tone, pinned: n.pinned ?? false });
       results.news++;
     } catch (e) { results.errors.push(`News: ${e.message}`); }
   }
 
   for (const ev of (data.events || [])) {
     try {
-      await rmAdminDomain.createEvent({ edition_id: editionId, title: ev.title, event_date: ev.date || null, event_type: ev.type || 'partita', description: ev.desc || ev.description || null });
+      // Support both relational shape {date,type,description} and legacy blob shape {day,month,kind,where}
+      const MONTH_IT = { Gen:1,Feb:2,Mar:3,Apr:4,Mag:5,Giu:6,Lug:7,Ago:8,Set:9,Ott:10,Nov:11,Dic:12 };
+      let eventDate = ev.date || null;
+      if (!eventDate && ev.day && ev.month) {
+        const m = MONTH_IT[ev.month] || MONTH_IT[ev.month?.slice(0,3)];
+        if (m) eventDate = `${new Date().getFullYear()}-${String(m).padStart(2,'0')}-${String(ev.day).padStart(2,'0')}`;
+      }
+      const eventType = ev.type || ev.kind || 'partita';
+      const description = ev.description || ev.desc || ev.where || null;
+      await rmAdminDomain.createEvent({ edition_id: editionId, title: ev.title, event_date: eventDate, event_type: eventType, description });
       results.events++;
     } catch (e) { results.errors.push(`Evento: ${e.message}`); }
   }
 
   for (const h of (data.honors || [])) {
     try {
+      // Support both 'runner_up'/'top_scorer' (DB) and 'runner'/'topScorer' (legacy blob)
       await rmAdminDomain.createHonor({
         edition_id: editionId, tournament_id: tournamentId || null,
         edition_name: h.edition || h.name || String(h.year || ''),
         year: parseInt(h.year) || 0,
-        winner: h.winner || null, runner_up: h.runner_up || h.second || null,
-        third_place: h.third || null, mvp: h.mvp || null, top_scorer: h.top_scorer || h.scorer || null,
+        winner: h.winner || null,
+        runner_up: h.runner_up || h.runner || h.second || null,
+        third_place: h.third || null,
+        mvp: h.mvp || null,
+        top_scorer: h.top_scorer || h.topScorer || h.scorer || null,
       });
       results.honors++;
     } catch (e) { results.errors.push(`Albo: ${e.message}`); }

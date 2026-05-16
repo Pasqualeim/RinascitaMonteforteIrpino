@@ -32,7 +32,7 @@ export function NewsSection({ data, onSave }) {
   }
 
   function newItem() {
-    setEditing({ id: 'n' + Date.now(), cat: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
+    setEditing({ id: 'n' + Date.now(), category: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
   }
 
   return (
@@ -51,7 +51,7 @@ export function NewsSection({ data, onSave }) {
             <div key={n.id} className="adm-item-row">
               <div className="adm-item-row-body">
                 <div className="adm-item-title">{n.pinned ? '📌 ' : ''}{n.title || '(senza titolo)'}</div>
-                <div className="adm-item-meta">{n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
+                <div className="adm-item-meta">{n.category || n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
               </div>
               <div className="adm-item-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...n })}><EditIcon size={16}/></button>
@@ -88,7 +88,7 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
             <div className="adm-form-row">
               <div className="adm-form-group">
                 <label className="adm-label">Categoria</label>
-                <select className="adm-select" value={form.cat} onChange={e => set('cat', e.target.value)}>
+                <select className="adm-select" value={form.category || form.cat || ''} onChange={e => set('category', e.target.value)}>
                   {catOpts.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>

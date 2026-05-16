@@ -28,15 +28,31 @@ src/
       table.jsx         → TableScreen
       teams.jsx         → TeamsScreen
       secondary.jsx     → EventsScreen + NewsScreen + HonorsScreen
+  lib/
+    api.js              → Chiamate HTTP verso admin-api (fetch wrapper autenticato)
+    auth.js             → Login/logout/me verso Edge Function
+    constants.js        → Costanti condivise (fasi knockout, nazioni, ecc.)
+    crud.js             → Helper CRUD generici per endpoint relazionali
+    http.js             → Fetch base con timeout, retry, error parsing
+    migration.js        → rmMigrateDataToRelational: blob → tabelle relazionali
+    session.js          → Lettura/scrittura sessionStorage sessione admin
+    storage.js          → Lettura/scrittura localStorage rm_data_v2
+    supabase.js         → Supabase client (anon key)
   admin/
     shared.jsx          → Helper admin condivisi: icone, toast, confirm, session helpers
     auth.jsx            → Login staff
     app.jsx             → Entry React admin: shell, routing tab, boot sessione
     sections/
-      live-news.jsx     → Live match + avvisi
-      competition.jsx   → Partite, bracket, classifica, marcatori, gironi, squadre
-      content.jsx       → Eventi, albo d'oro, sponsor
-      settings.jsx      → Credenziali staff + reset dati
+      dashboard.jsx     → Dashboard staff: checklist, badge categorie, accesso rapido tab
+      live.jsx          → Live match: punteggio +/−, minuto, eventi, undo
+      news.jsx          → CRUD avvisi: titolo, testo, tono, pin
+      gironi.jsx        → CRUD gironi: nome, colore
+      matches.jsx       → CRUD partite: stato, score, orario, campo, fase
+      standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB)
+      scorers.jsx       → CRUD marcatori con gol
+      teams.jsx         → CRUD squadre: nazione, girone, capitano
+      content.jsx       → CRUD eventi, albo d'oro, sponsor
+      settings.jsx      → Credenziali staff, reset dati, edizioni+categorie, migrazione DB
 assets/
   logo-rinascita-monteforte.jpg
   poster-qualificata-2024.png

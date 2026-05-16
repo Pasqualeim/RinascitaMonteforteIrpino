@@ -28,7 +28,7 @@ export async function buildBootstrap(editionId: string) {
         .order("match_time", { ascending: true, nullsFirst: false })
         .order("sort_order"),
       db.from("live_match_state")
-        .select("*, home_team:home_team_id(id,name,short,flag), away_team:away_team_id(id,name,short,flag)")
+        .select("*, home_team:home_team_id(id,name,short,flag,color), away_team:away_team_id(id,name,short,flag,color)")
         .eq("tournament_id", t.id).maybeSingle(),
       db.from("scorers").select("*, teams(short,flag)")
         .eq("tournament_id", t.id).order("goals", { ascending: false }).order("sort_order"),
@@ -61,8 +61,8 @@ export async function buildBootstrap(editionId: string) {
 
     const liveMatch = live ? {
       active: live.active,
-      home: live.home_team ? { short: live.home_team.short, flag: live.home_team.flag, name: live.home_team.name } : null,
-      away: live.away_team ? { short: live.away_team.short, flag: live.away_team.flag, name: live.away_team.name } : null,
+      home: live.home_team ? { short: live.home_team.short, flag: live.home_team.flag, name: live.home_team.name, color: live.home_team.color } : null,
+      away: live.away_team ? { short: live.away_team.short, flag: live.away_team.flag, name: live.away_team.name, color: live.away_team.color } : null,
       hs: live.home_score, as: live.away_score, minute: live.minute, pitch: live.pitch || "", events: [],
     } : { active: false, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
 
@@ -72,8 +72,8 @@ export async function buildBootstrap(editionId: string) {
       if (!phaseMap[phase]) phaseMap[phase] = { day: phase, items: [] };
       phaseMap[phase].items.push({
         id: m.id,
-        home: m.home_team ? { short: m.home_team.short, flag: m.home_team.flag, name: m.home_team.name } : null,
-        away: m.away_team ? { short: m.away_team.short, flag: m.away_team.flag, name: m.away_team.name } : null,
+        home: m.home_team ? { short: m.home_team.short, flag: m.home_team.flag, name: m.home_team.name, color: m.home_team.color } : null,
+        away: m.away_team ? { short: m.away_team.short, flag: m.away_team.flag, name: m.away_team.name, color: m.away_team.color } : null,
         hs: m.home_score, as: m.away_score, status: m.status,
         date: m.match_date, time: m.match_time, pitch: m.pitch, phase: m.phase, group_id: m.group_id,
       });

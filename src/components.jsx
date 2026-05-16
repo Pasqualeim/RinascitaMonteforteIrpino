@@ -366,7 +366,7 @@ function NewsCard({ item, featured }) {
     <div className={`rm-news-card ${featured ? 'featured' : ''} ${item.pinned ? 'pinned' : ''}`}>
       {item.pinned && <span className="rm-news-pin">📌 In evidenza</span>}
       <div className="rm-news-top">
-        <span className={`rm-news-cat ${item.tone || ''}`}>{item.cat}</span>
+        <span className={`rm-news-cat ${item.tone || ''}`}>{item.category || item.cat}</span>
         <span className="rm-news-date">{item.date}</span>
       </div>
       <h4 className="rm-news-title">{item.title}</h4>
@@ -376,21 +376,37 @@ function NewsCard({ item, featured }) {
 }
 
 // ── Event row ─────────────────────────────────────────────────────────────
+const EVENT_KIND_LABELS = { partita: 'Match', cerimonia: 'Cerimonia', festa: 'Festa' };
+
 function EventRow({ ev }) {
+  // Support bootstrap DB shape ({date, time, type, description}) and legacy blob shape ({day, month, kind, kindLabel, where})
+  let day = ev.day;
+  let month = ev.month;
+  if (!day && ev.date) {
+    const dt = new Date(ev.date + 'T12:00:00');
+    if (!isNaN(dt)) {
+      day = dt.getDate();
+      month = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'][dt.getMonth()];
+    }
+  }
+  const kindType = ev.kind || ev.type || '';
+  const kindLabel = ev.kindLabel || EVENT_KIND_LABELS[kindType] || kindType;
+  const where = ev.where || ev.description || '';
+
   return (
     <div className={`rm-event ${ev.highlight ? 'highlight' : ''}`}>
       <div className="rm-event-date">
-        <div className="rm-event-day">{ev.day}</div>
-        <div className="rm-event-mon">{ev.month}</div>
+        <div className="rm-event-day">{day}</div>
+        <div className="rm-event-mon">{month}</div>
       </div>
       <div className="rm-event-body">
         <div className="rm-event-title">{ev.title}</div>
         <div className="rm-event-meta">
-          <span><ClockIcon size={13}/>{ev.time}</span>
-          <span><PinIcon size={13}/>{ev.where}</span>
+          {ev.time && <span><ClockIcon size={13}/>{ev.time}</span>}
+          {where && <span><PinIcon size={13}/>{where}</span>}
           {ev.extra && <span>{ev.extra}</span>}
         </div>
-        <span className={`rm-event-cat ${ev.kind}`}>{ev.kindLabel}</span>
+        {kindLabel && <span className={`rm-event-cat ${kindType}`}>{kindLabel}</span>}
       </div>
     </div>
   );
@@ -398,6 +414,9 @@ function EventRow({ ev }) {
 
 // ── Honor card ────────────────────────────────────────────────────────────
 function HonorCard({ honor, current }) {
+  // Support both bootstrap DB shape (runner_up, top_scorer) and legacy blob shape (runner, topScorer)
+  const runner    = honor.runner_up   || honor.runner    || '';
+  const topScorer = honor.top_scorer  || honor.topScorer || '';
   return (
     <div className={`rm-honor ${current ? 'current' : ''} ${honor.alt ? 'alt' : ''}`}>
       <div className="rm-honor-year">{honor.year}</div>
@@ -405,8 +424,8 @@ function HonorCard({ honor, current }) {
         <h4 className="rm-honor-title">{honor.edition}</h4>
         <div className="rm-honor-list">
           <div className="rm-honor-row"><span>Vincitore</span><b>{honor.winner}</b></div>
-          <div className="rm-honor-row"><span>Finalista</span><b>{honor.runner}</b></div>
-          <div className="rm-honor-row"><span>Capocann.</span><b>{honor.topScorer}</b></div>
+          <div className="rm-honor-row"><span>Finalista</span><b>{runner}</b></div>
+          <div className="rm-honor-row"><span>Capocann.</span><b>{topScorer}</b></div>
           <div className="rm-honor-row"><span>MVP</span><b>{honor.mvp}</b></div>
         </div>
       </div>

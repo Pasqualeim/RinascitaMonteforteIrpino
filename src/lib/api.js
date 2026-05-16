@@ -5,17 +5,21 @@ let _cachedEditionId = null;
 
 export async function rmLoadDataFromBootstrap(editionSlug = null) {
   if (!SUPABASE_FUNCTIONS_URL) return null;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
     const url = editionSlug
       ? `${SUPABASE_FUNCTIONS_URL}/bootstrap?edition=${encodeURIComponent(editionSlug)}`
       : `${SUPABASE_FUNCTIONS_URL}/bootstrap`;
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: controller.signal });
     if (!res.ok) return null;
     const { data } = await res.json();
     if (!data || data.schema_version !== 3) return null;
     return data;
   } catch {
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

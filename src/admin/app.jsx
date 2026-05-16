@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions } from '../data.js';
+import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions, rmNormalizeTournamentData } from '../data.js';
 import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, BellIcon, MenuIcon } from './shared.jsx';
 import { LoginScreen } from './auth.jsx';
 import { DashboardSection } from './sections/dashboard.jsx';
@@ -47,15 +47,19 @@ function AdminApp() {
 
   useEffect(() => {
     async function sync() {
-      const [remoteData, bootstrapData] = await Promise.all([
-        rmLoadData(),
-        rmLoadDataFromBootstrap(),
-      ]);
-      if (remoteData) setData(rmMergeDefaults(remoteData));
+      // Single bootstrap fetch — extract both data and metadata from one call
+      const bootstrapData = await rmLoadDataFromBootstrap();
       if (bootstrapData?.edition?.id) setEditionId(bootstrapData.edition.id);
       if (bootstrapData?.tournaments?.length) {
         setTournamentCategories(bootstrapData.tournaments);
         setTournamentId(bootstrapData.tournaments[0].id);
+      }
+      if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
+        setData(rmMergeDefaults(rmNormalizeTournamentData(bootstrapData)));
+      } else {
+        // Bootstrap empty or failed — fall back to full load chain (site_data → localStorage)
+        const fallback = await rmLoadData();
+        if (fallback) setData(rmMergeDefaults(fallback));
       }
     }
     sync();

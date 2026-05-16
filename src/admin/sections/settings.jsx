@@ -17,6 +17,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
   const [newEdition, setNewEdition] = useState({ name: '', slug: '', year: new Date().getFullYear() + 1, edition_number: '', status: 'upcoming' });
   const [showNewCategory, setShowNewCategory] = useState(null); // edition_id to add category to
   const [newCategory, setNewCategory] = useState({ name: '', slug: '', prize_first: '', prize_second: '', prize_third: '' });
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null); // { editionId, categoryId, name }
 
   useEffect(() => { setUser(adminUser?.username || ''); }, [adminUser?.username]);
 
@@ -72,15 +73,16 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
     } catch (e) { setEditionStatusMsg('Errore creazione categoria: ' + (e?.message || '')); }
   }
 
-  async function deleteCategory(editionId, categoryId) {
+  async function deleteCategory(edId, categoryId) {
     try {
       await rmAdminDeleteTournamentCategory(categoryId);
       setEditions(prev => prev.map(ed =>
-        ed.id === editionId
+        ed.id === edId
           ? { ...ed, tournaments: (ed.tournaments || []).filter(t => t.id !== categoryId) }
           : ed
       ));
     } catch (e) { setEditionStatusMsg('Errore eliminazione categoria: ' + (e?.message || '')); }
+    setConfirmDeleteCategory(null);
   }
 
   async function save(e) {
@@ -268,7 +270,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
                           {t.name}
                           <span style={{ color: 'var(--fg-3)', marginLeft: 6 }}>{t.slug}</span>
                         </span>
-                        <button onClick={() => deleteCategory(e.id, t.id)}
+                        <button onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}
                           style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 14 }}>✕</button>
                       </div>
                     ))}
@@ -327,6 +329,13 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
       <div style={{ textAlign: 'center', marginTop: 24 }}>
         <a href="index.html" style={{ color: 'var(--brand-green)', fontSize: 14 }}>← Vai al sito pubblico</a>
       </div>
+      {confirmDeleteCategory && (
+        <Confirm
+          msg={`Eliminare la categoria "${confirmDeleteCategory.name}"? Questa operazione è irreversibile e rimuove gironi, partite e iscrizioni collegate.`}
+          onOk={() => deleteCategory(confirmDeleteCategory.editionId, confirmDeleteCategory.categoryId)}
+          onCancel={() => setConfirmDeleteCategory(null)}
+        />
+      )}
       {confirmingReset && (
         <Confirm
           msg="Ripristinare tutti i dati ai valori iniziali? Questa operazione non può essere annullata."

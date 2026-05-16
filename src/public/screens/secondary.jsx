@@ -143,7 +143,7 @@ export function HonorsScreen({ data }) {
               {selectedEditionMeta.name}
             </div>
             <div style={{ fontSize: 13, color: 'var(--fg-3)' }}>
-              {selectedEditionMeta.tournaments?.name || 'Rinascita Monteforte Cup'}
+              {selectedEditionMeta.tournaments?.[0]?.name || 'Rinascita Monteforte Cup'}
               {selectedEditionMeta.location && ` · ${selectedEditionMeta.location}`}
             </div>
             {editionData && !loading && (

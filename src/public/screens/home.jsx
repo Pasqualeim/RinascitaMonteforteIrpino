@@ -22,16 +22,18 @@ export function HomeScreen({ onNav, data }) {
   const groups          = d.groups           || [];
 
   // Edition metadata — dynamic from bootstrap, hardcoded defaults as fallback
-  const edition      = d.edition || {};
+  const edition          = d.edition || {};
+  const firstTournament  = (Array.isArray(d.tournaments) && d.tournaments[0]) || {};
   const editionName  = edition.name        || 'Cup 2026 · 3ª Edizione';
   const kickoffIso   = edition.kickoff_date || '2026-06-15T20:00:00+02:00';
   const kickoff      = new Date(kickoffIso).getTime();
   const startFmt     = fmtDateIt(edition.start_date) || '15 Giugno';
   const endFmt       = fmtDateIt(edition.end_date)   || '15 Luglio';
   const editionPeriod = `${startFmt} – ${endFmt}`;
-  const prize1 = edition.prize_first  ?? 1000;
-  const prize2 = edition.prize_second ?? 400;
-  const prize3 = edition.prize_third  ?? 250;
+  // Prizes live on tournament, not edition (schema v3)
+  const prize1 = firstTournament.prize_first  ?? 1000;
+  const prize2 = firstTournament.prize_second ?? 400;
+  const prize3 = firstTournament.prize_third  ?? 250;
   const kickoffLabel = `Calcio d'inizio · ${fmtDateIt(kickoffIso) || '15 Giugno 2026'}`;
 
   return (

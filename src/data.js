@@ -7,3 +7,4 @@ export * from './lib/api.js';
 export * from './lib/crud.js';
 export * from './lib/migration.js';
 export * from './lib/storage.js';
+export { rmNormalizeTournamentData, rmHydrateTournamentData } from './domain.js';

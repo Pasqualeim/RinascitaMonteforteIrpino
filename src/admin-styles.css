@@ -197,6 +197,9 @@ select:disabled {
 .adm-btn-secondary { background: #1a1a1a; color: var(--fg-1); border: 1px solid var(--border-1); }
 .adm-btn-secondary:hover { background: #222; }
 
+.adm-btn-brand { background: var(--brand-green); color: #000; border-color: var(--brand-green); }
+.adm-btn-brand:hover { background: #00c864; }
+
 .adm-btn-ghost { background: transparent; color: var(--fg-2); }
 .adm-btn-ghost:hover { background: #111; color: var(--fg-1); }
 
@@ -246,6 +249,8 @@ select:disabled {
   box-sizing: border-box;
   width: 100%;
 }
+
+.adm-topbar-left { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; }
 
 .adm-topbar-title {
   font-family: var(--font-display);

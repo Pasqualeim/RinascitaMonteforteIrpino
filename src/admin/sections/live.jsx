@@ -24,9 +24,17 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     return () => clearInterval(id);
   }, [lm.active]);
 
+  // Support: 'Oggi' (legacy blob), ISO 'YYYY-MM-DD' (relational), Italian 'DD Mmm' (blob freetext)
+  const today = new Date().toISOString().slice(0, 10);
   const todayMatches = (data.matches_giornata || [])
-    .flatMap(g => (g.items || []).filter(m => m.date === 'Oggi' || m.status === 'sch'))
-    .filter(m => m.home && m.away);
+    .flatMap(g => (g.items || []).filter(m => {
+      if (m.date === 'Oggi') return true;
+      if (m.date === today) return true;
+      // Italian freetext dates (e.g. "15 Lug") can't be compared precisely — show all scheduled
+      if (m.date && !m.date.includes('-')) return m.status === 'sch';
+      return false;
+    }))
+    .filter(m => m.home && m.away && m.status !== 'ft');
   const sameTeamsSelected = !!lm.home?.short && lm.home?.short === lm.away?.short;
   const canStartLive = !!lm.home?.short && !!lm.away?.short && !sameTeamsSelected;
 

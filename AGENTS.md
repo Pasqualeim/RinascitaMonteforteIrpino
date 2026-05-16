@@ -1,214 +1,124 @@
 # Rinascita Monteforte Cup — Sito Torneo
 
-Sito statico per torneo calcio amatoriale "Rinascita Monteforte Cup", Monteforte Irpino (AV).
-React 18 via CDN + Babel standalone. Nessun bundler. Nessun backend. Tutto client-side.
+Sito per torneo calcio amatoriale "Rinascita Monteforte Cup", Monteforte Irpino (AV).
+**Stack:** Vite + React 18 (JSX, no TypeScript). `npm run dev` per sviluppo, `npm run build` per produzione.
+Pubblico client-side read-only, admin protetto da Edge Function Supabase con auth custom `username + password`.
+
+> Questo file è mantenuto aggiornato dal team. Per dettagli tecnici completi vedi `CLAUDE.md`.
 
 ## Struttura file
 
 ```
-index.html              → Sito pubblico (read-only per utenti)
-admin.html              → Pannello staff (login richiesto)
+index.html              → Entry sito pubblico (Vite)
+admin.html              → Entry pannello staff (Vite)
+vite.config.js          → Config Vite (multi-page: index + admin)
+package.json            → Dipendenze: react, react-dom, @supabase/supabase-js, vite, vitest, eslint
+.env                    → VITE_SUPABASE_URL, VITE_SUPABASE_KEY, VITE_ADMIN_API_URL
 colors_and_type.css     → Design system: variabili CSS colori, font, spacing
-site/
+src/
+  domain.js             → Hydration, normalizzazione, derivazioni runtime (ES module puro, testabile)
+  data.js               → Facade re-export da src/lib/* (backward compat)
+  components.jsx        → Componenti condivisi pubblici: EmptyState, Header, BottomNav, LiveBoard, ecc.
   styles.css            → Stili pubblici, mobile-first (base=375px, desktop @900px)
-  data.js               → Dati + localStorage persistence (chiave: rm_data_v2)
-  components.jsx        → Componenti condivisi: Header, BottomNav, LiveBoard, ecc.
-  screens.jsx           → Schermate pubbliche: Home, Live, Calendario, Classifica, ecc.
-  admin.jsx             → Shim legacy compatibile durante lo split Fase 3
   admin-styles.css      → Stili pannello admin
+  lib/
+    api.js              → Fetch verso admin-api (bootstrap, editions, CRUD edizioni/categorie)
+    auth.js             → Login/logout/me verso Edge Function
+    constants.js        → DEFAULT_* + NATIONS_2026 + RM_STORAGE_KEY
+    crud.js             → rmAdminDomain — tutti i metodi CRUD endpoint relazionali
+    http.js             → rmAdminApi — fetch autenticato con 401 auto-clear
+    migration.js        → rmMigrateDataToRelational — blob → tabelle relazionali (una-tantum)
+    session.js          → Lettura/scrittura sessionStorage sessione admin
+    storage.js          → rmLoadData / rmSaveData / rmGetAllData / rmMergeDefaults
+    supabase.js         → Supabase client (anon key)
+  public/
+    app.jsx             → Entry React pubblico: App + ErrorBoundary + VALID_SCREENS
+    screens/
+      home.jsx          → HomeScreen
+      live.jsx          → LiveScreen
+      calendar.jsx      → CalendarScreen
+      table.jsx         → TableScreen
+      teams.jsx         → TeamsScreen
+      secondary.jsx     → EventsScreen + NewsScreen + HonorsScreen
   admin/
     shared.jsx          → Helper admin condivisi: icone, toast, confirm, session helpers
     auth.jsx            → Login staff
-    app.jsx             → Shell admin, routing tab, boot sessione, mount React
+    app.jsx             → Entry React admin: shell, routing tab, boot sessione
     sections/
-      live-news.jsx     → Live match + avvisi
-      competition.jsx   → Partite, bracket, classifica, marcatori, gironi, squadre
-      content.jsx       → Eventi, albo d'oro, sponsor
-      settings.jsx      → Credenziali staff + reset dati
+      dashboard.jsx     → Dashboard staff: checklist, badge categorie, accesso rapido tab
+      live.jsx          → Live match: punteggio +/−, minuto, eventi, undo
+      news.jsx          → CRUD avvisi: titolo, testo, tono, pin
+      gironi.jsx        → CRUD gironi: nome, colore
+      matches.jsx       → CRUD partite: stato, score, orario, campo, fase
+      standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB)
+      scorers.jsx       → CRUD marcatori con gol
+      teams.jsx         → CRUD squadre: nazione, girone, capitano
+      content.jsx       → CRUD eventi, albo d'oro, sponsor
+      settings.jsx      → Credenziali staff, reset dati, edizioni+categorie, migrazione DB
+  __tests__/
+    domain.test.js      → 59 test su domain.js (Vitest)
+supabase/
+  functions/admin-api/  → Edge Function Deno (v7): auth, bootstrap, CRUD relazionale, legacy /save
 assets/
   logo-rinascita-monteforte.jpg
   poster-qualificata-2024.png
+dist/                   → Output build (non committare)
+docs/
+  DEBUGGING_PLAN.md     → Piano operativo debug/refactor con tracker sprint e backlog
+  REFACTOR_PLAN.md      → Storico fasi refactor completate
 ```
 
-## Sito pubblico (index.html)
+## Comandi principali
 
-**Utenti:** solo visualizzazione. Nessun form iscrizione.
-
-**Sezioni:**
-- `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori, bacheca, premi, sponsor
-- `live` — Tabellone diretta + risultati oggi
-- `calendar` — Calendario partite con filtri dinamici per fase/girone
-- `table` — Classifica per girone (tab dinamici, auto-calcolati) + marcatori
-- `teams` — Squadre filtrabili per girone, con nazioni FIFA 2026
-- `events` — Timeline eventi
-- `news` — Bacheca avvisi
-- `honors` — Albo d'oro edizioni passate
-
-**Navigazione:**
-- Mobile: bottom nav fisso (Home | Live | Calendario | Classifica | Altro)
-- "Altro" apre drawer con Squadre/Eventi/Avvisi/Albo d'oro
-- Desktop (≥900px): nav orizzontale in header, bottom nav nascosta
-
-**Data refresh:** ogni 30 secondi rilegge localStorage → mostra dati aggiornati da admin.
-
-**Link admin:** footer → "⚙ Accesso staff" → admin.html (discreto, opacity 50%).
-
-## Pannello admin (admin.html)
-
-**Auth:**
-- Login unico staff via Edge Function Supabase `admin-api`
-- Credenziali staff: `username + password` veri, verificati server-side su tabella `public.admin_users`
-- Sessione breve in `sessionStorage.rm_admin_session_v1` con token emesso dal backend
-- Cambio username/password in tab `Settings` via endpoint protetto `/credentials`
-
-**Sezioni admin:**
-
-| Tab | Cosa gestisce |
-|-----|---------------|
-| Gironi | CRUD gironi con colore, auto-calcolo standings per girone |
-| Live 🔴 | Avvia/termina diretta, punteggio +/−, minuto +/−, eventi (⚽🟨🟥↻) |
-| Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
-| Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
-| Classifica | G/V/N/P/GF/GS/Pt/Forma per ogni squadra, per girone (tab dinamici) |
-| Marcatori | CRUD capocannonieri con gol |
-| Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
-| Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
-| Albo d'oro | CRUD edizioni passate |
-| Sponsor | CRUD sponsor con tag |
-| Striscia | Messaggi ticker verde in cima al sito |
-| Settings | Cambio username/password, reset dati a default |
-
-## Flusso dati (Supabase + localStorage fallback)
-
-```
-Admin login → Edge Function `admin-api/login`
-            → token sessione in sessionStorage["rm_admin_session_v1"]
-
-Admin salva → rmSaveData() → localStorage["rm_data_v2"] (immediato)
-                           → Edge Function `admin-api/save`
-                           → Supabase: site_data WHERE id=1 UPDATE content
-
-Sito pubblico → rmLoadData() ogni 30s:
-  1. Prova Supabase site_data.content
-  2. Se fallisce → localStorage["rm_data_v2"]
-  3. Se entrambi vuoti → DEFAULT_* hardcodati in data.js
+```bash
+npm install        # installa dipendenze
+npm run dev        # dev server (http://localhost:5173)
+npm run build      # build produzione in dist/
+npm run preview    # serve dist/ localmente
+npm run test       # vitest run (59 test)
+npm run test:watch # vitest watch
+npm run lint       # eslint src/
+npm run format     # prettier --write
 ```
 
-**Supabase progetto:** `jummgmhkapvvibicnqos` ("Rinascita Cup") — `eu-west-1` — `ACTIVE_HEALTHY`
-**URL:** `https://jummgmhkapvvibicnqos.supabase.co`
-**Tabella:** `site_data` — colonne: `id bigint PK`, `content jsonb`, `updated_at timestamptz`
-**Tabelle auth custom:** `admin_users`, `admin_sessions`
-**Edge Function:** `admin-api`
-**Riga dati:** sempre `id=1` (upsert su riga singola)
-**RLS desiderata:** `site_data` in sola lettura per `anon`; scrittura solo via Edge Function/service role
+## Flusso dati (schema v3)
 
-Struttura `content` jsonb:
-```js
-{
-  schema_version,    // 2
-  teams,             // [{ id, name, group_id, nation (FIFA 2026), ... }]
-  groups,            // [{ id, name, color }] gironi creati dallo staff
-  standings_groups,  // [{ id, name, color, rows: [...] }] classifiche auto-calcolate per girone
-  live_match,        // { active: bool, home, away, hs, as, minute, events[] }
-  matches_giornata,
-  scorers, news, events, honors, sponsors,
-  updated_at         // ISO timestamp ultimo salvataggio
-}
+```
+Pubblico (rmLoadData, ogni 30s):
+  bootstrap API (teams.length > 0, timeout 5s)
+  → site_data Supabase (fallback)
+  → localStorage rm_data_v2 (fallback)
+  → DEFAULT_* hardcoded (fallback finale)
+
+Admin salva → rmSaveData() → localStorage (immediato)
+                           → POST /admin-api/save (blob legacy)
+             Live dual-write → PUT /admin-api/live (relazionale)
 ```
 
-**Derivati runtime, non persistiti:** `matches_today`, `strip_items`
-**Alias legacy runtime:** `standings_a`, `standings_o40`, `standings_jr` (sempre `[]`)
-
-**Campi team principali:** `short, name, group_id, nation, flag, players`
-(campo `category` rimosso — sostituito da `group_id`)
-
-**Nota:** `content={}` al primo avvio è normale. App usa default finché admin non salva.
-
-**Globals window (rifrescati da rmLoadData):**
-- `GROUPS` — array gironi
-- `STANDINGS_GROUPS` — classifiche calcolate per girone
-- `NATIONS_2026` — dict nazioni FIFA 2026 (name → {flag, short})
-- `TEAMS`, `MATCHES_TODAY`, `LIVE_MATCH`, ecc. — come prima
-
-**Note MCP:** usare sempre il progetto `jummgmhkapvvibicnqos` quando disponibile nel plugin/connector Supabase.
-
-## Variabili CSS principali
-
-```css
---brand-green: #00E676    /* colore primario */
---brand-gold:  #F5C518    /* trofei/oro */
---font-display: 'Bebas Neue'  /* titoli uppercase */
---font-body:    'Inter'        /* testo */
---bg-canvas:   #000000
---bg-surface:  #141414
-```
-
-## Sistema gironi — flusso operativo
-
-**Workflow staff:**
-
-1. **Crea gironi** (tab "Gironi")
-   - Nome, colore per ogni girone
-   - `computeStandings()` auto-genera `standings_groups` quando partite finiscono
-
-2. **Crea squadre**
-   - `TeamForm` consente scegliere nazione FIFA 2026 (picker con flag emoji)
-   - La sigla squadra viene proposta dalla nazione ma resta indipendente dal vecchio campo `category`
-   - Assegna squadra a `group_id`
-   - Campo `category` (Senior/Over40/Jr) rimosso
-
-3. **Inserisce partite**
-   - `MatchForm` mostra preset fasi dinamici (generati da gironi)
-   - Fasi knockout: Quarti, Semifinali, Finale 3°/4°, Finale (hardcodati)
-   - `computeStandings(giornata, teams, groups)` auto-calcola classifiche per girone
-
-4. **Visualizza classifica**
-   - `StandingsSection` mostra tab dinamici per girone
-   - Ogni tab: G/V/N/P/GF/GS/Pt/Forma
-
-**Schermate pubbliche aggiornate:**
-- `TableScreen` — classifica per-girone con tab dinamici
-- `TeamsScreen` — filtra per girone, mostra flag nazione
-- `CalendarScreen` — tab per fase/girone (filtro effettivo)
-- `HomeScreen` — mostra primo girone da `standings_groups[0]`
-
-## Aggiungere nuova sezione pubblica
-
-1. Aggiungere screen in `site/screens.jsx` (pattern uguale agli altri)
-2. Aggiungere route in `App` in `index.html`
-3. Aggiungere voce in `BottomNav` (drawer "Altro") in `site/components.jsx`
-4. Se ha dati gestibili: aggiungere sezione in `site/admin.jsx`
-
-## Note
-
-- NO bundler. Modifica direttamente i file `.jsx` e `.css`.
-- `admin.html` ora carica più script Babel in ordine: `site/admin/shared.jsx` → `site/admin/auth.jsx` → `site/admin/sections/*.jsx` → `site/admin.jsx` → `site/admin/app.jsx`
-- Babel transpila JSX in-browser. Errori JSX visibili in console browser.
-- Il sito funziona aprendo `index.html` direttamente nel browser (file://).
-- `admin.html` e sito pubblico condividono `localStorage.rm_data_v2` per fallback locale.
-- La sessione staff vive solo in `sessionStorage`, quindi chiudere la tab admin richiede nuovo login.
-- Responsive breakpoints: mobile default, tablet `@600px`, desktop `@900px`.
+**Nota D-01:** post-migrazione, CRUD admin (matches/teams/groups/news) scrive solo blob.
+Il pubblico legge da bootstrap relazionale → modifiche non visibili finché non si ri-migra.
+Unica eccezione: live ha dual-write automatico.
 
 ## Sistema multi-agente
 
-Agenti in `.Codex/agents/`. Organizzati per **tipo di task**, non per singolo file.
+Agenti in `.claude/agents/`. Organizzati per **tipo di task**, non per singolo file.
 
 | Agente | Quando usarlo | File che può toccare |
 |--------|--------------|----------------------|
-| `feature-builder` | Nuova sezione/feature da zero che tocca 3+ file | data.js, admin.jsx, screens.jsx, components.jsx, CSS, AGENTS.md |
-| `admin-fixer` | Bug fix o miglioramento mirato solo lato admin | admin.jsx, admin-styles.css |
-| `public-fixer` | Bug fix o miglioramento mirato solo sito pubblico | screens.jsx, components.jsx, styles.css, index.html |
-| `supabase` | Operazioni DB: query, RLS, sync, ispezione dati | Supabase plugin/MCP sul progetto `jummgmhkapvvibicnqos` |
-| `reviewer` | QA post-lavoro: verifica classi CSS, campi dati, update AGENTS.md | Lettura tutto + scrittura AGENTS.md |
+| `feature-builder` | Nuova sezione/feature da zero che tocca 3+ file | data.js, admin, screens, components, CSS, CLAUDE.md |
+| `admin-fixer` | Bug fix o miglioramento mirato solo lato admin | src/admin/*, admin-styles.css |
+| `public-fixer` | Bug fix o miglioramento mirato solo sito pubblico | src/public/*, components.jsx, styles.css |
+| `supabase` | Operazioni DB: query, RLS, sync, ispezione dati | Supabase MCP su `jummgmhkapvvibicnqos` |
+| `reviewer` | QA post-lavoro: verifica CSS, campi dati, update docs | Lettura tutto + scrittura CLAUDE.md + AGENTS.md |
 
 ### Quando usare gli agenti vs inline
 
 - **Inline** (nessun agente): modifiche a 1-2 file, task semplici, piccoli fix
-- **Agente**: task grandi che proteggono il contesto principale, operazioni specializzate (DB), review indipendente
+- **Agente**: task grandi che proteggono il contesto principale, operazioni DB, review indipendente
 
 ### Regole
 
-- `supabase` non modifica schema o dati senza conferma esplicita dell'utente
-- `reviewer` è read-only su tutti i file tranne AGENTS.md
+- `supabase` non modifica schema o dati senza conferma esplicita
+- `reviewer` è read-only su tutti i file tranne CLAUDE.md e AGENTS.md
 - Per task che toccano sia admin che public, usa `feature-builder` o lavora inline
 - Se task richiede modifica a file fuori scope dell'agente scelto, fermati e chiedi conferma
