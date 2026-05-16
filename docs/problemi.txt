@@ -1,0 +1,4 @@
+Home:
+- caricamento logo pagina
+- visualizzazione bandierine accanto alle squadre(caricate ma non renderizzate)
+- aggiungere regolamento
