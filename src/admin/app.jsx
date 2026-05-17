@@ -188,7 +188,7 @@ function AdminApp() {
           </button>
         )}
 
-        {tab === 'dashboard'  && <DashboardSection data={data} editionId={editionId} tournamentCategories={tournamentCategories} setTab={navigateTo} />}
+        {tab === 'dashboard'  && <DashboardSection data={data} editionId={editionId} tournamentId={tournamentId} tournamentCategories={tournamentCategories} setTab={navigateTo} />}
         {tab === 'live'       && <LiveSection {...props} />}
         {tab === 'news'       && <NewsSection {...props} />}
         {tab === 'gironi'     && <GironiSection {...props} />}

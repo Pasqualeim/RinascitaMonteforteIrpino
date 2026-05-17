@@ -1,12 +1,13 @@
 import { GridIcon, ZapIcon, BellIcon, CalIcon, StarIcon, TrophyIcon, UsersIcon } from '../shared.jsx';
 
-export function DashboardSection({ data, editionId, tournamentCategories, setTab }) {
+export function DashboardSection({ data, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
   const todayMatches = (data.matches_today || []).filter(m => !liveMatch.active || m.status !== 'live');
+  const activeCategory = tournamentCategories.find(t => t.id === tournamentId);
 
   const checks = [
     { done: (data.groups || []).length > 0,                                          label: 'Gironi configurati',    tab: 'gironi' },
-    { done: (data.teams || []).length > 0,                                           label: 'Squadre registrate',    tab: 'teams' },
+    { done: (data.teams || []).length >= 2,                                          label: 'Squadre registrate',    tab: 'teams' },
     { done: (data.matches_giornata || []).some(g => (g.items || []).length > 0),     label: 'Calendario inserito',   tab: 'matches' },
     { done: (data.news || []).length > 0,                                            label: 'Bacheca con avvisi',    tab: 'news' },
   ];
@@ -24,21 +25,30 @@ export function DashboardSection({ data, editionId, tournamentCategories, setTab
       <p className="adm-section-sub">{data.edition?.location || 'Campo Sportivo Monteforte Irpino'}</p>
 
       {tournamentCategories.length > 0 && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12, marginBottom: 4 }}>
-          {tournamentCategories.map(t => (
-            <span key={t.id} style={{
-              padding: '4px 12px', borderRadius: 16, fontSize: 12, fontWeight: 600,
-              background: 'rgba(0,230,118,0.1)', border: '1px solid var(--border-brand)',
-              color: 'var(--brand-green)',
-            }}>
-              {t.name}
-              {(t.prize_first || 0) > 0 && (
-                <span style={{ marginLeft: 6, color: 'var(--fg-3)', fontWeight: 400 }}>
-                  🏆 {t.prize_first}€
-                </span>
+        <div style={{ marginTop: 10, marginBottom: 4 }}>
+          {activeCategory && (
+            <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 6 }}>
+              Stai gestendo: <strong style={{ color: 'var(--brand-green)' }}>{activeCategory.name}</strong>
+              {(activeCategory.prize_first || 0) > 0 && (
+                <span style={{ marginLeft: 6 }}>· 🏆 {activeCategory.prize_first}€</span>
               )}
-            </span>
-          ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {tournamentCategories.map(t => {
+              const isActive = t.id === tournamentId;
+              return (
+                <span key={t.id} style={{
+                  padding: '4px 12px', borderRadius: 16, fontSize: 12, fontWeight: 600,
+                  background: isActive ? 'var(--brand-green)' : 'rgba(0,230,118,0.08)',
+                  border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-brand)'}`,
+                  color: isActive ? '#000' : 'var(--brand-green)',
+                }}>
+                  {t.name}
+                </span>
+              );
+            })}
+          </div>
         </div>
       )}
 
