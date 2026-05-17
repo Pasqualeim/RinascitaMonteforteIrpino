@@ -126,7 +126,9 @@ function AdminApp() {
     if (msg) setToast({ msg, type: 'success' });
   }
 
-  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories };
+  const [teamsPerGroupAdvance, setTeamsPerGroupAdvance] = useState(2);
+
+  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories, teamsPerGroupAdvance, onTeamsPerGroupAdvance: setTeamsPerGroupAdvance };
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
 

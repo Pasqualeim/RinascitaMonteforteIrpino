@@ -34,7 +34,7 @@ function nextGroupName(existingGroups) {
   return '';
 }
 
-export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
+export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerGroupAdvance = 2, onTeamsPerGroupAdvance }) {
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
   const [deletingGroupId, setDeletingGroupId] = useState(null);
@@ -331,6 +331,50 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
               </>
             )}
             {setupMsg && <div style={{ marginTop: 8, fontSize: 13, color: setupMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{setupMsg}</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Qualificazione */}
+      {groups.length > 0 && (
+        <div className="adm-card" style={{ marginBottom: 16 }}>
+          <div className="adm-card-header"><span className="adm-card-title">Qualificazione al turno successivo</span></div>
+          <div className="adm-card-body" style={{ paddingTop: 8 }}>
+            <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
+              Quante squadre per girone passano alla fase eliminatoria?
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {[1, 2, 3, 4].map(n => {
+                const total = groups.length * n;
+                const isActive = teamsPerGroupAdvance === n;
+                return (
+                  <button key={n} type="button"
+                    onClick={() => onTeamsPerGroupAdvance && onTeamsPerGroupAdvance(n)}
+                    style={{
+                      padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                      background: isActive ? 'var(--brand-green)' : 'transparent',
+                      border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                      color: isActive ? '#000' : 'var(--fg-2)',
+                      fontWeight: isActive ? 700 : 400,
+                      fontSize: 13, transition: 'all 140ms',
+                    }}>
+                    {n === 1 ? 'Solo 1°' : n === 2 ? '1° e 2°' : n === 3 ? '1°, 2°, 3°' : 'Tutte e 4'}
+                    <div style={{ fontSize: 11, color: isActive ? 'rgba(0,0,0,0.6)' : 'var(--fg-3)', marginTop: 2 }}>
+                      {total} squadre totali
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {groups.length > 0 && (
+              <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 10 }}>
+                {(() => {
+                  const tot = groups.length * teamsPerGroupAdvance;
+                  const fase = tot <= 2 ? 'Finale' : tot <= 4 ? 'Semifinali' : tot <= 8 ? 'Quarti di finale' : `Round di ${tot}`;
+                  return `${groups.length} gironi × ${teamsPerGroupAdvance} = ${tot} qualificate → prima fase knockout: ${fase}`;
+                })()}
+              </div>
+            )}
           </div>
         </div>
       )}

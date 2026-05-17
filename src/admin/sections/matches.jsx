@@ -16,7 +16,7 @@ function buildKnockoutRounds(numTeams) {
   return rounds;
 }
 
-export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
+export function MatchesSection({ data, onSave, onRefresh, tournamentId, teamsPerGroupAdvance = 2 }) {
   const allMatches = useMemo(() => {
     const giornata = data.matches_giornata || [];
     return giornata.flatMap(g => g.items.map(m => ({ ...m, _day: g.day })));
@@ -30,7 +30,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
 
   // Knockout generator
   const [koOpen, setKoOpen] = useState(false);
-  const [koTeamsPerGroup, setKoTeamsPerGroup] = useState(2);
+  const [koTeamsPerGroup, setKoTeamsPerGroup] = useState(teamsPerGroupAdvance);
   const [ko3rd, setKo3rd] = useState(true);
   const [koBusy, setKoBusy] = useState(false);
   const [koMsg, setKoMsg] = useState('');
