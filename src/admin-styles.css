@@ -352,6 +352,15 @@ select:disabled {
   font-weight: 700;
 }
 
+.adm-cat-pill-add {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.adm-cat-pill-add:hover {
+  opacity: 1;
+}
+
 /* ── Bottom Navigation & Dashboard Grids ────────────────────────────────────── */
 
 .adm-bottom-nav {

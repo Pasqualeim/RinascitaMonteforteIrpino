@@ -37,6 +37,7 @@ function AdminApp() {
   const [editionId, setEditionId] = useState(null);
   const [tournamentId, setTournamentId] = useState(null);
   const [tournamentCategories, setTournamentCategories] = useState([]);
+  const [bootstrapCache, setBootstrapCache] = useState(null);
 
   function bounceToLogin(message = 'Sessione scaduta. Effettua di nuovo l\'accesso.') {
     setToast({ msg: message, type: 'error' });
@@ -46,21 +47,36 @@ function AdminApp() {
   }
 
   async function sync() {
-    // Single bootstrap fetch — extract both data and metadata from one call
     const bootstrapData = await rmLoadDataFromBootstrap();
     if (bootstrapData?.edition?.id) setEditionId(bootstrapData.edition.id);
     if (bootstrapData?.tournaments?.length) {
       setTournamentCategories(bootstrapData.tournaments);
       setTournamentId(prev => prev || bootstrapData.tournaments[0].id);
-    }
-    if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
-      setData(rmMergeDefaults(rmNormalizeTournamentData(bootstrapData)));
+      setBootstrapCache(bootstrapData);
     } else {
-      // Bootstrap empty or failed — fall back to full load chain (site_data → localStorage)
+      setBootstrapCache(null);
       const fallback = await rmLoadData();
       if (fallback) setData(rmMergeDefaults(fallback));
     }
   }
+
+  // Re-derive data whenever bootstrap or selected tournament changes
+  useEffect(() => {
+    if (!bootstrapCache || !tournamentId) return;
+    const tournament = bootstrapCache.tournaments?.find(t => t.id === tournamentId)
+      || bootstrapCache.tournaments?.[0];
+    if (!tournament) return;
+    setData(rmMergeDefaults(rmNormalizeTournamentData({
+      ...bootstrapCache,
+      groups:           tournament.groups           || [],
+      teams:            tournament.teams             || [],
+      standings_groups: tournament.standings_groups  || [],
+      live_match:       tournament.live_match        || { active: false },
+      matches:          tournament.matches           || [],
+      matches_giornata: tournament.matches_giornata  || [],
+      scorers:          tournament.scorers           || [],
+    })));
+  }, [bootstrapCache, tournamentId]);
 
   useEffect(() => {
     sync();
@@ -125,20 +141,29 @@ function AdminApp() {
         <button className="adm-logout" onClick={logout}>Esci</button>
       </header>
 
-      {tournamentCategories.length > 0 && (
-        <div className="adm-cat-bar">
-          {tournamentCategories.map(t => (
-            <button
-              key={t.id}
-              type="button"
-              className={`adm-cat-pill ${tournamentId === t.id ? 'on' : ''}`}
-              onClick={() => setTournamentId(t.id)}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="adm-cat-bar">
+        {tournamentCategories.length === 0 && (
+          <span style={{ fontSize: 12, color: 'var(--fg-3)', marginRight: 4 }}>Nessun torneo —</span>
+        )}
+        {tournamentCategories.map(t => (
+          <button
+            key={t.id}
+            type="button"
+            className={`adm-cat-pill ${tournamentId === t.id ? 'on' : ''}`}
+            onClick={() => setTournamentId(t.id)}
+          >
+            {t.name}
+          </button>
+        ))}
+        <button
+          type="button"
+          className="adm-cat-pill adm-cat-pill-add"
+          onClick={() => navigateTo('settings')}
+          title="Gestisci tornei in Impostazioni"
+        >
+          + Torneo
+        </button>
+      </div>
 
       <div className="adm-desktop-nav" aria-label="Navigazione primaria admin">
         {PRIMARY_NAV_ITEMS.map(item => {
