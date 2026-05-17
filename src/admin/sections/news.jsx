@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { DEFAULT_NEWS } from '../../data.js';
+import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function NewsSection({ data, onSave }) {
-  const [news, setNews] = useState(data.news || DEFAULT_NEWS);
+export function NewsSection({ data, onSave, onRefresh, editionId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+
+  const news = data.news || [];
 
   const TONE_OPTS = [
     { value: '', label: 'Normale' },
@@ -14,35 +17,64 @@ export function NewsSection({ data, onSave }) {
   ];
   const CAT_OPTS = ['News', 'Avviso', 'Regolamento', 'Eventi', 'Sponsor'];
 
-  function saveAll(list) {
-    setNews(list);
-    onSave({ ...data, news: list }, 'Avvisi aggiornati');
+  if (!editionId) {
+    return (
+      <div>
+        <h2 className="adm-section-title">Avvisi & News</h2>
+        <div className="adm-card"><div className="adm-empty">Nessuna edizione attiva.</div></div>
+      </div>
+    );
   }
 
-  function saveItem(item) {
-    const exists = news.find(n => n.id === item.id);
-    const updated = exists ? news.map(n => n.id === item.id ? item : n) : [item, ...news];
-    saveAll(updated);
-    setEditing(null);
+  async function saveItem(item) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      if (item.id && !String(item.id).startsWith('n')) {
+        // Existing DB item
+        await rmAdminDomain.updateNews(item.id, { title: item.title, body: item.body, category: item.category || item.cat || 'generale', tone: item.tone || '', pinned: !!item.pinned });
+      } else {
+        // New item
+        await rmAdminDomain.createNews({ edition_id: editionId, title: item.title, body: item.body, category: item.category || item.cat || 'generale', tone: item.tone || '', pinned: !!item.pinned });
+      }
+      setEditing(null);
+      await onRefresh('Avvisi aggiornati');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio avviso');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function deleteItem(id) {
-    saveAll(news.filter(n => n.id !== id));
-    setDeleting(null);
+  async function deleteItem(id) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.deleteNews(id);
+      setDeleting(null);
+      await onRefresh('Avviso eliminato');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione avviso');
+    } finally {
+      setBusy(false);
+    }
   }
 
   function newItem() {
-    setEditing({ id: 'n' + Date.now(), category: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
+    setEditing({ category: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
   }
 
   return (
     <div>
       <h2 className="adm-section-title">Avvisi & News</h2>
       <p className="adm-section-sub">Gestisci la bacheca pubblica. Gli avvisi in evidenza appaiono in cima.</p>
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
+
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{news.length} avvisi</span>
-          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={newItem}>+ Nuovo avviso</button>
+          <button className="adm-btn adm-btn-secondary adm-btn-sm" onClick={newItem} disabled={busy}>+ Nuovo avviso</button>
         </div>
         {news.length === 0 ? (
           <div className="adm-empty">Nessun avviso. Clicca "Nuovo avviso" per aggiungerne uno.</div>
@@ -64,7 +96,7 @@ export function NewsSection({ data, onSave }) {
 
       {editing && (
         <NewsForm item={editing} catOpts={CAT_OPTS} toneOpts={TONE_OPTS}
-          onSave={saveItem} onClose={() => setEditing(null)} />
+          onSave={saveItem} onClose={() => setEditing(null)} busy={busy} />
       )}
       {deleting && (
         <Confirm msg="Eliminare questo avviso?" onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)} />
@@ -73,7 +105,7 @@ export function NewsSection({ data, onSave }) {
   );
 }
 
-function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
+function NewsForm({ item, catOpts, toneOpts, onSave, onClose, busy }) {
   const [form, setForm] = useState({ ...item });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
@@ -101,7 +133,7 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Data</label>
-              <input className="adm-input" value={form.date} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
+              <input className="adm-input" value={form.date || ''} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Titolo</label>
@@ -117,7 +149,7 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose }) {
             </label>
             <div className="adm-form-actions">
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-              <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim()}>Salva</button>
+              <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim() || busy}>Salva</button>
             </div>
           </div>
         </div>

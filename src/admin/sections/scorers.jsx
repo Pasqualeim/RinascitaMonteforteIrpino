@@ -1,41 +1,73 @@
 import { useState } from 'react';
-import { DEFAULT_SCORERS } from '../../data.js';
+import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function ScorersSection({ data, onSave }) {
-  const [scorers, setScorers] = useState(data.scorers || DEFAULT_SCORERS);
+export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
 
-  function saveAll(list) {
-    setScorers(list);
-    onSave({ ...data, scorers: list }, 'Marcatori aggiornati');
+  const scorers = data.scorers || [];
+  const teams = data.teams || [];
+
+  if (!tournamentId) {
+    return (
+      <div>
+        <h2 className="adm-section-title">Marcatori</h2>
+        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata.</div></div>
+      </div>
+    );
   }
 
-  function saveItem(item) {
-    const idx = scorers.findIndex(s => s._idx === item._idx);
-    let updated;
-    if (idx >= 0) {
-      updated = scorers.map((s, i) => i === idx ? item : s);
-    } else {
-      updated = [...scorers, item];
+  async function saveItem(item) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      const team = teams.find(t => t.short === item.short);
+      const team_id = team?.id || null;
+      if (item.id) {
+        await rmAdminDomain.updateScorer(item.id, { player_name: item.name, team_id, goals: item.goals || 0 });
+      } else {
+        await rmAdminDomain.createScorer({ tournament_id: tournamentId, team_id, player_name: item.name, goals: item.goals || 0, sort_order: 0 });
+      }
+      setEditing(null);
+      await onRefresh('Marcatori aggiornati');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio marcatore');
+    } finally {
+      setBusy(false);
     }
-    updated.sort((a, b) => (b.goals || 0) - (a.goals || 0));
-    saveAll(updated);
-    setEditing(null);
+  }
+
+  async function deleteItem(scorer) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.deleteScorer(scorer.id);
+      setDeleting(null);
+      await onRefresh('Marcatore eliminato');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione marcatore');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div>
       <h2 className="adm-section-title">Marcatori</h2>
       <p className="adm-section-sub">Capocannonieri del torneo (ordinati per gol).</p>
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
+
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{scorers.length} marcatori</span>
-          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _idx: -1, name: '', team: '', short: '', color: '#00E676', goals: 0 })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-sm" disabled={busy} onClick={() => setEditing({ name: '', short: '', team: '', color: '#00E676', goals: 0 })}>+ Nuovo</button>
         </div>
         {scorers.map((s, i) => (
-          <div key={i} className="adm-item-row">
+          <div key={s.id || i} className="adm-item-row">
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--brand-green)', width: 26 }}>{i + 1}</div>
             <div className="adm-crest" style={{ borderColor: s.color, color: s.color }}>{s.short}</div>
             <div className="adm-item-row-body">
@@ -44,8 +76,8 @@ export function ScorersSection({ data, onSave }) {
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--brand-green)', marginRight: 8 }}>⚽{s.goals}</div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s, _idx: i })}><EditIcon size={16}/></button>
-              <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(i)}><TrashIcon size={16}/></button>
+              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s })}><EditIcon size={16}/></button>
+              <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(s)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
@@ -62,18 +94,18 @@ export function ScorersSection({ data, onSave }) {
                 <div className="adm-form-group">
                   <label className="adm-label">Squadra</label>
                   <select className="adm-select" value={editing.short || ''} onChange={e => {
-                    const t = (data.teams || []).find(x => x.short === e.target.value);
+                    const t = teams.find(x => x.short === e.target.value);
                     if (t) setEditing(f => ({ ...f, short: t.short, team: t.name, color: t.color || '#00E676', name: '' }));
                     else setEditing(f => ({ ...f, short: e.target.value }));
                   }}>
                     <option value="">-- Seleziona Squadra --</option>
-                    {(data.teams || []).map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                    {teams.map(t => <option key={t.id || t.short} value={t.short}>{t.name}</option>)}
                   </select>
                 </div>
                 <div className="adm-form-group">
                   <label className="adm-label">Giocatore</label>
                   {(() => {
-                    const tObj = (data.teams || []).find(t => t.short === editing.short);
+                    const tObj = teams.find(t => t.short === editing.short);
                     const pList = tObj?.players || [];
                     if (pList.length > 0) {
                       return (
@@ -92,15 +124,15 @@ export function ScorersSection({ data, onSave }) {
                 </div>
                 <div className="adm-form-actions" style={{ marginTop: 24 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)} disabled={!editing.name || !editing.short}>Salva</button>
+                  <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)} disabled={!editing.name || !editing.short || busy}>Salva</button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       )}
-      {deleting !== null && (
-        <Confirm msg={`Eliminare ${scorers[deleting]?.name}?`} onOk={() => { saveAll(scorers.filter((_, i) => i !== deleting)); setDeleting(null); }} onCancel={() => setDeleting(null)} />
+      {deleting && (
+        <Confirm msg={`Eliminare ${deleting.name}?`} onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)} />
       )}
     </div>
   );

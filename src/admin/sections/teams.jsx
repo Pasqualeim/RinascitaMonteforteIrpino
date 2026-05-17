@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_NATIONS_2026 } from '../../data.js';
-import { rmGetTeamGroupId } from '../../domain.js';
+import { DEFAULT_NATIONS_2026 } from '../../data.js';
+import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 function TeamForm({ team, groups, onSave, onClose }) {
@@ -16,7 +16,7 @@ function TeamForm({ team, groups, onSave, onClose }) {
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const [editPlayerName, setEditPlayerName] = useState('');
   const [editPlayerNum, setEditPlayerNum] = useState('');
-  const isNew = !team.short;
+  const isNew = !team.id;
   const [selectedNationShort, setSelectedNationShort] = useState(() => {
     const fromNation = nations.find(n => n.name === (team.nation || team.name))?.short;
     return fromNation || (team.short ? team.short.split('-')[0] : '');
@@ -223,40 +223,77 @@ function TeamForm({ team, groups, onSave, onClose }) {
   );
 }
 
-export function TeamsSection({ data, onSave }) {
-  const [teams, setTeams] = useState(data.teams || DEFAULT_TEAMS);
+export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
-  const [deletingTeamShort, setDeletingTeamShort] = useState(null);
+  const [deletingTeam, setDeletingTeam] = useState(null);
   const [filterGroup, setFilterGroup] = useState('all');
-  const groups = data.groups || DEFAULT_GROUPS;
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
 
-  function saveItem(item) {
-    if (!item.short) return;
-    let updated;
-    if (teams.find(t => t.short === item.short)) {
-      updated = teams.map(t => t.short === item.short ? item : t);
-    } else {
-      updated = [...teams, item];
-    }
-    setTeams(updated);
-    onSave({ ...data, teams: updated }, 'Squadra salvata');
-    setEditing(null);
+  const teams = data.teams || [];
+  const groups = data.groups || [];
+
+  if (!tournamentId) {
+    return (
+      <div>
+        <h2 className="adm-section-title" style={{ margin: 0 }}>Squadre</h2>
+        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata.</div></div>
+      </div>
+    );
   }
 
-  function deleteTeam(short) {
-    const updated = teams.filter(t => t.short !== short);
-    setTeams(updated);
-    onSave({ ...data, teams: updated }, 'Squadra eliminata');
+  async function saveItem(item) {
+    if (!item.short) return;
+    setBusy(true);
+    setErrMsg('');
+    try {
+      if (item.id) {
+        // Existing team — update
+        await rmAdminDomain.updateTeam(item.id, { name: item.name, short: item.short, nation: item.nation, flag: item.flag, color: item.color });
+        if (item.registration_id) {
+          await rmAdminDomain.updateRegistration(item.registration_id, { group_id: item.group_id || null, captain: item.captain, players: item.players });
+        }
+      } else {
+        // New team — create then register
+        const res = await rmAdminDomain.createTeam({ name: item.name, short: item.short, nation: item.nation, flag: item.flag, color: item.color });
+        const newId = res?.data?.id || res?.id;
+        if (newId) {
+          await rmAdminDomain.upsertRegistration({ team_id: newId, tournament_id: tournamentId, group_id: item.group_id || null });
+        }
+      }
+      setEditing(null);
+      await onRefresh('Squadra salvata');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio squadra');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteTeam(team) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      if (team.registration_id) {
+        await rmAdminDomain.deleteRegistration(team.registration_id);
+      }
+      await rmAdminDomain.deleteTeam(team.id);
+      await onRefresh('Squadra eliminata');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione squadra');
+    } finally {
+      setBusy(false);
+    }
   }
 
   function newTeam() {
-    setEditing({ short: '', name: '', nation: '', group_id: '', flag: '', players: [], played: 0, won: 0, goals: 0, points: 0 });
+    setEditing({ short: '', name: '', nation: '', group_id: '', flag: '', players: [] });
   }
 
   const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
   const filtered = filterGroup === 'all' ? teams
-    : filterGroup === 'none' ? teams.filter(t => !rmGetTeamGroupId(t))
-    : teams.filter(t => rmGetTeamGroupId(t) === filterGroup);
+    : filterGroup === 'none' ? teams.filter(t => !t.group_id)
+    : teams.filter(t => t.group_id === filterGroup);
 
   return (
     <div>
@@ -265,19 +302,21 @@ export function TeamsSection({ data, onSave }) {
           <h2 className="adm-section-title" style={{ margin: 0 }}>Squadre</h2>
           <p className="adm-section-sub" style={{ margin: 0 }}>{teams.length} squadre registrate</p>
         </div>
-        <button className="adm-btn adm-btn-sm" onClick={newTeam}>+ Nuova Squadra</button>
+        <button className="adm-btn adm-btn-sm" onClick={newTeam} disabled={busy}>+ Nuova Squadra</button>
       </div>
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
       {groups.length > 0 && (
         <div className="rm-tabs" style={{ marginBottom: 12 }}>
           <button className={`rm-tab ${filterGroup === 'all' ? 'on' : ''}`} onClick={() => setFilterGroup('all')}>Tutte ({teams.length})</button>
           {groups.map(g => (
             <button key={g.id} className={`rm-tab ${filterGroup === g.id ? 'on' : ''}`} onClick={() => setFilterGroup(g.id)}>
-              {g.name} ({teams.filter(t => rmGetTeamGroupId(t) === g.id).length})
+              {g.name} ({teams.filter(t => t.group_id === g.id).length})
             </button>
           ))}
           <button className={`rm-tab ${filterGroup === 'none' ? 'on' : ''}`} onClick={() => setFilterGroup('none')}>
-            Senza girone ({teams.filter(t => !rmGetTeamGroupId(t)).length})
+            Senza girone ({teams.filter(t => !t.group_id).length})
           </button>
         </div>
       )}
@@ -285,10 +324,9 @@ export function TeamsSection({ data, onSave }) {
       <div className="adm-card">
         {filtered.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra{filterGroup !== 'all' ? ' in questo girone' : ' registrata'}</div>}
         {filtered.map(t => {
-          const teamGroupId = rmGetTeamGroupId(t);
-          const gName = groupMap[teamGroupId] || (teamGroupId ? teamGroupId : 'Nessun girone');
+          const gName = groupMap[t.group_id] || (t.group_id ? t.group_id : 'Nessun girone');
           return (
-            <div key={t.short} className="adm-item-row">
+            <div key={t.id || t.short} className="adm-item-row">
               <div className="adm-crest" style={{ borderColor: 'var(--brand-green)', color: 'var(--brand-green)' }}>{t.flag || t.short}</div>
               <div className="adm-item-row-body">
                 <div className="adm-item-title">{t.flag ? t.flag + ' ' : ''}{t.name}</div>
@@ -296,18 +334,18 @@ export function TeamsSection({ data, onSave }) {
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...t })}><EditIcon size={16}/></button>
-                <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeletingTeamShort(t.short)}><TrashIcon size={16}/></button>
+                <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeletingTeam(t)}><TrashIcon size={16}/></button>
               </div>
             </div>
           );
         })}
       </div>
       {editing && <TeamForm team={editing} groups={groups} onSave={saveItem} onClose={() => setEditing(null)} />}
-      {deletingTeamShort && (
+      {deletingTeam && (
         <Confirm
           msg="Eliminare questa squadra?"
-          onOk={() => { deleteTeam(deletingTeamShort); setDeletingTeamShort(null); }}
-          onCancel={() => setDeletingTeamShort(null)}
+          onOk={() => { deleteTeam(deletingTeam); setDeletingTeam(null); }}
+          onCancel={() => setDeletingTeam(null)}
         />
       )}
     </div>

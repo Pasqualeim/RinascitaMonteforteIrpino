@@ -1,58 +1,110 @@
 import React, { useState, useMemo } from 'react';
-import { DEFAULT_TEAMS, DEFAULT_GROUPS, DEFAULT_MATCHES_GIORNATA } from '../../data.js';
+import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 
-export function MatchesSection({ data, onSave }) {
+export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
   const allMatches = useMemo(() => {
-    const giornata = data.matches_giornata || DEFAULT_MATCHES_GIORNATA;
+    const giornata = data.matches_giornata || [];
     return giornata.flatMap(g => g.items.map(m => ({ ...m, _day: g.day })));
   }, [data.matches_giornata]);
+
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [view, setView] = useState('lista');
-  const teams = data.teams || DEFAULT_TEAMS;
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
 
-  const groups = data.groups || DEFAULT_GROUPS;
+  const teams = data.teams || [];
+  const groups = data.groups || [];
   const groupPresets = groups.map(g => g.name);
   const allPresets = [...groupPresets, ...KNOCKOUT_PRESETS];
   const defaultPhase = allPresets[0] || 'Girone A';
 
-  function saveMatch(updated) {
-    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
-
-    if (!updated._isNew) {
-      for (let g of giornata) {
-        const idx = g.items.findIndex(m => m.id === updated.id);
-        if (idx >= 0) { g.items.splice(idx, 1); break; }
-      }
-    } else {
-      updated.id = Date.now().toString();
-    }
-
-    updated.pitch = updated.pitch || 'Campo Sportivo';
-    const targetDay = updated._day || defaultPhase;
-    delete updated._isNew;
-    delete updated._day;
-
-    let g = giornata.find(x => x.day === targetDay);
-    if (!g) { g = { day: targetDay, items: [] }; giornata.push(g); }
-    g.items.push(updated);
-    giornata = giornata.filter(x => x.items.length > 0);
-
-    onSave({ ...data, matches_giornata: giornata }, 'Partita e classifica aggiornate');
-    setEditing(null);
+  if (!tournamentId) {
+    return (
+      <div>
+        <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
+        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata.</div></div>
+      </div>
+    );
   }
 
-  function deleteMatch(matchId) {
-    let giornata = JSON.parse(JSON.stringify(data.matches_giornata || []));
-    for (let g of giornata) {
-      g.items = g.items.filter(m => m.id !== matchId);
+  // Determine group_id from phase label (matches group name)
+  function groupIdFromPhase(phase) {
+    const g = groups.find(x => x.name === phase);
+    return g ? g.id : null;
+  }
+
+  // Determine phase string from _day
+  function phaseFromDay(day) {
+    if (KNOCKOUT_PRESETS.includes(day)) return day;
+    const g = groups.find(x => x.name === day);
+    return g ? g.name : (day || defaultPhase);
+  }
+
+  async function saveMatch(updated) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      const phase = phaseFromDay(updated._day);
+      const group_id = groupIdFromPhase(updated._day);
+      const home_team_id = updated.home?.id || null;
+      const away_team_id = updated.away?.id || null;
+      const home_score = updated.hs != null ? parseInt(updated.hs) : null;
+      const away_score = updated.as != null ? parseInt(updated.as) : null;
+
+      if (updated._isNew) {
+        await rmAdminDomain.createMatch({
+          tournament_id: tournamentId,
+          group_id,
+          home_team_id,
+          away_team_id,
+          home_score,
+          away_score,
+          status: updated.status || 'sch',
+          phase,
+          match_date: updated.date || null,
+          match_time: updated.time || null,
+          pitch: updated.pitch || 'Campo Sportivo',
+          sort_order: 0,
+        });
+      } else {
+        await rmAdminDomain.updateMatch(updated.id, {
+          group_id,
+          home_team_id,
+          away_team_id,
+          home_score,
+          away_score,
+          status: updated.status || 'sch',
+          phase,
+          match_date: updated.date || null,
+          match_time: updated.time || null,
+          pitch: updated.pitch || 'Campo Sportivo',
+        });
+      }
+      setEditing(null);
+      await onRefresh('Partita e classifica aggiornate');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio partita');
+    } finally {
+      setBusy(false);
     }
-    giornata = giornata.filter(x => x.items.length > 0);
-    onSave({ ...data, matches_giornata: giornata }, 'Partita eliminata');
-    setDeleting(null);
+  }
+
+  async function deleteMatch(matchId) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.deleteMatch(matchId);
+      setDeleting(null);
+      await onRefresh('Partita eliminata');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione partita');
+    } finally {
+      setBusy(false);
+    }
   }
 
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
@@ -71,9 +123,11 @@ export function MatchesSection({ data, onSave }) {
         <div className="adm-section-actions">
           <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
           <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Bracket</button>
-          <button className="adm-btn adm-btn-sm" onClick={newMatch}>+ Nuova</button>
+          <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
         </div>
       </div>
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
       {view === 'lista' && (
         <div className="adm-card">
@@ -100,13 +154,13 @@ export function MatchesSection({ data, onSave }) {
 
       {view === 'bracket' && <BracketView giornata={data.matches_giornata} />}
 
-      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} />}
+      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} giornate={data.matches_giornata || []} onSave={saveMatch} onClose={() => setEditing(null)} busy={busy} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
 
-function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, onSave, onClose }) {
+function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, onSave, onClose, busy }) {
   const [form, setForm] = useState({ ...match });
   const [error, setError] = useState('');
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -163,7 +217,7 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, o
                   <option value="">-- Seleziona --</option>
                   {teams
                     .filter(t => !form.away?.short || t.short === form.home?.short || t.short !== form.away.short)
-                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                    .map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
                 </select>
               </div>
               <div className="adm-form-group">
@@ -172,7 +226,7 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, o
                   <option value="">-- Seleziona --</option>
                   {teams
                     .filter(t => !form.home?.short || t.short === form.away?.short || t.short !== form.home.short)
-                    .map(t => <option key={t.short} value={t.short}>{t.name}</option>)}
+                    .map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
                 </select>
               </div>
             </div>
@@ -223,7 +277,7 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, giornate, o
             </div>
             <div className="adm-form-actions" style={{ marginTop: 24 }}>
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-              <button className="adm-btn adm-btn-sm" onClick={submit}>Salva Partita</button>
+              <button className="adm-btn adm-btn-sm" onClick={submit} disabled={busy}>Salva Partita</button>
             </div>
           </div>
         </div>

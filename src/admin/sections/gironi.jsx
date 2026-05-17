@@ -1,45 +1,84 @@
 import { useState } from 'react';
-import { DEFAULT_GROUPS } from '../../data.js';
-import { rmGetTeamGroupId } from '../../domain.js';
+import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function GironiSection({ data, onSave }) {
-  const [groups, setGroups] = useState(data.groups || DEFAULT_GROUPS);
+export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
   const [deletingGroupId, setDeletingGroupId] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
 
-  function saveGroup(g) {
-    let updated;
-    if (g._isNew) {
-      const newG = { id: 'g' + Date.now(), name: g.name, color: g.color || '#00E676' };
-      updated = [...groups, newG];
-    } else {
-      updated = groups.map(x => x.id === g.id ? { ...x, name: g.name, color: g.color || '#00E676' } : x);
-    }
-    setGroups(updated);
-    onSave({ ...data, groups: updated }, 'Girone salvato');
-    setEditing(null);
-  }
-
-  function deleteGroup(id) {
-    const updated = groups.filter(g => g.id !== id);
-    const updatedTeams = (data.teams || []).map(t => (rmGetTeamGroupId(t) === id ? { ...t, group_id: '' } : t));
-    setGroups(updated);
-    onSave({ ...data, groups: updated, teams: updatedTeams }, 'Girone eliminato');
-  }
-
-  function assignTeam(groupId, teamShort) {
-    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group_id: groupId } : t);
-    onSave({ ...data, teams: updatedTeams }, 'Squadra aggiunta al girone');
-  }
-
-  function removeTeamFromGroup(teamShort) {
-    const updatedTeams = (data.teams || []).map(t => t.short === teamShort ? { ...t, group_id: '' } : t);
-    onSave({ ...data, teams: updatedTeams }, 'Squadra rimossa dal girone');
-  }
-
+  const groups = data.groups || [];
   const allTeams = data.teams || [];
+
+  if (!tournamentId) {
+    return (
+      <div>
+        <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
+        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata. Seleziona una categoria dal menu in alto.</div></div>
+      </div>
+    );
+  }
+
+  async function saveGroup(g) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      if (g._isNew) {
+        await rmAdminDomain.createGroup({ tournament_id: tournamentId, name: g.name, color: g.color || '#00E676', sort_order: 0 });
+      } else {
+        await rmAdminDomain.updateGroup(g.id, { name: g.name, color: g.color || '#00E676' });
+      }
+      setEditing(null);
+      await onRefresh('Girone salvato');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio girone');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteGroup(id) {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.deleteGroup(id);
+      await onRefresh('Girone eliminato');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione girone');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function assignTeam(groupId, team) {
+    if (!team.registration_id) return;
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.updateRegistration(team.registration_id, { group_id: groupId });
+      await onRefresh('Squadra aggiunta al girone');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore assegnazione squadra');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeTeamFromGroup(team) {
+    if (!team.registration_id) return;
+    setBusy(true);
+    setErrMsg('');
+    try {
+      await rmAdminDomain.updateRegistration(team.registration_id, { group_id: null });
+      await onRefresh('Squadra rimossa dal girone');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore rimozione squadra');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <div>
@@ -48,16 +87,18 @@ export function GironiSection({ data, onSave }) {
           <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
           <p className="adm-section-sub" style={{ margin: 0 }}>Crea gironi e assegna le squadre.</p>
         </div>
-        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', color: '#00E676' })}>+ Girone</button>
+        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '', color: '#00E676' })} disabled={busy}>+ Girone</button>
       </div>
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
       {groups.length === 0 ? (
         <div className="adm-card"><div className="adm-empty">Nessun girone. Creane uno per iniziare.</div></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {groups.map(g => {
-            const groupTeams = allTeams.filter(t => rmGetTeamGroupId(t) === g.id);
-            const freeTeams = allTeams.filter(t => !rmGetTeamGroupId(t));
+            const groupTeams = allTeams.filter(t => t.group_id === g.id);
+            const freeTeams = allTeams.filter(t => !t.group_id);
             const isOpen = openGroup === g.id;
             return (
               <div key={g.id} className="adm-card">
@@ -78,11 +119,11 @@ export function GironiSection({ data, onSave }) {
                 {groupTeams.length > 0 && (
                   <div style={{ padding: '0 16px' }}>
                     {groupTeams.map((t, i) => (
-                      <div key={t.short} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < groupTeams.length - 1 ? '1px solid var(--border-1)' : 'none' }}>
+                      <div key={t.id || t.short} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: i < groupTeams.length - 1 ? '1px solid var(--border-1)' : 'none' }}>
                         <span style={{ fontSize: 20 }}>{t.flag || '🏳️'}</span>
                         <span style={{ fontSize: 14, color: '#fff', flex: 1 }}>{t.name}</span>
                         {isOpen && (
-                          <button onClick={() => removeTeamFromGroup(t.short)}
+                          <button onClick={() => removeTeamFromGroup(t)} disabled={busy}
                             style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>✕</button>
                         )}
                       </div>
@@ -99,7 +140,7 @@ export function GironiSection({ data, onSave }) {
                         <div className="adm-label" style={{ marginBottom: 8 }}>Aggiungi squadra</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {freeTeams.map(t => (
-                            <button key={t.short} onClick={() => assignTeam(g.id, t.short)}
+                            <button key={t.id || t.short} onClick={() => assignTeam(g.id, t)} disabled={busy}
                               style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(0,230,118,0.04)', border: '1px solid var(--border-1)', borderRadius: 8, padding: '9px 12px', cursor: 'pointer', color: '#fff', textAlign: 'left' }}>
                               <span style={{ fontSize: 20 }}>{t.flag || '🏳️'}</span>
                               <span style={{ fontSize: 14, flex: 1 }}>{t.name}</span>
@@ -139,7 +180,7 @@ export function GironiSection({ data, onSave }) {
                 </div>
                 <div className="adm-form-actions" style={{ marginTop: 24 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name.trim()}>Salva</button>
+                  <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name.trim() || busy}>Salva</button>
                 </div>
               </div>
             </div>

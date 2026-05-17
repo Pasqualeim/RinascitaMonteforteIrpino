@@ -17,17 +17,8 @@ export function DashboardSection({ data, editionId, tournamentCategories, setTab
 
   return (
     <div>
-      {editionId && (
-        <div style={{
-          background: 'rgba(245,197,24,0.07)', border: '1px solid rgba(245,197,24,0.25)',
-          borderRadius: 8, padding: '10px 14px', marginBottom: 16, marginTop: 8,
-          fontSize: 12, color: '#F5C518', lineHeight: 1.5,
-        }}>
-          ⚠️ <strong>DB relazionale attivo</strong> — gironi, partite, squadre e avvisi salvati qui non aggiornano automaticamente il sito pubblico (che legge dal DB). Dopo modifiche importanti usa <em>Impostazioni → Migra al nuovo database</em>.
-        </div>
-      )}
-      <div className="adm-eyebrow" style={{ marginTop: editionId ? 0 : 10 }}>
-        {editionId ? 'Database relazionale attivo' : 'Gestione torneo'}
+      <div className="adm-eyebrow" style={{ marginTop: 10 }}>
+        Gestione torneo
       </div>
       <h2 className="adm-section-title" style={{ margin: 0 }}>{data.edition?.name || 'Rinascita Cup 2026'}</h2>
       <p className="adm-section-sub">{data.edition?.location || 'Campo Sportivo Monteforte Irpino'}</p>

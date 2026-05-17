@@ -45,23 +45,24 @@ function AdminApp() {
     }, 1800);
   }
 
-  useEffect(() => {
-    async function sync() {
-      // Single bootstrap fetch — extract both data and metadata from one call
-      const bootstrapData = await rmLoadDataFromBootstrap();
-      if (bootstrapData?.edition?.id) setEditionId(bootstrapData.edition.id);
-      if (bootstrapData?.tournaments?.length) {
-        setTournamentCategories(bootstrapData.tournaments);
-        setTournamentId(bootstrapData.tournaments[0].id);
-      }
-      if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
-        setData(rmMergeDefaults(rmNormalizeTournamentData(bootstrapData)));
-      } else {
-        // Bootstrap empty or failed — fall back to full load chain (site_data → localStorage)
-        const fallback = await rmLoadData();
-        if (fallback) setData(rmMergeDefaults(fallback));
-      }
+  async function sync() {
+    // Single bootstrap fetch — extract both data and metadata from one call
+    const bootstrapData = await rmLoadDataFromBootstrap();
+    if (bootstrapData?.edition?.id) setEditionId(bootstrapData.edition.id);
+    if (bootstrapData?.tournaments?.length) {
+      setTournamentCategories(bootstrapData.tournaments);
+      setTournamentId(prev => prev || bootstrapData.tournaments[0].id);
     }
+    if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
+      setData(rmMergeDefaults(rmNormalizeTournamentData(bootstrapData)));
+    } else {
+      // Bootstrap empty or failed — fall back to full load chain (site_data → localStorage)
+      const fallback = await rmLoadData();
+      if (fallback) setData(rmMergeDefaults(fallback));
+    }
+  }
+
+  useEffect(() => {
     sync();
   }, []);
 
@@ -104,7 +105,12 @@ function AdminApp() {
     window.location.replace('admin.html');
   }
 
-  const props = { data, onSave: handleSave, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories };
+  async function refresh(msg) {
+    await sync();
+    if (msg) setToast({ msg, type: 'success' });
+  }
+
+  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories };
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
 
