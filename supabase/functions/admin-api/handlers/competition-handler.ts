@@ -132,9 +132,9 @@ export async function competitionHandler(req: Request, base: string, id: string 
 
   // Live
   if (base === "/live" && method === "PUT") {
-    const { tournament_id, match_id, active, home_team_id, away_team_id, home_score, away_score, minute, pitch } = body;
+    const { tournament_id, match_id, active, home_team_id, away_team_id, home_score, away_score, minute, pitch, events } = body;
     if (!tournament_id) return ok(req, 400, { error: "tournament_id obbligatorio" });
-    const upd: Record<string, unknown> = { tournament_id, active: active ?? false, home_team_id: home_team_id || null, away_team_id: away_team_id || null, home_score: home_score ?? 0, away_score: away_score ?? 0, minute: minute ?? 0, pitch: pitch || "", updated_at: new Date().toISOString() };
+    const upd: Record<string, unknown> = { tournament_id, active: active ?? false, home_team_id: home_team_id || null, away_team_id: away_team_id || null, home_score: home_score ?? 0, away_score: away_score ?? 0, minute: minute ?? 0, pitch: pitch || "", events: Array.isArray(events) ? events : [], updated_at: new Date().toISOString() };
     if (match_id !== undefined) upd.match_id = match_id || null;
     const { data, error } = await db.from("live_match_state").upsert(upd, { onConflict: "tournament_id" }).select().single();
     if (error) throw error;

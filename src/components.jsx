@@ -248,13 +248,24 @@ function LiveBoard({ match }) {
       Nessuna partita in diretta
     </div>
   );
-  const { home, away, hs, as: as_, minute, pitch, events = [] } = match;
+  const { home, away, hs, as: as_, minute, pitch, events = [], phase } = match;
   if (!home || !away) return null;
-  const half = minute > 45 ? '2° tempo' : '1° tempo';
+
+  const phaseLabel = phase === 'half_time' ? 'Intervallo'
+    : phase === 'second_half' ? '2° Tempo'
+    : phase === 'first_half' ? '1° Tempo'
+    : minute > 45 ? '2° Tempo' : '1° Tempo';
+  const isHalfTime = phase === 'half_time';
+
+  const sortedEvents = [...events].sort((a, b) => b.min - a.min);
+
   return (
     <div className="rm-live-hero">
       <div className="rm-live-top">
-        <span className="rm-live-badge"><span className="dot"></span>In diretta · {minute}'</span>
+        <span className="rm-live-badge">
+          <span className="dot"></span>
+          {isHalfTime ? 'Intervallo' : `In diretta · ${minute}'`}
+        </span>
         {pitch && <span className="rm-live-pitch">{pitch}</span>}
       </div>
       <div className="rm-live-board">
@@ -265,7 +276,7 @@ function LiveBoard({ match }) {
         </div>
         <div className="rm-live-score">
           <div className="rm-live-score-row">{hs}<i>–</i>{as_}</div>
-          <div className="rm-live-min">{half} · {minute}'</div>
+          <div className="rm-live-min">{phaseLabel}{!isHalfTime && ` · ${minute}'`}</div>
         </div>
         <div className="rm-live-team">
           <div className="rm-live-crest" style={{ borderColor: away.color, color: away.color }}>{away.short}</div>
@@ -273,15 +284,24 @@ function LiveBoard({ match }) {
           <div className="rm-live-team-meta">Ospite</div>
         </div>
       </div>
-      {events.length > 0 && (
+
+      {sortedEvents.length > 0 && (
         <div className="rm-live-events">
-          {events.map((e, i) => (
-            <div key={i} className="rm-live-event">
-              <span className="min">{e.min}'</span>
-              <span className="icon">{e.type === 'goal' ? '⚽' : e.type === 'yellow' ? '🟨' : e.type === 'red' ? '🟥' : '↻'}</span>
-              <span className="desc"><b>{e.player}</b> · {e.team}{e.note ? ` · ${e.note}` : ''}</span>
-            </div>
-          ))}
+          {sortedEvents.map((e, i) => {
+            const isHome = e._ts === home.short;
+            const icon = e.type === 'goal' ? (e._autogol ? '⚽ aut.' : '⚽') : e.type === 'yellow' ? '🟨' : '🟥';
+            return (
+              <div key={i} className="rm-live-event-row">
+                <div className="rm-lev-home">
+                  {isHome && <><span className="rm-lev-name">{e.player}</span><span className="rm-lev-icon">{icon}</span></>}
+                </div>
+                <div className="rm-lev-min">{e.min}'</div>
+                <div className="rm-lev-away">
+                  {!isHome && <><span className="rm-lev-icon">{icon}</span><span className="rm-lev-name">{e.player}</span></>}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

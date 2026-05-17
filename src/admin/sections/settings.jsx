@@ -38,6 +38,8 @@ export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChan
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
   const [msg, setMsg] = useState('');
+  const [halfDuration, setHalfDuration] = useState(data.match_settings?.half_duration || 30);
+  const [matchSettingsMsg, setMatchSettingsMsg] = useState('');
   const [editions, setEditions] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [editionStatusMsg, setEditionStatusMsg] = useState('');
@@ -143,6 +145,44 @@ export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChan
   return (
     <div>
       <h2 className="adm-section-title">Impostazioni</h2>
+
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header"><span className="adm-card-title">Durata tempi</span></div>
+        <div className="adm-card-body">
+          <div className="adm-form">
+            <div className="adm-form-group">
+              <label className="adm-label">Minuti per tempo</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {[20, 25, 30, 35, 45].map(v => (
+                  <button key={v} type="button"
+                    onClick={() => setHalfDuration(v)}
+                    style={{
+                      padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      background: halfDuration === v ? 'var(--brand-green)' : 'var(--bg-canvas)',
+                      border: `1px solid ${halfDuration === v ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                      color: halfDuration === v ? '#000' : 'var(--fg-2)',
+                    }}>
+                    {v}'
+                  </button>
+                ))}
+                <input type="number" className="adm-input" min="1" max="90"
+                  value={halfDuration} onChange={e => setHalfDuration(parseInt(e.target.value) || 30)}
+                  style={{ width: 64 }} />
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '6px 0 0' }}>
+                Totale: {halfDuration * 2}' + recupero. Lo staff controlla manualmente fine 1° e inizio 2° tempo.
+              </p>
+            </div>
+            {matchSettingsMsg && <div style={{ fontSize: 13, color: 'var(--brand-green)' }}>{matchSettingsMsg}</div>}
+            <button className="adm-btn adm-btn-sm" type="button" onClick={() => {
+              onSave({ ...data, match_settings: { ...(data.match_settings || {}), half_duration: halfDuration } }, 'Impostazioni partita salvate');
+              setMatchSettingsMsg('Salvato');
+              setTimeout(() => setMatchSettingsMsg(''), 2000);
+            }}>Salva</button>
+          </div>
+        </div>
+      </div>
+
       <div className="adm-card" style={{ marginBottom: 16 }}>
         <div className="adm-card-header"><span className="adm-card-title">Credenziali staff</span></div>
         <div className="adm-card-body">

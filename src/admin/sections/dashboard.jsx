@@ -1,20 +1,16 @@
-import { GridIcon, ZapIcon, BellIcon, CalIcon, StarIcon, TrophyIcon, UsersIcon } from '../shared.jsx';
+import { GridIcon, BellIcon, CalIcon, StarIcon, UsersIcon } from '../shared.jsx';
 
 export function DashboardSection({ data, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
   const todayMatches = (data.matches_today || []).filter(m => !liveMatch.active || m.status !== 'live');
   const activeCategory = tournamentCategories.find(t => t.id === tournamentId);
 
-  const checks = [
-    { done: (data.groups || []).length > 0,                                          label: 'Gironi configurati',    tab: 'gironi' },
-    { done: (data.teams || []).length >= 2,                                          label: 'Squadre registrate',    tab: 'teams' },
-    { done: (data.matches_giornata || []).some(g => (g.items || []).length > 0),     label: 'Calendario inserito',   tab: 'matches' },
-    { done: (data.news || []).length > 0,                                            label: 'Bacheca con avvisi',    tab: 'news' },
-  ];
-  const progress = checks.filter(c => c.done).length;
-  const allDone  = progress === checks.length;
+  const groupsCount   = (data.groups || []).length;
+  const teamsCount    = (data.teams || []).length;
+  const newsCount     = (data.news || []).length;
   const matchesTotal = (data.matches_giornata || []).reduce((n, g) => n + (g.items || []).length, 0);
   const matchesFt    = (data.matches_giornata || []).flatMap(g => g.items || []).filter(m => m.status === 'ft').length;
+  const scorersCount = (data.scorers || []).length;
 
   return (
     <div>
@@ -49,25 +45,22 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
         </div>
       )}
 
-      {!allDone && (
-        <div className="adm-card" style={{ marginBottom: 20, marginTop: 16 }}>
-          <div className="adm-card-header">
-            <span className="adm-card-title">Checklist pre-torneo</span>
-            <span style={{ color: 'var(--brand-green)', fontSize: 13, fontWeight: 700 }}>{progress}/{checks.length}</span>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14, marginBottom: 20 }}>
+        {[
+          { label: 'Gironi', value: groupsCount, tab: 'gironi' },
+          { label: 'Squadre', value: teamsCount, tab: 'teams' },
+          { label: 'Partite', value: `${matchesFt}/${matchesTotal}`, tab: 'matches' },
+        ].map(s => (
+          <div key={s.label} onClick={() => setTab(s.tab)} style={{
+            flex: '1 1 calc(50% - 4px)', minWidth: 0, background: 'var(--bg-surface)',
+            borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-1)',
+            textAlign: 'center', cursor: 'pointer',
+          }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, color: 'var(--brand-green)', lineHeight: 1 }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 3 }}>{s.label}</div>
           </div>
-          <div style={{ padding: '0 16px 4px' }}>
-            {checks.map(c => (
-              <div key={c.label}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-1)', cursor: c.done ? 'default' : 'pointer' }}
-                onClick={() => !c.done && setTab(c.tab)}>
-                <span style={{ fontSize: 18, flexShrink: 0 }}>{c.done ? '✅' : '⬜'}</span>
-                <span style={{ fontSize: 14, color: c.done ? 'var(--fg-2)' : '#fff', flex: 1 }}>{c.label}</span>
-                {!c.done && <span style={{ color: 'var(--brand-green)', fontSize: 16 }}>→</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {(liveMatch.active || todayMatches.length > 0) && (
         <div className="adm-card" style={{ marginBottom: 20, marginTop: allDone ? 16 : 0 }}>
@@ -97,22 +90,7 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
         </div>
       )}
 
-      {allDone && (
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20, marginTop: allDone && !liveMatch.active ? 16 : 0 }}>
-          {[
-            { label: 'Squadre', value: (data.teams || []).length },
-            { label: 'Partite FT', value: `${matchesFt}/${matchesTotal}` },
-            { label: 'Marcatori', value: (data.scorers || []).length },
-          ].map(s => (
-            <div key={s.label} style={{ flex: 1, background: 'var(--bg-surface)', borderRadius: 10, padding: '12px 14px', border: '1px solid var(--border-1)', textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--brand-green)' }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 2 }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="adm-eyebrow" style={{ marginTop: allDone ? 0 : 4 }}>Preparazione pre-torneo</div>
+      <div className="adm-eyebrow" style={{ marginTop: 4 }}>Preparazione pre-torneo</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Setup Torneo</h3>
       <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}>
@@ -134,33 +112,14 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
         </button>
       </div>
 
-      <div className="adm-eyebrow">Bordo campo</div>
-      <h3 className="adm-section-title" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-        Live Diretta
-        {liveMatch.active && (
-          <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#FF3D3D' }} />
-        )}
-      </h3>
-      <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
-        <button type="button" className="adm-grid-btn"
-          style={{ borderColor: liveMatch.active ? 'rgba(255,61,61,0.5)' : undefined }}
-          onClick={() => setTab('live')}>
-          <ZapIcon size={28}/>
-          <span>{liveMatch.active ? '🔴 In Diretta' : 'Avvia Live'}</span>
-        </button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('news')}>
-          <BellIcon size={28}/><span>Avvisi</span>
-        </button>
-      </div>
-
       <div className="adm-eyebrow">Sito pubblico</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Portale</h3>
       <div className="adm-grid-menu">
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('news')}>
+          <BellIcon size={28}/><span>Avvisi</span>
+        </button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}>
           <CalIcon size={28}/><span>Regolamento</span>
-        </button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('honors')}>
-          <TrophyIcon size={28}/><span>Albo d'oro</span>
         </button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('sponsors')}>
           <StarIcon size={28}/><span>Sponsor</span>

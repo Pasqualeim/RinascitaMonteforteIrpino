@@ -97,7 +97,7 @@ dist/                   → Output build (non committare)
 | Tab | Cosa gestisce |
 |-----|---------------|
 | Gironi | CRUD gironi con colore, auto-calcolo standings per girone |
-| Live 🔴 | Avvia/termina diretta, punteggio +/−, minuto +/−, eventi (⚽🟨🟥↻), undo, +5'/+10' |
+| Live 🔴 | Avvia/termina diretta (con confirm), selezione partita da calendario, timer real-time, fasi (1°T/Intervallo/2°T), punteggio +/−, eventi (⚽🟨🟥), undo |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
 | Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
 | Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB) |
@@ -277,6 +277,12 @@ Il `Countdown` accetta prop `label` per testo dinamico kick-off.
 | `src/components.jsx` Countdown | `"Calcio d'inizio · 15 Giugno 2026"` |
 
 Il countdown mostra "In campo! ⚽" automaticamente dopo la data kick-off.
+
+## Regole cartellini (live) — dinamiche da regolamento
+
+- **Doppio giallo = espulsione automatica**: implementato in `live.jsx` — quando un giocatore riceve un 2° giallo nella stessa partita, viene aggiunto automaticamente un evento rosso con `_reason: 'doppio_giallo'`.
+- **Gialli accumulati tra partite**: NON gestiti automaticamente — lo staff gestisce manualmente le squalifiche. La regola dipende dal regolamento di edizione (es. 3 gialli = 1 turno di stop). Se il regolamento cambia, adeguare il comportamento in `live.jsx → confirmEvent()`.
+- **Rosso diretto**: inseribile manualmente dallo staff (bottone 🟥).
 
 ## Note
 

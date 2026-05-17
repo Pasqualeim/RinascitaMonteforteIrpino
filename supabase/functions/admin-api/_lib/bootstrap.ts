@@ -63,7 +63,7 @@ export async function buildBootstrap(editionId: string) {
       active: live.active,
       home: live.home_team ? { short: live.home_team.short, flag: live.home_team.flag, name: live.home_team.name, color: live.home_team.color } : null,
       away: live.away_team ? { short: live.away_team.short, flag: live.away_team.flag, name: live.away_team.name, color: live.away_team.color } : null,
-      hs: live.home_score, as: live.away_score, minute: live.minute, pitch: live.pitch || "", events: [],
+      hs: live.home_score, as: live.away_score, minute: live.minute, pitch: live.pitch || "", events: Array.isArray(live.events) ? live.events : [],
     } : { active: false, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
 
     const phaseMap: Record<string, any> = {};
