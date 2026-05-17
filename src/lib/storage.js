@@ -59,7 +59,7 @@ export async function rmLoadData() {
   if (SUPABASE_FUNCTIONS_URL) {
     try {
       const bootstrapData = await rmLoadDataFromBootstrap();
-      if (bootstrapData && Array.isArray(bootstrapData.teams) && bootstrapData.teams.length > 0) {
+      if (bootstrapData && bootstrapData.edition?.id) {
         const normalized = rmNormalizeTournamentData(bootstrapData);
         localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
