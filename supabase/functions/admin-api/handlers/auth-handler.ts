@@ -16,7 +16,6 @@ export async function authHandler(req: Request, base: string, id: string | null)
     const raw = b64(crypto.getRandomValues(new Uint8Array(32)));
     const hash = await sha256(raw);
     const exp  = addHrs(sessionHours);
-    await db.from("admin_sessions").update({ revoked_at: new Date().toISOString() }).eq("user_id", u.id).is("revoked_at", null);
     const { error: ie } = await db.from("admin_sessions").insert({ user_id: u.id, session_token_hash: hash, expires_at: exp, user_agent: req.headers.get("user-agent") });
     if (ie) throw ie;
     return ok(req, 200, { ok: true, session: { token: raw, expires_at: exp, user: { username: u.username, role: u.role } } });
