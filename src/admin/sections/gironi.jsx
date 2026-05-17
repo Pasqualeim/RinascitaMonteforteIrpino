@@ -21,6 +21,19 @@ function suggestGroups(teamCount) {
   return Math.ceil(teamCount / 4);
 }
 
+function nextGroupName(existingGroups) {
+  const used = new Set(
+    existingGroups.map(g => {
+      const m = g.name.match(/Girone\s+([A-P])/i);
+      return m ? m[1].toUpperCase() : null;
+    }).filter(Boolean)
+  );
+  for (const letter of GROUP_LETTERS) {
+    if (!used.has(letter)) return `Girone ${letter}`;
+  }
+  return '';
+}
+
 export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
@@ -33,10 +46,13 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
   const [numGroups, setNumGroups] = useState(null);
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMsg, setSetupMsg] = useState('');
+  const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
 
   // Generate matches state
   const [genMsg, setGenMsg] = useState('');
   const [genBusy, setGenBusy] = useState(false);
+  const [genConfirm, setGenConfirm] = useState(false);
+  const [genMode, setGenMode] = useState('single'); // 'single' | 'double'
 
   const groups = data.groups || [];
   const allTeams = data.teams || [];
@@ -171,16 +187,36 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
       for (const g of groups) {
         const groupTeams = allTeams.filter(t => t.group_id === g.id);
         if (groupTeams.length < 2) continue;
-        // Round-robin pairs
+        // Generate pairs
+        const pairs = [];
         for (let a = 0; a < groupTeams.length; a++) {
           for (let b = a + 1; b < groupTeams.length; b++) {
+            pairs.push([groupTeams[a], groupTeams[b]]);
+          }
+        }
+        // Andata
+        for (const [home, away] of pairs) {
+          await rmAdminDomain.createMatch({
+            tournament_id: tournamentId,
+            group_id: g.id,
+            home_team_id: home.id,
+            away_team_id: away.id,
+            status: 'sch',
+            phase: genMode === 'double' ? `${g.name} · Andata` : g.name,
+            sort_order: created,
+          });
+          created++;
+        }
+        // Ritorno (se double)
+        if (genMode === 'double') {
+          for (const [home, away] of pairs) {
             await rmAdminDomain.createMatch({
               tournament_id: tournamentId,
               group_id: g.id,
-              home_team_id: groupTeams[a].id,
-              away_team_id: groupTeams[b].id,
+              home_team_id: away.id,
+              away_team_id: home.id,
               status: 'sch',
-              phase: g.name,
+              phase: `${g.name} · Ritorno`,
               sort_order: created,
             });
             created++;
@@ -197,6 +233,8 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
   }
 
   const allAssigned = allTeams.length > 0 && allTeams.every(t => t.group_id);
+  const groupNames = new Set(groups.map(g => g.name));
+  const hasGroupMatches = (data.matches_giornata || []).some(g => groupNames.has(g.day) && (g.items || []).length > 0);
 
   return (
     <div>
@@ -216,7 +254,7 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
               ⚡ Setup auto
             </button>
           )}
-          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: '' })} disabled={busy}>+ Girone</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: nextGroupName(groups) })} disabled={busy}>+ Girone</button>
         </div>
       </div>
 
@@ -257,12 +295,29 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
                 <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
                   Gironi esistenti: {groups.map(g => g.name).join(', ')}. Rimescola la distribuzione delle squadre mantenendo i gironi attuali.
                 </div>
-                <div className="adm-form-actions">
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setSetupOpen(false)}>Chiudi</button>
-                  <button className="adm-btn adm-btn-sm" onClick={reshuffleTeams} disabled={setupBusy}>
-                    {setupBusy ? 'Rimescolamento…' : '🔀 Rimescola squadre (random)'}
-                  </button>
-                </div>
+                {reshuffleConfirm ? (
+                  <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
+                    <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 6 }}>
+                      ⚠️ Le squadre verranno riassegnate casualmente ai gironi.
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>
+                      Le assegnazioni attuali andranno perse. Eventuali partite già generate potrebbero non corrispondere ai nuovi gironi.
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setReshuffleConfirm(false)}>Annulla</button>
+                      <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setReshuffleConfirm(false); reshuffleTeams(); }} disabled={setupBusy}>
+                        Rimescola comunque
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="adm-form-actions">
+                    <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setSetupOpen(false)}>Chiudi</button>
+                    <button className="adm-btn adm-btn-sm" onClick={() => setReshuffleConfirm(true)} disabled={setupBusy}>
+                      🔀 Rimescola squadre (random)
+                    </button>
+                  </div>
+                )}
               </>
             )}
             {setupMsg && <div style={{ marginTop: 8, fontSize: 13, color: setupMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{setupMsg}</div>}
@@ -277,15 +332,56 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
             <span className="adm-card-title">Partite di girone</span>
           </div>
           <div className="adm-card-body" style={{ paddingTop: 8 }}>
-            <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
-              Genera automaticamente tutte le partite round-robin per ogni girone (ogni squadra affronta tutte le altre nel girone).
+            {/* Mode selector */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[
+                { id: 'single', label: 'Sola andata', desc: `Ogni coppia si affronta 1 volta`, count: groups.reduce((s,g) => { const n = allTeams.filter(t=>t.group_id===g.id).length; return s + n*(n-1)/2; }, 0) },
+                { id: 'double', label: 'Andata e ritorno', desc: `Ogni coppia si affronta 2 volte`, count: groups.reduce((s,g) => { const n = allTeams.filter(t=>t.group_id===g.id).length; return s + n*(n-1); }, 0) },
+              ].map(opt => (
+                <button key={opt.id} type="button"
+                  onClick={() => setGenMode(opt.id)}
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                    background: genMode === opt.id ? 'rgba(0,230,118,0.08)' : 'transparent',
+                    border: `1px solid ${genMode === opt.id ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                    color: '#fff', transition: 'all 140ms',
+                  }}>
+                  <div style={{ fontWeight: 600, fontSize: 13, color: genMode === opt.id ? 'var(--brand-green)' : '#fff', marginBottom: 2 }}>{opt.label}</div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{opt.desc}</div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}><strong style={{ color: 'var(--brand-green)' }}>{opt.count}</strong> partite totali</div>
+                </button>
+              ))}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button className="adm-btn adm-btn-sm" onClick={generateGroupMatches} disabled={genBusy}>
-                {genBusy ? 'Generazione…' : '⚽ Genera partite round-robin'}
-              </button>
-              {genMsg && <span style={{ fontSize: 13, color: genMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{genMsg}</span>}
-            </div>
+            {genMode === 'double' && (
+              <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>
+                📍 Campo unico: casa/trasferta non si applica. Le partite vengono generate come <em>Andata</em> e <em>Ritorno</em> senza distinzione di campo.
+              </div>
+            )}
+            {genConfirm ? (
+              <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 8 }}>
+                  ⚠️ Attenzione: esistono già partite di girone.
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>
+                  Rigenerare creerà partite duplicate. Elimina prima le partite esistenti dai gironi, poi rigenera.
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setGenConfirm(false)}>Annulla</button>
+                  <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setGenConfirm(false); generateGroupMatches(); }} disabled={genBusy}>
+                    Rigenera comunque
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <button className="adm-btn adm-btn-sm"
+                  onClick={() => hasGroupMatches ? setGenConfirm(true) : generateGroupMatches()}
+                  disabled={genBusy}>
+                  {genBusy ? 'Generazione…' : hasGroupMatches ? '🔄 Rigenera partite' : '⚽ Genera partite round-robin'}
+                </button>
+                {genMsg && <span style={{ fontSize: 13, color: genMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{genMsg}</span>}
+              </div>
+            )}
           </div>
         </div>
       )}
