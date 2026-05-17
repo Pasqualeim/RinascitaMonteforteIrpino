@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { rmAdminUpdateCredentials, rmGetAllEditions, rmAdminUpdateEdition, rmAdminCreateEdition, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
+import { rmAdminUpdateCredentials, rmGetAllEditions, rmAdminCreateEdition, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
 import { isAdminSessionError, Confirm } from '../shared.jsx';
 
 export function SettingsSection({ data, onSave, adminUser, onUserChange, editionId, tournamentId }) {
@@ -11,7 +11,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [editionStatusMsg, setEditionStatusMsg] = useState('');
   const [showNewEdition, setShowNewEdition] = useState(false);
-  const [newEdition, setNewEdition] = useState({ name: '', slug: '', year: new Date().getFullYear() + 1, edition_number: '', status: 'upcoming' });
+  const [newEdition, setNewEdition] = useState({ name: '', slug: '', year: new Date().getFullYear() + 1, edition_number: '' });
   const [showNewCategory, setShowNewCategory] = useState(null); // edition_id to add category to
   const [newCategory, setNewCategory] = useState({ name: '', slug: '', prize_first: '', prize_second: '', prize_third: '' });
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null); // { editionId, categoryId, name }
@@ -25,15 +25,6 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
       .then(eds => setEditions(eds))
       .finally(() => setEditionsLoading(false));
   }, []);
-
-  async function setEditionStatus(edition, status) {
-    setEditionStatusMsg('');
-    try {
-      await rmAdminUpdateEdition(edition.id, { status });
-      setEditions(prev => prev.map(e => e.id === edition.id ? { ...e, status } : e));
-      setEditionStatusMsg(`${edition.name} → ${status}`);
-    } catch (e) { setEditionStatusMsg('Errore: ' + (e?.message || 'fallito')); }
-  }
 
   async function createEdition(e) {
     e.preventDefault();
@@ -242,20 +233,12 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
           {editions.length === 0
             ? <div className="adm-empty" style={{ fontSize: 13 }}>{editionsLoading ? 'Caricamento…' : 'Nessuna edizione nel database relazionale'}</div>
             : editions.map(e => {
-              const STATUS_LABELS = { upcoming: 'In programma', active: '🔴 Attiva', completed: 'Completata', archived: 'Archiviata' };
-              const STATUS_OPTS = ['upcoming', 'active', 'completed', 'archived'];
               const cats = e.tournaments || [];
               return (
                 <div key={e.id} style={{ borderBottom: '1px solid var(--border-1)', paddingBottom: 12, marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', padding: '10px 0', gap: 10 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{e.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{e.slug}</div>
-                    </div>
-                    <select className="adm-select" style={{ fontSize: 12, padding: '4px 8px', width: 140 }} value={e.status}
-                      onChange={ev => setEditionStatus(e, ev.target.value)}>
-                      {STATUS_OPTS.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-                    </select>
+                  <div style={{ padding: '10px 0' }}>
+                    <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{e.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{e.year}</div>
                   </div>
                   {/* Categorie (tornei) dentro questa edizione */}
                   <div style={{ paddingLeft: 12 }}>
