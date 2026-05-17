@@ -29,9 +29,6 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
           {activeCategory && (
             <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 6 }}>
               Stai gestendo: <strong style={{ color: 'var(--brand-green)' }}>{activeCategory.name}</strong>
-              {(activeCategory.prize_first || 0) > 0 && (
-                <span style={{ marginLeft: 6 }}>· 🏆 {activeCategory.prize_first}€</span>
-              )}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
