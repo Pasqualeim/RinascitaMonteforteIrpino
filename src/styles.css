@@ -423,6 +423,29 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-news-pin { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--brand-green); display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── Events (timeline) ────────────────────────────────────── */
+/* ── Regolamento ────────────────────────────────────────── */
+.rm-rulebook { display: flex; flex-direction: column; gap: 2px; }
+.rm-rule-article {
+  display: grid; grid-template-columns: 52px 1fr; gap: 16px; align-items: start;
+  padding: 18px 16px; background: #0a0a0a; border: 1px solid var(--border-1);
+  border-radius: 0; transition: background 150ms;
+}
+.rm-rule-article:first-child { border-radius: 12px 12px 0 0; }
+.rm-rule-article:last-child  { border-radius: 0 0 12px 12px; }
+.rm-rule-article:only-child  { border-radius: 12px; }
+.rm-rule-article + .rm-rule-article { border-top: none; }
+.rm-rule-article:hover { background: #111; }
+.rm-rule-num {
+  font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--brand-green); padding-top: 2px;
+}
+.rm-rule-title {
+  font-size: 15px; font-weight: 600; color: #fff; line-height: 1.3; margin-bottom: 6px;
+}
+.rm-rule-text {
+  font-size: 14px; color: var(--fg-2); line-height: 1.65; white-space: pre-wrap;
+}
+
 .rm-events { display: flex; flex-direction: column; gap: 10px; }
 .rm-event {
   display: grid; grid-template-columns: 70px 1fr; gap: 14px; align-items: start;

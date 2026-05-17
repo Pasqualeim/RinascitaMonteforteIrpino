@@ -3,19 +3,29 @@ import { DEFAULT_EVENTS, DEFAULT_NEWS, DEFAULT_HONORS, rmGetAllEditions, rmLoadD
 import { EmptyState, EventRow, NewsCard, HonorCard } from '../../components.jsx';
 
 export function EventsScreen({ data }) {
-  const events = data?.events || DEFAULT_EVENTS;
+  const articles = data?.events || DEFAULT_EVENTS;
   return (
     <div data-screen-label="events">
       <section className="rm-section">
         <div className="rm-section-head">
           <div>
-            <span className="rm-eyebrow">Tornei · Cerimonie · Feste</span>
-            <h3 className="rm-section-title">Eventi 2026</h3>
+            <span className="rm-eyebrow">Rinascita Monteforte Cup 2026</span>
+            <h3 className="rm-section-title">Regolamento</h3>
           </div>
         </div>
-        {events.length === 0
-          ? <EmptyState icon="🗓" title="Nessun evento" sub="Gli eventi del torneo verranno pubblicati a breve."/>
-          : <div className="rm-events">{events.map((e, i) => <EventRow key={e.id || i} ev={e}/>)}</div>
+        {articles.length === 0
+          ? <EmptyState icon="📋" title="Regolamento non ancora disponibile" sub="Lo staff pubblicherà il regolamento ufficiale a breve."/>
+          : <div className="rm-rulebook">
+              {articles.map((art, i) => (
+                <div key={art.id || i} className="rm-rule-article">
+                  <div className="rm-rule-num">Art. {art.sort_order > 0 ? art.sort_order : i + 1}</div>
+                  <div className="rm-rule-body">
+                    <div className="rm-rule-title">{art.title}</div>
+                    {art.description && <div className="rm-rule-text">{art.description}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
         }
       </section>
     </div>

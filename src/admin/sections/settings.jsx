@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { rmAdminUpdateCredentials, rmGetAllEditions, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
 import { isAdminSessionError, Confirm } from '../shared.jsx';
 
+function ordinal(n) {
+  return `${n}° Posto`;
+}
+
 function PrizesEditor({ prizes, onChange }) {
-  function add() { onChange([...prizes, { label: '', amount: '' }]); }
+  function add() { onChange([...prizes, { label: ordinal(prizes.length + 1), amount: '' }]); }
   function remove(i) { onChange(prizes.filter((_, idx) => idx !== i)); }
   function update(i, field, val) { onChange(prizes.map((p, idx) => idx === i ? { ...p, [field]: val } : p)); }
   return (
@@ -29,7 +33,7 @@ function PrizesEditor({ prizes, onChange }) {
   );
 }
 
-export function SettingsSection({ data, onSave, adminUser, onUserChange, editionId, tournamentId }) {
+export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChange, editionId, tournamentId }) {
   const [user, setUser] = useState(adminUser?.username || '');
   const [pass, setPass] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -78,6 +82,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
       setShowNewCategory(null);
       setNewCategoryName('');
       setNewCategoryPrizes([]);
+      if (onRefresh) await onRefresh('Categoria aggiunta');
     } catch (e) { setEditionStatusMsg('Errore creazione categoria: ' + (e?.message || '')); }
   }
 
@@ -89,6 +94,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
           ? { ...ed, tournaments: (ed.tournaments || []).filter(t => t.id !== categoryId) }
           : ed
       ));
+      if (onRefresh) await onRefresh('Categoria eliminata');
     } catch (e) { setEditionStatusMsg('Errore eliminazione categoria: ' + (e?.message || '')); }
     setConfirmDeleteCategory(null);
   }

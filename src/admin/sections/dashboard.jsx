@@ -160,7 +160,7 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Portale</h3>
       <div className="adm-grid-menu">
         <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}>
-          <CalIcon size={28}/><span>Eventi</span>
+          <CalIcon size={28}/><span>Regolamento</span>
         </button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('honors')}>
           <TrophyIcon size={28}/><span>Albo d'oro</span>

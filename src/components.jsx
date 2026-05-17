@@ -42,7 +42,7 @@ function Header({ current, onNav, hasLive }) {
     { id: 'calendar', label: 'Calendario' },
     { id: 'table',    label: 'Classifica' },
     { id: 'teams',    label: 'Squadre' },
-    { id: 'events',   label: 'Eventi' },
+    { id: 'events',   label: 'Regolamento' },
     { id: 'news',     label: 'Avvisi' },
     { id: 'honors',   label: "Albo d'oro" },
   ];
@@ -86,7 +86,7 @@ function BottomNav({ current, onNav, hasLive }) {
 
   const more = [
     { id: 'teams',  label: 'Squadre',   icon: UsersIcon },
-    { id: 'events', label: 'Eventi',    icon: CalIcon },
+    { id: 'events', label: 'Regolamento', icon: NewspaperIcon },
     { id: 'news',   label: 'Avvisi',    icon: BellIcon },
     { id: 'honors', label: "Albo d'oro", icon: TrophyIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
@@ -96,6 +96,7 @@ function BottomNav({ current, onNav, hasLive }) {
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }
+    setDrawerOpen(false);
     onNav(id);
   }
 
@@ -455,7 +456,7 @@ function Footer({ onNav }) {
         <div>
           <h4>Informazioni</h4>
           <ul>
-            <li><a onClick={() => onNav('events')} style={{ cursor: 'pointer' }}>Eventi</a></li>
+            <li><a onClick={() => onNav('events')} style={{ cursor: 'pointer' }}>Regolamento</a></li>
             <li><a onClick={() => onNav('news')} style={{ cursor: 'pointer' }}>Avvisi</a></li>
             <li><a onClick={() => onNav('honors')} style={{ cursor: 'pointer' }}>Albo d'oro</a></li>
           </ul>
