@@ -132,35 +132,32 @@ export function HomeScreen({ onNav, data, tournament }) {
             <h3 className="rm-section-title">Premi & quote</h3>
           </div>
         </div>
-        {(data?.tournaments || []).filter(t => (t.prize_first || 0) > 0 || (t.prize_second || 0) > 0 || (t.prize_third || 0) > 0).map(t => (
+        {(data?.tournaments || []).map(t => {
+          const prizes = Array.isArray(t.prizes) && t.prizes.length > 0
+            ? t.prizes
+            : [
+                t.prize_first  > 0 ? { label: '1° Posto', amount: t.prize_first  } : null,
+                t.prize_second > 0 ? { label: '2° Posto', amount: t.prize_second } : null,
+                t.prize_third  > 0 ? { label: '3° Posto', amount: t.prize_third  } : null,
+              ].filter(Boolean);
+          if (!prizes.length) return null;
+          return (
           <div key={t.id} style={{ marginBottom: 20 }}>
             {(data?.tournaments?.length > 1) && (
               <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
             )}
             <div className="rm-prize-row">
-              {(t.prize_first || 0) > 0 && (
-                <div className="rm-prize gold">
-                  <TrophyIcon size={36}/>
-                  <div className="rm-prize-place">1° Posto</div>
-                  <div className="rm-prize-amt">{t.prize_first.toLocaleString('it-IT')}€</div>
+              {prizes.map((p, i) => (
+                <div key={i} className={`rm-prize${i === 0 ? ' gold' : i >= 2 ? ' alt' : ''}`}>
+                  {i < 2 && <TrophyIcon size={i === 0 ? 36 : 28}/>}
+                  {p.label && <div className="rm-prize-place">{p.label}</div>}
+                  <div className="rm-prize-amt">{Number(p.amount).toLocaleString('it-IT')}€</div>
                 </div>
-              )}
-              {(t.prize_second || 0) > 0 && (
-                <div className="rm-prize">
-                  <TrophyIcon size={28}/>
-                  <div className="rm-prize-place">2° Posto</div>
-                  <div className="rm-prize-amt">{t.prize_second.toLocaleString('it-IT')}€</div>
-                </div>
-              )}
-              {(t.prize_third || 0) > 0 && (
-                <div className="rm-prize alt">
-                  <div className="rm-prize-place">3° Posto</div>
-                  <div className="rm-prize-amt">{t.prize_third.toLocaleString('it-IT')}€</div>
-                </div>
-              )}
+              ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="rm-section">

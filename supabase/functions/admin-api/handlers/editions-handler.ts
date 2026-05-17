@@ -39,14 +39,14 @@ export async function editionsHandler(req: Request, base: string, id: string | n
     const body = await req.json().catch(() => ({}));
 
     if (method === "POST") {
-      const { edition_id, name, slug, sort_order, prize_first, prize_second, prize_third } = body;
+      const { edition_id, name, slug, sort_order, prize_first, prize_second, prize_third, prizes } = body;
       if (!edition_id || !name || !slug) return ok(req, 400, { error: "edition_id, name, slug obbligatori" });
-      const { data, error } = await db.from("tournaments").insert({ edition_id, name, slug, sort_order: sort_order ?? 0, prize_first, prize_second, prize_third }).select().single();
+      const { data, error } = await db.from("tournaments").insert({ edition_id, name, slug, sort_order: sort_order ?? 0, prize_first, prize_second, prize_third, prizes: prizes ?? [] }).select().single();
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
     }
     if (method === "PUT" && id) {
-      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third"];
+      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third","prizes"];
       const upd: Record<string, unknown> = {};
       for (const k of allowed) { if (k in body) upd[k] = body[k]; }
       const { data, error } = await db.from("tournaments").update(upd).eq("id", id).select().single();
