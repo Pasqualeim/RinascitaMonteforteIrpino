@@ -183,6 +183,16 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
     setGenBusy(true);
     setGenMsg('');
     try {
+      // Delete existing group matches first
+      const groupNameSet = new Set(groups.map(g => g.name));
+      const toDelete = (data.matches_giornata || [])
+        .filter(day => groups.some(g => day.day === g.name || day.day?.startsWith(g.name + ' · ')))
+        .flatMap(day => day.items || [])
+        .filter(m => m.id);
+      for (const m of toDelete) {
+        await rmAdminDomain.deleteMatch(m.id);
+      }
+
       let created = 0;
       for (const g of groups) {
         const groupTeams = allTeams.filter(t => t.group_id === g.id);
@@ -360,10 +370,10 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId }) {
             {genConfirm ? (
               <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
                 <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 8 }}>
-                  ⚠️ Attenzione: esistono già partite di girone.
+                  ⚠️ Esistono già {(data.matches_giornata || []).filter(day => groups.some(g => day.day === g.name || day.day?.startsWith(g.name + ' · '))).reduce((s, d) => s + (d.items?.length || 0), 0)} partite di girone.
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>
-                  Rigenerare creerà partite duplicate. Elimina prima le partite esistenti dai gironi, poi rigenera.
+                  Rigenerando verranno cancellate e ricreate. I risultati già inseriti andranno persi.
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setGenConfirm(false)}>Annulla</button>
