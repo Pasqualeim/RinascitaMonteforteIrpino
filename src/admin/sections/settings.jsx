@@ -15,6 +15,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
   const [showNewCategory, setShowNewCategory] = useState(null); // edition_id to add category to
   const [newCategory, setNewCategory] = useState({ name: '', slug: '', prize_first: '', prize_second: '', prize_third: '' });
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null); // { editionId, categoryId, name }
+  const [editingCategory, setEditingCategory] = useState(null); // { id, name, slug, prize_first, prize_second, prize_third }
 
   useEffect(() => { setUser(adminUser?.username || ''); }, [adminUser?.username]);
 
@@ -80,6 +81,28 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
       ));
     } catch (e) { setEditionStatusMsg('Errore eliminazione categoria: ' + (e?.message || '')); }
     setConfirmDeleteCategory(null);
+  }
+
+  async function saveCategory(e) {
+    e.preventDefault();
+    if (!editingCategory) return;
+    try {
+      await rmAdminUpdateTournamentCategory(editingCategory.id, {
+        name: editingCategory.name,
+        slug: editingCategory.slug,
+        prize_first: editingCategory.prize_first ? parseInt(editingCategory.prize_first) : null,
+        prize_second: editingCategory.prize_second ? parseInt(editingCategory.prize_second) : null,
+        prize_third: editingCategory.prize_third ? parseInt(editingCategory.prize_third) : null,
+      });
+      setEditions(prev => prev.map(ed => ({
+        ...ed,
+        tournaments: (ed.tournaments || []).map(t =>
+          t.id === editingCategory.id ? { ...t, ...editingCategory } : t
+        ),
+      })));
+      setEditionStatusMsg('Categoria aggiornata');
+      setEditingCategory(null);
+    } catch (e) { setEditionStatusMsg('Errore aggiornamento categoria: ' + (e?.message || '')); }
   }
 
   async function save(e) {
@@ -237,18 +260,65 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
                   {/* Categorie (tornei) dentro questa edizione */}
                   <div style={{ paddingLeft: 12 }}>
                     {cats.map(t => (
-                      <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-                        <span style={{ fontSize: 12, color: 'var(--brand-green)', flex: 1 }}>
-                          {t.name}
-                          <span style={{ color: 'var(--fg-3)', marginLeft: 6 }}>{t.slug}</span>
-                        </span>
-                        <button onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}
-                          style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                      <div key={t.id}>
+                        {editingCategory?.id === t.id ? (
+                          <form onSubmit={saveCategory} className="adm-form" style={{ paddingTop: 8, paddingBottom: 8, background: 'rgba(0,230,118,0.05)', borderRadius: 8, padding: 10, marginBottom: 4 }}>
+                            <div className="adm-form-row">
+                              <div className="adm-form-group">
+                                <label className="adm-label">Nome torneo</label>
+                                <input className="adm-input" required value={editingCategory.name}
+                                  onChange={ev => setEditingCategory(f => ({ ...f, name: ev.target.value }))} />
+                              </div>
+                              <div className="adm-form-group">
+                                <label className="adm-label">Slug</label>
+                                <input className="adm-input" required value={editingCategory.slug}
+                                  onChange={ev => setEditingCategory(f => ({ ...f, slug: ev.target.value }))} />
+                              </div>
+                            </div>
+                            <div className="adm-form-row">
+                              <div className="adm-form-group">
+                                <label className="adm-label">1° (€)</label>
+                                <input type="number" className="adm-input" value={editingCategory.prize_first || ''}
+                                  onChange={ev => setEditingCategory(f => ({ ...f, prize_first: ev.target.value }))} placeholder="1000" />
+                              </div>
+                              <div className="adm-form-group">
+                                <label className="adm-label">2° (€)</label>
+                                <input type="number" className="adm-input" value={editingCategory.prize_second || ''}
+                                  onChange={ev => setEditingCategory(f => ({ ...f, prize_second: ev.target.value }))} placeholder="400" />
+                              </div>
+                              <div className="adm-form-group">
+                                <label className="adm-label">3° (€)</label>
+                                <input type="number" className="adm-input" value={editingCategory.prize_third || ''}
+                                  onChange={ev => setEditingCategory(f => ({ ...f, prize_third: ev.target.value }))} placeholder="250" />
+                              </div>
+                            </div>
+                            <div className="adm-form-actions">
+                              <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditingCategory(null)}>Annulla</button>
+                              <button type="submit" className="adm-btn adm-btn-sm">Salva</button>
+                            </div>
+                          </form>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-1)' }}>
+                            <div style={{ flex: 1 }}>
+                              <span style={{ fontSize: 13, color: 'var(--brand-green)', fontWeight: 600 }}>{t.name}</span>
+                              <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 6 }}>{t.slug}</span>
+                              {(t.prize_first > 0) && (
+                                <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 8 }}>🏆 {t.prize_first}€</span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => setEditingCategory({ id: t.id, name: t.name, slug: t.slug, prize_first: t.prize_first || '', prize_second: t.prize_second || '', prize_third: t.prize_third || '' })}
+                              style={{ background: 'transparent', border: 0, color: 'var(--fg-3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px' }}
+                              title="Modifica">✎</button>
+                            <button onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}
+                              style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 14, padding: '2px 4px' }}>✕</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                     <button className="adm-btn adm-btn-ghost adm-btn-sm"
-                      style={{ fontSize: 11, marginTop: 4 }}
-                      onClick={() => { setShowNewCategory(e.id); setShowNewEdition(false); }}>
+                      style={{ fontSize: 11, marginTop: 8 }}
+                      onClick={() => { setShowNewCategory(e.id); setShowNewEdition(false); setEditingCategory(null); }}>
                       + Aggiungi categoria
                     </button>
                   </div>

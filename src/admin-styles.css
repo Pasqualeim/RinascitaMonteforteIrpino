@@ -305,6 +305,53 @@ select:disabled {
   cursor: pointer;
 }
 
+/* ── Category bar ───────────────────────────────────────────── */
+
+.adm-cat-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-1);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  position: sticky;
+  top: 56px;
+  z-index: 29;
+}
+
+.adm-cat-bar::-webkit-scrollbar { display: none; }
+
+.adm-cat-pill {
+  flex-shrink: 0;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border-1);
+  background: transparent;
+  color: var(--fg-2);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 140ms;
+  white-space: nowrap;
+}
+
+.adm-cat-pill:hover {
+  border-color: var(--brand-green);
+  color: var(--brand-green);
+}
+
+.adm-cat-pill.on {
+  background: var(--brand-green);
+  border-color: var(--brand-green);
+  color: #000;
+  font-weight: 700;
+}
+
 /* ── Bottom Navigation & Dashboard Grids ────────────────────────────────────── */
 
 .adm-bottom-nav {

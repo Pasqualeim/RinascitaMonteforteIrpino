@@ -122,21 +122,23 @@ function AdminApp() {
           <span className="adm-topbar-title">Admin Rinascita</span>
           <span className="adm-badge">Staff</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {tournamentCategories.length > 1 && (
-            <select
-              value={tournamentId || ''}
-              onChange={e => setTournamentId(e.target.value)}
-              style={{ fontSize: 12, padding: '4px 28px 4px 8px', minWidth: 90, height: 30 }}
-            >
-              {tournamentCategories.map(t => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          )}
-          <button className="adm-logout" onClick={logout}>Esci</button>
-        </div>
+        <button className="adm-logout" onClick={logout}>Esci</button>
       </header>
+
+      {tournamentCategories.length > 0 && (
+        <div className="adm-cat-bar">
+          {tournamentCategories.map(t => (
+            <button
+              key={t.id}
+              type="button"
+              className={`adm-cat-pill ${tournamentId === t.id ? 'on' : ''}`}
+              onClick={() => setTournamentId(t.id)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="adm-desktop-nav" aria-label="Navigazione primaria admin">
         {PRIMARY_NAV_ITEMS.map(item => {
