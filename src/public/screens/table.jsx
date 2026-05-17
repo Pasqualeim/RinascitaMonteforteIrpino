@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS } from '../../data.js';
 import { StandingsTable, TopScorers } from '../../components.jsx';
 
-export function TableScreen({ data }) {
-  const standingsGroups = data?.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
-  const scorers         = data?.scorers          || DEFAULT_SCORERS;
+export function TableScreen({ data, tournament }) {
+  const standingsGroups = tournament?.standings_groups || data?.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
+  const scorers         = tournament?.scorers          || data?.scorers          || DEFAULT_SCORERS;
   const [selIdx, setSelIdx] = useState(0);
   return (
     <div data-screen-label="table">
       <section className="rm-section">
         <div className="rm-section-head">
           <div>
-            <span className="rm-eyebrow">Aggiornata in tempo reale</span>
+            <span className="rm-eyebrow">{tournament?.name || 'Aggiornata in tempo reale'}</span>
             <h3 className="rm-section-title">Classifica</h3>
           </div>
         </div>

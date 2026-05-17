@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { rmGetAllData, rmLoadData, rmMergeDefaults } from '../data.js';
 import { StatusStrip, Header, Footer, BottomNav } from '../components.jsx';
@@ -19,6 +19,7 @@ function App() {
   });
 
   const [data, setData] = useState(() => rmGetAllData());
+  const [activeTournamentId, setActiveTournamentId] = useState(null);
 
   const refresh = useCallback(async () => {
     const remoteData = await rmLoadData();
@@ -39,9 +40,20 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (data?.tournaments?.length > 0 && !activeTournamentId) {
+      setActiveTournamentId(data.tournaments[0].id);
+    }
+  }, [data]);
+
+  useEffect(() => {
     window.location.hash = screen;
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [screen]);
+
+  const activeTournament = useMemo(() =>
+    data?.tournaments?.find(t => t.id === activeTournamentId) || data?.tournaments?.[0] || null,
+    [data, activeTournamentId]
+  );
 
   const hasLive = !!(data?.live_match?.active);
 
@@ -49,11 +61,24 @@ function App() {
     <div className="rm-app">
       <StatusStrip items={data?.strip_items}/>
       <Header current={screen} onNav={setScreen} hasLive={hasLive}/>
-      {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data}/>}
-      {screen === 'live'     && <LiveScreen                       data={data}/>}
-      {screen === 'calendar' && <CalendarScreen                   data={data}/>}
-      {screen === 'table'    && <TableScreen                      data={data}/>}
-      {screen === 'teams'    && <TeamsScreen                      data={data}/>}
+      {(data?.tournaments?.length > 1) && (
+        <div className="rm-cat-bar">
+          {data.tournaments.map(t => (
+            <button
+              key={t.id}
+              className={`rm-cat-pill ${activeTournamentId === t.id ? 'on' : ''}`}
+              onClick={() => setActiveTournamentId(t.id)}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}
+      {screen === 'live'     && <LiveScreen                       data={data} tournament={activeTournament}/>}
+      {screen === 'calendar' && <CalendarScreen                   data={data} tournament={activeTournament}/>}
+      {screen === 'table'    && <TableScreen                      data={data} tournament={activeTournament}/>}
+      {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
       {screen === 'events'   && <EventsScreen                     data={data}/>}
       {screen === 'news'     && <NewsScreen                       data={data}/>}
       {screen === 'honors'   && <HonorsScreen                     data={data}/>}

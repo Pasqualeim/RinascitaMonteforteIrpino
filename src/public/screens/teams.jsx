@@ -3,10 +3,10 @@ import { DEFAULT_TEAMS, DEFAULT_GROUPS } from '../../data.js';
 import { rmGetTeamGroupId } from '../../domain.js';
 import { EmptyState, TeamCard } from '../../components.jsx';
 
-export function TeamsScreen({ data }) {
+export function TeamsScreen({ data, tournament }) {
   const [selGroup, setSelGroup] = useState('all');
-  const teams  = data?.teams  || DEFAULT_TEAMS;
-  const groups = data?.groups || DEFAULT_GROUPS || [];
+  const teams  = tournament?.teams  || data?.teams  || DEFAULT_TEAMS;
+  const groups = tournament?.groups || data?.groups || DEFAULT_GROUPS || [];
 
   const filtered = useMemo(() => {
     if (selGroup === 'all') return teams;

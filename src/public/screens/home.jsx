@@ -9,7 +9,7 @@ function fmtDateIt(iso) {
   return `${dt.getDate()} ${months[dt.getMonth()]}`;
 }
 
-export function HomeScreen({ onNav, data }) {
+export function HomeScreen({ onNav, data, tournament }) {
   const d = data || {};
   const liveMatch       = d.live_match       || DEFAULT_LIVE_MATCH;
   const matchesToday    = d.matches_today    || DEFAULT_MATCHES_TODAY;
@@ -132,31 +132,35 @@ export function HomeScreen({ onNav, data }) {
             <h3 className="rm-section-title">Premi & quote</h3>
           </div>
         </div>
-        <div className="rm-prize-row">
-          {prize1 > 0 && (
-            <div className="rm-prize gold">
-              <TrophyIcon size={36}/>
-              <div className="rm-prize-place">1° Posto</div>
-              <div className="rm-prize-amt">{prize1.toLocaleString('it-IT')}€</div>
-              <div className="rm-prize-foot">+ coppa + medaglie</div>
+        {(data?.tournaments || []).filter(t => (t.prize_first || 0) > 0 || (t.prize_second || 0) > 0 || (t.prize_third || 0) > 0).map(t => (
+          <div key={t.id} style={{ marginBottom: 20 }}>
+            {(data?.tournaments?.length > 1) && (
+              <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
+            )}
+            <div className="rm-prize-row">
+              {(t.prize_first || 0) > 0 && (
+                <div className="rm-prize gold">
+                  <TrophyIcon size={36}/>
+                  <div className="rm-prize-place">1° Posto</div>
+                  <div className="rm-prize-amt">{t.prize_first.toLocaleString('it-IT')}€</div>
+                </div>
+              )}
+              {(t.prize_second || 0) > 0 && (
+                <div className="rm-prize">
+                  <TrophyIcon size={28}/>
+                  <div className="rm-prize-place">2° Posto</div>
+                  <div className="rm-prize-amt">{t.prize_second.toLocaleString('it-IT')}€</div>
+                </div>
+              )}
+              {(t.prize_third || 0) > 0 && (
+                <div className="rm-prize alt">
+                  <div className="rm-prize-place">3° Posto</div>
+                  <div className="rm-prize-amt">{t.prize_third.toLocaleString('it-IT')}€</div>
+                </div>
+              )}
             </div>
-          )}
-          {prize2 > 0 && (
-            <div className="rm-prize">
-              <TrophyIcon size={28}/>
-              <div className="rm-prize-place">2° Posto</div>
-              <div className="rm-prize-amt">{prize2.toLocaleString('it-IT')}€</div>
-              <div className="rm-prize-foot">+ medaglie</div>
-            </div>
-          )}
-          {prize3 > 0 && (
-            <div className="rm-prize alt">
-              <div className="rm-prize-place">3° Posto</div>
-              <div className="rm-prize-amt">{prize3.toLocaleString('it-IT')}€</div>
-              <div className="rm-prize-foot">+ medaglie</div>
-            </div>
-          )}
-        </div>
+          </div>
+        ))}
       </section>
 
       <section className="rm-section">
