@@ -60,7 +60,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
       return s.phase === 'second_half' ? halfDuration + elapsed : elapsed;
     }
     setDisplayMinute(calcMinute(lm));
-    const id = setInterval(() => setDisplayMinute(calcMinute(lmRef.current)), 30000);
+    const id = setInterval(() => setDisplayMinute(calcMinute(lmRef.current)), 5000);
     return () => clearInterval(id);
   }, [lm.active, lm.phase, lm.timer_started_at, halfDuration]);
 
@@ -155,6 +155,8 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
         home_score: newLm.hs ?? 0,
         away_score: newLm.as ?? 0,
         minute: newLm.minute ?? 0,
+        phase: newLm.phase || null,
+        timer_started_at: newLm.timer_started_at || null,
         pitch: newLm.pitch || '',
         events: newLm.events || [],
       }).catch(e => console.warn('Live sync:', e));
@@ -478,15 +480,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
           <div style={{ marginTop: 14, borderTop: '1px solid var(--border-1)', paddingTop: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', letterSpacing: '0.12em', color: 'var(--fg-3)' }}>EVENTI</span>
-              {lm.active && (
-                <button onClick={() => {
-                  const last = lm.events?.[lm.events.length - 1];
-                  if (last) removeEvent(lm.events.length - 1);
-                }} style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--fg-3)', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 5, padding: '2px 8px', cursor: 'pointer' }}>
-                  ↩ Annulla ultimo
-                </button>
-              )}
-            </div>
+              </div>
             {sortedEvents.map((ev) => {
               const isHome = ev._ts === lm.home?.short;
               const icon = ev.type === 'goal' ? (ev._autogol ? '⚽ (aut)' : '⚽') : ev.type === 'yellow' ? '🟨' : '🟥';
@@ -535,24 +529,48 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
       {/* Modal: confirm start */}
       {confirmStart && selectedMatchObj && (
         <div className="adm-overlay" onClick={() => setConfirmStart(false)}>
-          <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 320 }}>
+          <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="adm-modal-header">
-              <span className="adm-card-title">Avvia diretta</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.12em', color: 'var(--fg-2)' }}>AVVIA DIRETTA</span>
               <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setConfirmStart(false)}>✕</button>
             </div>
-            <div style={{ padding: '0 16px 16px' }}>
-              <div style={{ background: 'var(--bg-canvas)', border: '1px solid var(--border-1)', borderRadius: 8, padding: '14px', marginBottom: 14, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#fff', letterSpacing: '0.05em' }}>
-                  {getFlag(selectedMatchObj.home)} {selectedMatchObj.home?.short} — {selectedMatchObj.away?.short} {getFlag(selectedMatchObj.away)}
+            <div style={{ padding: '28px 20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: '100%', borderRadius: 12, padding: '24px 20px 20px',
+                background: 'linear-gradient(160deg, rgba(0,230,118,0.08) 0%, #0a0a0a 60%)',
+                border: '1px solid rgba(0,230,118,0.2)',
+                textAlign: 'center', marginBottom: 28, position: 'relative',
+              }}>
+                <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, letterSpacing: '0.2em', color: 'var(--brand-green)' }}>CALCIO D'INIZIO</span>
+                </div>
+                <div style={{ fontSize: 36, marginBottom: 4, marginTop: 16 }}>
+                  {getFlag(selectedMatchObj.home)} {getFlag(selectedMatchObj.away)}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '0.05em', color: '#fff', lineHeight: 1.1 }}>
+                  {selectedMatchObj.home?.short} <span style={{ color: 'var(--fg-3)', fontSize: 18 }}>vs</span> {selectedMatchObj.away?.short}
                 </div>
                 {selectedMatchObj.time && (
-                  <div style={{ fontSize: 12, color: 'var(--brand-green)', marginTop: 6 }}>{selectedMatchObj.time} {selectedMatchObj._group ? `· ${selectedMatchObj._group}` : ''}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--brand-green)' }}>{selectedMatchObj.time}</span>
+                    {selectedMatchObj._group && <><span style={{ color: 'var(--border-1)' }}>·</span><span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{selectedMatchObj._group}</span></>}
+                  </div>
                 )}
-                <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 4 }}>{halfDuration}' + {halfDuration}' · timer parte subito · score reset 0–0</div>
+                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.08em' }}>
+                  {halfDuration}' + {halfDuration}' · TIMER PARTE SUBITO · 0–0
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setConfirmStart(false)}>Annulla</button>
-                <button className="adm-btn adm-btn-primary adm-btn-sm" style={{ flex: 2 }} onClick={doStartLive}>Avvia</button>
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <button
+                  onClick={() => setConfirmStart(false)}
+                  style={{ flex: 1, padding: '14px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 10, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer' }}>
+                  ANNULLA
+                </button>
+                <button
+                  onClick={doStartLive}
+                  style={{ flex: 2, padding: '14px 0', background: 'rgba(0,230,118,0.12)', border: '1px solid rgba(0,230,118,0.45)', borderRadius: 10, color: 'var(--brand-green)', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer', fontWeight: 700 }}>
+                  AVVIA
+                </button>
               </div>
             </div>
           </div>
@@ -562,24 +580,47 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
       {/* Modal: confirm terminate */}
       {confirmTerminate && (
         <div className="adm-overlay" onClick={() => setConfirmTerminate(false)}>
-          <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 320 }}>
+          <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="adm-modal-header">
-              <span className="adm-card-title">Termina partita</span>
+              <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.12em', color: 'var(--fg-2)' }}>TERMINA PARTITA</span>
               <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setConfirmTerminate(false)}>✕</button>
             </div>
-            <div style={{ padding: '0 16px 16px' }}>
-              <div style={{ background: 'var(--bg-canvas)', border: '1px solid var(--border-1)', borderRadius: 8, padding: '14px', marginBottom: 14, textAlign: 'center' }}>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#fff' }}>
-                  {getFlag(lm.home)} {lm.home?.short} {lm.hs ?? 0}–{lm.as ?? 0} {lm.away?.short} {getFlag(lm.away)}
+            <div style={{ padding: '28px 20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: '100%', borderRadius: 12, padding: '24px 20px 20px',
+                background: 'linear-gradient(160deg, rgba(255,61,61,0.08) 0%, #0a0a0a 60%)',
+                border: '1px solid rgba(255,61,61,0.2)',
+                textAlign: 'center', marginBottom: 16, position: 'relative',
+              }}>
+                <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, letterSpacing: '0.2em', color: '#FF3D3D' }}>RISULTATO FINALE</span>
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 6 }}>{displayMinute}' · {phaseLabel}</div>
+                <div style={{ fontSize: 36, marginBottom: 4, marginTop: 16 }}>
+                  {getFlag(lm.home)} {getFlag(lm.away)}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 32, letterSpacing: '0.05em', color: '#fff', lineHeight: 1.1 }}>
+                  {lm.home?.short} <span style={{ color: '#FF3D3D', margin: '0 4px' }}>{lm.hs ?? 0}–{lm.as ?? 0}</span> {lm.away?.short}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: '#FF3D3D' }}>{displayMinute}'</span>
+                  <span style={{ color: 'var(--border-1)' }}>·</span>
+                  <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{phaseLabel}</span>
+                </div>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '0 0 14px' }}>
+              <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '0 0 24px', textAlign: 'center', lineHeight: 1.5 }}>
                 La diretta verrà chiusa. Il risultato viene salvato come finale.
               </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setConfirmTerminate(false)}>Annulla</button>
-                <button className="adm-btn adm-btn-sm" style={{ flex: 2, background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.5)', color: '#FF3D3D' }} onClick={doTerminate}>Termina</button>
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <button
+                  onClick={() => setConfirmTerminate(false)}
+                  style={{ flex: 1, padding: '14px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 10, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer' }}>
+                  ANNULLA
+                </button>
+                <button
+                  onClick={doTerminate}
+                  style={{ flex: 2, padding: '14px 0', background: 'rgba(255,61,61,0.12)', border: '1px solid rgba(255,61,61,0.45)', borderRadius: 10, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer', fontWeight: 700 }}>
+                  TERMINA
+                </button>
               </div>
             </div>
           </div>
@@ -638,24 +679,60 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
       {confirmRemoveEvent !== null && (() => {
         const ev = lm.events?.[confirmRemoveEvent];
         if (!ev) return null;
-        const icon = ev.type === 'goal' ? (ev._autogol ? '⚽ (aut)' : '⚽') : ev.type === 'yellow' ? '🟨' : '🟥';
+        const isGoal = ev.type === 'goal';
+        const isYellow = ev.type === 'yellow';
+        const isRed = ev.type === 'red';
+        const accentColor = isGoal ? 'var(--brand-green)' : isYellow ? 'var(--brand-gold)' : '#FF3D3D';
+        const typeLabel = isGoal ? (ev._autogol ? 'AUTOGOL' : 'GOL') : isYellow ? 'AMMONIZIONE' : 'ESPULSIONE';
+        const bigIcon = isGoal ? '⚽' : isYellow ? '🟨' : '🟥';
         return (
           <div className="adm-overlay" onClick={() => setConfirmRemoveEvent(null)}>
-            <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 300 }}>
+            <div className="adm-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
               <div className="adm-modal-header">
-                <span className="adm-card-title">Rimuovi evento</span>
+                <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, letterSpacing: '0.12em', color: 'var(--fg-2)' }}>RIMUOVI EVENTO</span>
                 <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setConfirmRemoveEvent(null)}>✕</button>
               </div>
-              <div style={{ padding: '0 16px 16px' }}>
-                <div style={{ background: 'var(--bg-canvas)', border: '1px solid var(--border-1)', borderRadius: 8, padding: '12px', marginBottom: 14, textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{icon}</div>
-                  <div style={{ fontWeight: 600, color: '#fff' }}>{ev.player}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 4 }}>{ev.min}' · {ev.team || ev._ts}</div>
-                  {ev._reason === 'doppio_giallo' && <div style={{ fontSize: 11, color: 'var(--brand-gold)', marginTop: 2 }}>Espulsione per doppio giallo</div>}
+              <div style={{ padding: '28px 20px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                {/* Event card */}
+                <div style={{
+                  width: '100%', borderRadius: 12, padding: '24px 20px 20px',
+                  background: `linear-gradient(160deg, rgba(${isGoal ? '0,230,118' : isYellow ? '245,197,24' : '255,61,61'},0.08) 0%, #0a0a0a 60%)`,
+                  border: `1px solid ${accentColor}30`,
+                  textAlign: 'center', marginBottom: 28, position: 'relative', overflow: 'hidden',
+                }}>
+                  <div style={{ position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, letterSpacing: '0.2em', color: accentColor }}>{typeLabel}</span>
+                  </div>
+                  <div style={{ fontSize: 44, lineHeight: 1, margin: '16px 0 12px' }}>{bigIcon}</div>
+                  <div style={{ fontFamily: 'var(--font-display)', fontSize: 26, letterSpacing: '0.04em', color: '#fff', lineHeight: 1.1 }}>{ev.player}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: accentColor }}>{ev.min}'</span>
+                    <span style={{ color: 'var(--border-1)', fontSize: 12 }}>·</span>
+                    <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{ev.team || ev._ts}</span>
+                  </div>
+                  {ev._reason === 'doppio_giallo' && (
+                    <div style={{ marginTop: 8, fontSize: 11, color: 'var(--brand-gold)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
+                      2° GIALLO → ESPULSIONE
+                    </div>
+                  )}
+                  {isGoal && ev._autogol && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.1em' }}>
+                      IN PROPRIA PORTA
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setConfirmRemoveEvent(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" style={{ flex: 2, background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.5)', color: '#FF3D3D' }} onClick={() => { removeEvent(confirmRemoveEvent); setConfirmRemoveEvent(null); }}>Rimuovi</button>
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                  <button
+                    onClick={() => setConfirmRemoveEvent(null)}
+                    style={{ flex: 1, padding: '14px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 10, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer' }}>
+                    ANNULLA
+                  </button>
+                  <button
+                    onClick={() => { removeEvent(confirmRemoveEvent); setConfirmRemoveEvent(null); }}
+                    style={{ flex: 2, padding: '14px 0', background: 'rgba(255,61,61,0.12)', border: '1px solid rgba(255,61,61,0.45)', borderRadius: 10, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer', fontWeight: 700 }}>
+                    RIMUOVI
+                  </button>
                 </div>
               </div>
             </div>

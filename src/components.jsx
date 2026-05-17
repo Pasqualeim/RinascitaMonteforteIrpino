@@ -243,18 +243,37 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
 
 // ── Big LIVE board ────────────────────────────────────────────────────────
 function LiveBoard({ match }) {
+  const halfDuration = match?.half_duration || 30;
+  const [displayMinute, setDisplayMinute] = useState(match?.minute || 0);
+
+  useEffect(() => {
+    if (!match?.active || match?.phase === 'half_time') {
+      setDisplayMinute(match?.minute || 0);
+      return;
+    }
+    function calcMinute() {
+      const ref = match.timer_started_at;
+      if (!ref) return match.minute || 0;
+      const elapsed = Math.floor((Date.now() - ref) / 60000);
+      return match.phase === 'second_half' ? halfDuration + elapsed : elapsed;
+    }
+    setDisplayMinute(calcMinute());
+    const id = setInterval(() => setDisplayMinute(calcMinute()), 5000);
+    return () => clearInterval(id);
+  }, [match?.active, match?.phase, match?.timer_started_at, match?.minute, halfDuration]);
+
   if (!match || !match.active) return (
     <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.14em', textTransform: 'uppercase' }}>
       Nessuna partita in diretta
     </div>
   );
-  const { home, away, hs, as: as_, minute, pitch, events = [], phase } = match;
+  const { home, away, hs, as: as_, pitch, events = [], phase } = match;
   if (!home || !away) return null;
 
   const phaseLabel = phase === 'half_time' ? 'Intervallo'
     : phase === 'second_half' ? '2° Tempo'
     : phase === 'first_half' ? '1° Tempo'
-    : minute > 45 ? '2° Tempo' : '1° Tempo';
+    : displayMinute > halfDuration ? '2° Tempo' : '1° Tempo';
   const isHalfTime = phase === 'half_time';
 
   const sortedEvents = [...events].sort((a, b) => b.min - a.min);
@@ -264,7 +283,7 @@ function LiveBoard({ match }) {
       <div className="rm-live-top">
         <span className="rm-live-badge">
           <span className="dot"></span>
-          {isHalfTime ? 'Intervallo' : `In diretta · ${minute}'`}
+          {isHalfTime ? 'Intervallo' : `In diretta · ${displayMinute}'`}
         </span>
         {pitch && <span className="rm-live-pitch">{pitch}</span>}
       </div>
@@ -276,7 +295,7 @@ function LiveBoard({ match }) {
         </div>
         <div className="rm-live-score">
           <div className="rm-live-score-row">{hs}<i>–</i>{as_}</div>
-          <div className="rm-live-min">{phaseLabel}{!isHalfTime && ` · ${minute}'`}</div>
+          <div className="rm-live-min">{phaseLabel}{!isHalfTime && ` · ${displayMinute}'`}</div>
         </div>
         <div className="rm-live-team">
           <div className="rm-live-crest" style={{ borderColor: away.color, color: away.color }}>{away.short}</div>
