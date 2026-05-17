@@ -154,7 +154,15 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
       <div className="adm-card" style={{ marginBottom: 16 }}>
         <div className="adm-card-header">
           <span className="adm-card-title">Edizioni & Categorie</span>
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewEdition(v => !v)}>+ Nuova edizione</button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {editions.length > 0 && (
+              <button className="adm-btn adm-btn-sm" onClick={() => {
+                const targetId = editions[0]?.id;
+                if (targetId) { setShowNewCategory(targetId); setShowNewEdition(false); setEditingCategory(null); }
+              }}>+ Categoria</button>
+            )}
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setShowNewEdition(v => !v)}>+ Edizione</button>
+          </div>
         </div>
         {editionStatusMsg && (
           <div style={{ padding: '6px 16px', fontSize: 12, color: editionStatusMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>
@@ -281,7 +289,7 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
                             </div>
                           </form>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-1)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-1)' }}>
                             <div style={{ flex: 1 }}>
                               <span style={{ fontSize: 13, color: 'var(--brand-green)', fontWeight: 600 }}>{t.name}</span>
                               <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 6 }}>{t.slug}</span>
@@ -291,19 +299,14 @@ export function SettingsSection({ data, onSave, adminUser, onUserChange, edition
                             </div>
                             <button
                               onClick={() => setEditingCategory({ id: t.id, name: t.name, slug: t.slug, prize_first: t.prize_first || '', prize_second: t.prize_second || '', prize_third: t.prize_third || '' })}
-                              style={{ background: 'transparent', border: 0, color: 'var(--fg-3)', cursor: 'pointer', fontSize: 14, padding: '2px 4px' }}
+                              className="adm-btn adm-btn-ghost adm-btn-sm"
                               title="Modifica">✎</button>
                             <button onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}
-                              style={{ background: 'transparent', border: 0, color: '#FF3D3D', cursor: 'pointer', fontSize: 14, padding: '2px 4px' }}>✕</button>
+                              className="adm-btn adm-btn-danger adm-btn-sm">✕</button>
                           </div>
                         )}
                       </div>
                     ))}
-                    <button className="adm-btn adm-btn-ghost adm-btn-sm"
-                      style={{ fontSize: 11, marginTop: 8 }}
-                      onClick={() => { setShowNewCategory(e.id); setShowNewEdition(false); setEditingCategory(null); }}>
-                      + Aggiungi categoria
-                    </button>
                   </div>
                 </div>
               );
