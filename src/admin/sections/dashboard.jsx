@@ -118,11 +118,11 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
       <div className="adm-eyebrow" style={{ marginTop: allDone ? 0 : 4 }}>Preparazione pre-torneo</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Setup Torneo</h3>
       <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}>
-          <GridIcon size={28}/><span>Gironi</span>
-        </button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}>
           <UsersIcon size={28}/><span>Squadre</span>
+        </button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}>
+          <GridIcon size={28}/><span>Gironi</span>
         </button>
       </div>
 

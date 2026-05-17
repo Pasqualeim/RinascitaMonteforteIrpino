@@ -4,6 +4,18 @@ import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 const KNOCKOUT_PRESETS = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 
+function buildKnockoutRounds(numTeams) {
+  const rounds = [];
+  let n = numTeams;
+  while (n >= 2) {
+    const half = Math.floor(n / 2);
+    const name = n === 2 ? 'Finale' : n === 4 ? 'Semifinali' : n === 8 ? 'Quarti di finale' : `Round di ${n}`;
+    rounds.push({ phase: name, count: half });
+    n = half;
+  }
+  return rounds;
+}
+
 export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
   const allMatches = useMemo(() => {
     const giornata = data.matches_giornata || [];
@@ -15,6 +27,13 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
   const [view, setView] = useState('lista');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+
+  // Knockout generator
+  const [koOpen, setKoOpen] = useState(false);
+  const [koTeamsPerGroup, setKoTeamsPerGroup] = useState(2);
+  const [ko3rd, setKo3rd] = useState(true);
+  const [koBusy, setKoBusy] = useState(false);
+  const [koMsg, setKoMsg] = useState('');
 
   const teams = data.teams || [];
   const groups = data.groups || [];
@@ -109,6 +128,44 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
 
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳ Programmata' };
 
+  async function generateKnockout() {
+    const numQualified = groups.length * koTeamsPerGroup;
+    if (numQualified < 2) { setKoMsg('Servono almeno 2 squadre qualificate.'); return; }
+    setKoBusy(true);
+    setKoMsg('');
+    try {
+      const rounds = buildKnockoutRounds(numQualified);
+      let sortOrder = 1000;
+      for (const round of rounds) {
+        for (let i = 0; i < round.count; i++) {
+          await rmAdminDomain.createMatch({
+            tournament_id: tournamentId,
+            home_team_id: null,
+            away_team_id: null,
+            status: 'sch',
+            phase: round.phase,
+            group_id: null,
+            sort_order: sortOrder++,
+          });
+        }
+      }
+      if (ko3rd && numQualified >= 4) {
+        await rmAdminDomain.createMatch({
+          tournament_id: tournamentId,
+          home_team_id: null, away_team_id: null, status: 'sch',
+          phase: '3° posto', group_id: null, sort_order: sortOrder++,
+        });
+      }
+      const total = rounds.reduce((s, r) => s + r.count, 0) + (ko3rd && numQualified >= 4 ? 1 : 0);
+      setKoOpen(false);
+      await onRefresh(`Fase knockout generata: ${total} partite`);
+    } catch (err) {
+      setKoMsg('Errore: ' + (err?.message || ''));
+    } finally {
+      setKoBusy(false);
+    }
+  }
+
   function newMatch() {
     setEditing({ _isNew: true, _day: defaultPhase, status: 'sch', home: null, away: null, hs: null, as: null, date: '', time: '', pitch: 'Campo Sportivo' });
   }
@@ -123,9 +180,61 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
         <div className="adm-section-actions">
           <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
           <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Bracket</button>
+          {groups.length > 0 && (
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setKoOpen(o => !o)}>🏆 Knockout</button>
+          )}
           <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
         </div>
       </div>
+
+      {/* Knockout generator panel */}
+      {koOpen && (
+        <div className="adm-card" style={{ marginBottom: 16, background: 'rgba(245,197,24,0.04)', border: '1px solid rgba(245,197,24,0.3)' }}>
+          <div className="adm-card-header"><span className="adm-card-title">🏆 Genera Fase Knockout</span></div>
+          <div className="adm-card-body">
+            <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 14 }}>
+              {groups.length} gironi. Genera il bracket di eliminazione diretta per le squadre qualificate.
+            </div>
+            <div className="adm-form-row" style={{ alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+              <div className="adm-form-group" style={{ flex: '0 0 160px' }}>
+                <label className="adm-label">Squadre per girone che avanzano</label>
+                <select className="adm-select" value={koTeamsPerGroup} onChange={e => setKoTeamsPerGroup(parseInt(e.target.value))}>
+                  <option value={1}>1 (solo 1° posto)</option>
+                  <option value={2}>2 (1° e 2° posto)</option>
+                  <option value={3}>3 (1°, 2°, 3°)</option>
+                  <option value={4}>4 (tutte)</option>
+                </select>
+              </div>
+              <div className="adm-form-group" style={{ flex: '0 0 auto' }}>
+                <label className="adm-label">Opzioni</label>
+                <label className="adm-checkbox-row">
+                  <input type="checkbox" checked={ko3rd} onChange={e => setKo3rd(e.target.checked)} />
+                  Partita 3° posto
+                </label>
+              </div>
+            </div>
+            {(() => {
+              const n = groups.length * koTeamsPerGroup;
+              const rounds = buildKnockoutRounds(n);
+              const total = rounds.reduce((s, r) => s + r.count, 0) + (ko3rd && n >= 4 ? 1 : 0);
+              return (
+                <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 14 }}>
+                  {n} squadre qualificate → {rounds.map(r => `${r.phase} (${r.count})`).join(' → ')}
+                  {ko3rd && n >= 4 ? ' → 3° posto (1)' : ''}
+                  {' '}<strong style={{ color: 'var(--brand-green)' }}>= {total} partite totali</strong>
+                </div>
+              );
+            })()}
+            <div className="adm-form-actions">
+              <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setKoOpen(false)}>Annulla</button>
+              <button className="adm-btn adm-btn-sm" onClick={generateKnockout} disabled={koBusy}>
+                {koBusy ? 'Generazione…' : 'Genera bracket'}
+              </button>
+            </div>
+            {koMsg && <div style={{ marginTop: 8, fontSize: 13, color: '#FF3D3D' }}>{koMsg}</div>}
+          </div>
+        </div>
+      )}
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
