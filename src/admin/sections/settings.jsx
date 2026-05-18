@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { rmAdminUpdateCredentials, rmGetAllEditions, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
-import { isAdminSessionError, Confirm } from '../shared.jsx';
+import { rmGetAllEditions, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
+import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 function ordinal(n) {
   return `${n}° Posto`;
@@ -27,29 +27,91 @@ function PrizesEditor({ prizes, onChange }) {
         </div>
       ))}
       {prizes.length === 0 && (
-        <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: 0 }}>Nessun premio. Premi + Premio per aggiungerne.</p>
+        <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: 0 }}>Nessun premio configurato.</p>
       )}
     </div>
   );
 }
 
-export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChange, editionId, tournamentId }) {
-  const [user, setUser] = useState(adminUser?.username || '');
-  const [pass, setPass] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [msg, setMsg] = useState('');
+function CategoryForm({ editionId, onSubmit, onCancel }) {
+  const [name, setName] = useState('');
+  const [prizes, setPrizes] = useState([]);
+  function slugify(s) {
+    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cat';
+  }
+  function submit(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    const filtered = prizes.filter(p => p.label || p.amount);
+    onSubmit({
+      edition_id: editionId,
+      name: name.trim(),
+      slug: slugify(name),
+      prizes: filtered,
+      prize_first: filtered[0]?.amount ? parseInt(filtered[0].amount) : null,
+      prize_second: filtered[1]?.amount ? parseInt(filtered[1].amount) : null,
+      prize_third: filtered[2]?.amount ? parseInt(filtered[2].amount) : null,
+    });
+  }
+  return (
+    <form onSubmit={submit} className="adm-form" style={{ padding: '12px 16px', background: 'rgba(0,230,118,0.03)', borderTop: '1px solid var(--border-1)' }}>
+      <div className="adm-form-group">
+        <label className="adm-label">Nome categoria</label>
+        <input className="adm-input" required value={name} onChange={e => setName(e.target.value)} placeholder="Senior, Over 40, Junior…" autoFocus />
+      </div>
+      <PrizesEditor prizes={prizes} onChange={setPrizes} />
+      <div className="adm-form-actions">
+        <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onCancel}>Annulla</button>
+        <button type="submit" className="adm-btn adm-btn-sm">Aggiungi</button>
+      </div>
+    </form>
+  );
+}
+
+function CategoryEditForm({ category, onSubmit, onCancel }) {
+  const [editing, setEditing] = useState({
+    ...category,
+    prizes: category.prizes?.length ? category.prizes.map(p => ({ label: p.label || '', amount: p.amount || '' })) : [],
+  });
+  function slugify(s) {
+    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cat';
+  }
+  function submit(e) {
+    e.preventDefault();
+    const filtered = (editing.prizes || []).filter(p => p.label || p.amount);
+    onSubmit({
+      ...editing,
+      prizes: filtered,
+      slug: slugify(editing.name),
+      prize_first: filtered[0]?.amount ? parseInt(filtered[0].amount) : null,
+      prize_second: filtered[1]?.amount ? parseInt(filtered[1].amount) : null,
+      prize_third: filtered[2]?.amount ? parseInt(filtered[2].amount) : null,
+    });
+  }
+  return (
+    <form onSubmit={submit} className="adm-form" style={{ padding: '12px 16px', background: 'rgba(0,230,118,0.03)', borderTop: '1px solid var(--border-1)' }}>
+      <div className="adm-form-group">
+        <label className="adm-label">Nome categoria</label>
+        <input className="adm-input" required value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} autoFocus />
+      </div>
+      <PrizesEditor prizes={editing.prizes || []} onChange={p => setEditing(f => ({ ...f, prizes: p }))} />
+      <div className="adm-form-actions">
+        <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onCancel}>Annulla</button>
+        <button type="submit" className="adm-btn adm-btn-sm">Salva</button>
+      </div>
+    </form>
+  );
+}
+
+export function SettingsSection({ data, onSave, onRefresh, editionId }) {
   const [halfDuration, setHalfDuration] = useState(data.match_settings?.half_duration || 30);
-  const [matchSettingsMsg, setMatchSettingsMsg] = useState('');
+  const [matchSaved, setMatchSaved] = useState(false);
   const [editions, setEditions] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
-  const [editionStatusMsg, setEditionStatusMsg] = useState('');
+  const [statusMsg, setStatusMsg] = useState('');
   const [showNewCategory, setShowNewCategory] = useState(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryPrizes, setNewCategoryPrizes] = useState([]);
+  const [editingCategory, setEditingCategory] = useState(null);
   const [confirmDeleteCategory, setConfirmDeleteCategory] = useState(null);
-  const [editingCategory, setEditingCategory] = useState(null); // { id, name, prizes: [{label,amount}] }
-
-  useEffect(() => { setUser(adminUser?.username || ''); }, [adminUser?.username]);
 
   useEffect(() => {
     setEditionsLoading(true);
@@ -58,34 +120,34 @@ export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChan
       .finally(() => setEditionsLoading(false));
   }, []);
 
-  function slugify(s) {
-    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cat';
+  function showStatus(msg) {
+    setStatusMsg(msg);
+    setTimeout(() => setStatusMsg(''), 3000);
   }
 
-  async function createCategory(e) {
-    e.preventDefault();
-    if (!showNewCategory || !newCategoryName.trim()) return;
+  async function createCategory(payload) {
     try {
-      const prizes = newCategoryPrizes.filter(p => p.label || p.amount);
-      const res = await rmAdminCreateTournamentCategory({
-        edition_id: showNewCategory,
-        name: newCategoryName.trim(),
-        slug: slugify(newCategoryName),
-        prizes,
-        prize_first: prizes[0]?.amount ? parseInt(prizes[0].amount) : null,
-        prize_second: prizes[1]?.amount ? parseInt(prizes[1].amount) : null,
-        prize_third: prizes[2]?.amount ? parseInt(prizes[2].amount) : null,
-      });
+      const res = await rmAdminCreateTournamentCategory(payload);
       setEditions(prev => prev.map(ed =>
-        ed.id === showNewCategory
+        ed.id === payload.edition_id
           ? { ...ed, tournaments: [...(ed.tournaments || []), res.data] }
           : ed
       ));
       setShowNewCategory(null);
-      setNewCategoryName('');
-      setNewCategoryPrizes([]);
       if (onRefresh) await onRefresh('Categoria aggiunta');
-    } catch (e) { setEditionStatusMsg('Errore creazione categoria: ' + (e?.message || '')); }
+    } catch (e) { showStatus('Errore: ' + (e?.message || '')); }
+  }
+
+  async function updateCategory(payload) {
+    try {
+      await rmAdminUpdateTournamentCategory(payload.id, payload);
+      setEditions(prev => prev.map(ed => ({
+        ...ed,
+        tournaments: (ed.tournaments || []).map(t => t.id === payload.id ? { ...t, ...payload } : t),
+      })));
+      setEditingCategory(null);
+      showStatus('Categoria aggiornata');
+    } catch (e) { showStatus('Errore: ' + (e?.message || '')); }
   }
 
   async function deleteCategory(edId, categoryId) {
@@ -97,71 +159,108 @@ export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChan
           : ed
       ));
       if (onRefresh) await onRefresh('Categoria eliminata');
-    } catch (e) { setEditionStatusMsg('Errore eliminazione categoria: ' + (e?.message || '')); }
+    } catch (e) { showStatus('Errore: ' + (e?.message || '')); }
     setConfirmDeleteCategory(null);
-  }
-
-  async function saveCategory(e) {
-    e.preventDefault();
-    if (!editingCategory) return;
-    try {
-      const prizes = (editingCategory.prizes || []).filter(p => p.label || p.amount);
-      await rmAdminUpdateTournamentCategory(editingCategory.id, {
-        name: editingCategory.name,
-        slug: slugify(editingCategory.name),
-        prizes,
-        prize_first: prizes[0]?.amount ? parseInt(prizes[0].amount) : null,
-        prize_second: prizes[1]?.amount ? parseInt(prizes[1].amount) : null,
-        prize_third: prizes[2]?.amount ? parseInt(prizes[2].amount) : null,
-      });
-      setEditions(prev => prev.map(ed => ({
-        ...ed,
-        tournaments: (ed.tournaments || []).map(t =>
-          t.id === editingCategory.id ? { ...t, ...editingCategory, prizes } : t
-        ),
-      })));
-      setEditionStatusMsg('Categoria aggiornata');
-      setEditingCategory(null);
-    } catch (e) { setEditionStatusMsg('Errore aggiornamento categoria: ' + (e?.message || '')); }
-  }
-
-  async function save(e) {
-    e.preventDefault();
-    if (pass && pass !== confirm) { setMsg('Le password non coincidono'); return; }
-    try {
-      const payload = await rmAdminUpdateCredentials({
-        username: user.trim(),
-        password: pass || undefined,
-      });
-      setPass('');
-      setConfirm('');
-      setMsg('Credenziali staff aggiornate');
-      if (onUserChange) onUserChange(payload.user);
-    } catch (error) {
-      setMsg(isAdminSessionError(error) ? 'Sessione scaduta. Rientra nel pannello e riprova.' : (error?.message || 'Aggiornamento credenziali fallito'));
-    }
   }
 
   return (
     <div>
       <h2 className="adm-section-title">Impostazioni</h2>
 
+      {/* ── Categorie torneo ───────────────────────────── */}
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header">
+          <span className="adm-card-title">Categorie di Torneo</span>
+          {editions.length > 0 && !showNewCategory && (
+            <button className="adm-btn adm-btn-sm" onClick={() => {
+              setEditingCategory(null);
+              setShowNewCategory(editions[0]?.id);
+            }}>+ Categoria</button>
+          )}
+        </div>
+
+        {statusMsg && (
+          <div style={{ padding: '6px 16px', fontSize: 12, color: statusMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>
+            {statusMsg}
+          </div>
+        )}
+
+        {showNewCategory && (
+          <CategoryForm
+            editionId={showNewCategory}
+            onSubmit={createCategory}
+            onCancel={() => setShowNewCategory(null)}
+          />
+        )}
+
+        <div style={{ padding: '4px 0 8px' }}>
+          {editionsLoading && <div className="adm-empty" style={{ fontSize: 13 }}>Caricamento…</div>}
+          {!editionsLoading && editions.length === 0 && (
+            <div className="adm-empty" style={{ fontSize: 13 }}>Nessuna edizione trovata.</div>
+          )}
+          {editions.map(e => {
+            const cats = e.tournaments || [];
+            return (
+              <div key={e.id}>
+                <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-1)' }}>{e.name}</span>
+                  <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{e.year}</span>
+                </div>
+                {cats.length === 0 && (
+                  <div style={{ padding: '4px 16px 8px', fontSize: 12, color: 'var(--fg-3)' }}>Nessuna categoria</div>
+                )}
+                {cats.map(t => (
+                  <div key={t.id}>
+                    {editingCategory?.id === t.id ? (
+                      <CategoryEditForm
+                        category={editingCategory}
+                        onSubmit={updateCategory}
+                        onCancel={() => setEditingCategory(null)}
+                      />
+                    ) : (
+                      <div className="adm-item-row">
+                        <div className="adm-item-row-body">
+                          <div className="adm-item-title">{t.name}</div>
+                          {(t.prize_first > 0 || t.prizes?.length > 0) && (
+                            <div className="adm-item-meta">
+                              {t.prizes?.length > 0
+                                ? t.prizes.map((p, i) => `${p.label} ${p.amount}€`).join(' · ')
+                                : `🏆 ${t.prize_first}€`}
+                            </div>
+                          )}
+                        </div>
+                        <div className="adm-item-actions">
+                          <button className="adm-btn adm-btn-ghost adm-btn-icon"
+                            onClick={() => { setShowNewCategory(null); setEditingCategory({ ...t }); }}>
+                            <EditIcon size={16} />
+                          </button>
+                          <button className="adm-btn adm-btn-danger adm-btn-icon"
+                            onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}>
+                            <TrashIcon size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Durata tempi ───────────────────────────────── */}
       <div className="adm-card" style={{ marginBottom: 16 }}>
         <div className="adm-card-header"><span className="adm-card-title">Durata tempi</span></div>
         <div className="adm-card-body">
           <div className="adm-form">
             <div className="adm-form-group">
               <label className="adm-label">Minuti per tempo</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 {[20, 25, 30, 35, 45].map(v => (
                   <button key={v} type="button"
                     onClick={() => setHalfDuration(v)}
-                    style={{
-                      padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                      background: halfDuration === v ? 'var(--brand-green)' : 'var(--bg-canvas)',
-                      border: `1px solid ${halfDuration === v ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                      color: halfDuration === v ? '#000' : 'var(--fg-2)',
-                    }}>
+                    className={`adm-btn adm-btn-sm ${halfDuration === v ? '' : 'adm-btn-ghost'}`}>
                     {v}'
                   </button>
                 ))}
@@ -170,150 +269,26 @@ export function SettingsSection({ data, onSave, onRefresh, adminUser, onUserChan
                   style={{ width: 64 }} />
               </div>
               <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '6px 0 0' }}>
-                Totale: {halfDuration * 2}' + recupero. Lo staff controlla manualmente fine 1° e inizio 2° tempo.
+                Totale: {halfDuration * 2}' + recupero
               </p>
             </div>
-            {matchSettingsMsg && <div style={{ fontSize: 13, color: 'var(--brand-green)' }}>{matchSettingsMsg}</div>}
+            {matchSaved && <div style={{ fontSize: 13, color: 'var(--brand-green)' }}>Salvato ✓</div>}
             <button className="adm-btn adm-btn-sm" type="button" onClick={() => {
               onSave({ ...data, match_settings: { ...(data.match_settings || {}), half_duration: halfDuration } }, 'Impostazioni partita salvate');
-              setMatchSettingsMsg('Salvato');
-              setTimeout(() => setMatchSettingsMsg(''), 2000);
+              setMatchSaved(true);
+              setTimeout(() => setMatchSaved(false), 2000);
             }}>Salva</button>
           </div>
         </div>
       </div>
 
-      <div className="adm-card" style={{ marginBottom: 16 }}>
-        <div className="adm-card-header"><span className="adm-card-title">Credenziali staff</span></div>
-        <div className="adm-card-body">
-          <form onSubmit={save} className="adm-form">
-            <div className="adm-form-group">
-              <label className="adm-label">Username</label>
-              <input className="adm-input" value={user} onChange={e => setUser(e.target.value)} required />
-            </div>
-            <div className="adm-form-group">
-              <label className="adm-label">Nuova Password (lascia vuoto per non cambiare)</label>
-              <input type="password" className="adm-input" value={pass} onChange={e => setPass(e.target.value)} placeholder="••••••••" />
-            </div>
-            {pass && (
-              <div className="adm-form-group">
-                <label className="adm-label">Conferma Password</label>
-                <input type="password" className="adm-input" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" />
-              </div>
-            )}
-            {msg && <div style={{ color: /non|fallit|errore|cort/i.test(msg) ? '#FF3D3D' : 'var(--brand-green)', fontSize: 13 }}>{msg}</div>}
-            <button className="adm-btn adm-btn-sm" type="submit">Salva credenziali</button>
-          </form>
-        </div>
-      </div>
-      <div className="adm-card" style={{ marginBottom: 16 }}>
-        <div className="adm-card-header"><span className="adm-card-title">Sessione admin</span></div>
-        <div className="adm-card-body">
-          <p style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 14 }}>
-            Login unico attivo. Questo account staff controlla sia l'accesso al pannello sia i salvataggi sul database.
-          </p>
-          <div style={{ fontSize: 13, color: 'var(--fg-2)' }}>
-            Utente corrente: <strong style={{ color: 'var(--fg-1)' }}>{adminUser?.username || 'staff'}</strong>
-          </div>
-        </div>
-      </div>
-      {/* Gestione edizioni + categorie */}
-      <div className="adm-card" style={{ marginBottom: 16 }}>
-        <div className="adm-card-header">
-          <span className="adm-card-title">Categorie di Torneo</span>
-          {editions.length > 0 && (
-            <button className="adm-btn adm-btn-sm" onClick={() => {
-              const targetId = editions[0]?.id;
-              if (targetId) { setShowNewCategory(targetId); setEditingCategory(null); }
-            }}>+ Categoria</button>
-          )}
-        </div>
-        {editionStatusMsg && (
-          <div style={{ padding: '6px 16px', fontSize: 12, color: editionStatusMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>
-            {editionStatusMsg}
-          </div>
-        )}
-
-        {showNewCategory && (
-          <div className="adm-card-body" style={{ borderBottom: '1px solid var(--border-1)', background: 'rgba(0,230,118,0.03)' }}>
-            <form onSubmit={createCategory} className="adm-form">
-              <div className="adm-form-group">
-                <label className="adm-label">Nome categoria</label>
-                <input className="adm-input" required value={newCategoryName}
-                  onChange={e => setNewCategoryName(e.target.value)} placeholder="Senior, Over 40, Junior…" autoFocus />
-              </div>
-              <PrizesEditor prizes={newCategoryPrizes} onChange={setNewCategoryPrizes} />
-              <div className="adm-form-actions">
-                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => { setShowNewCategory(null); setNewCategoryName(''); setNewCategoryPrizes([]); }}>Annulla</button>
-                <button type="submit" className="adm-btn adm-btn-sm">Aggiungi categoria</button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        <div style={{ padding: '4px 16px 12px' }}>
-          {editions.length === 0
-            ? <div className="adm-empty" style={{ fontSize: 13 }}>{editionsLoading ? 'Caricamento…' : 'Nessuna edizione nel database relazionale'}</div>
-            : editions.map(e => {
-              const cats = e.tournaments || [];
-              return (
-                <div key={e.id} style={{ borderBottom: '1px solid var(--border-1)', paddingBottom: 12, marginBottom: 4 }}>
-                  <div style={{ padding: '10px 0' }}>
-                    <div style={{ fontSize: 14, color: '#fff', fontWeight: 600 }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{e.year}</div>
-                  </div>
-                  {/* Categorie (tornei) dentro questa edizione */}
-                  <div style={{ paddingLeft: 12 }}>
-                    {cats.map(t => (
-                      <div key={t.id}>
-                        {editingCategory?.id === t.id ? (
-                          <form onSubmit={saveCategory} className="adm-form" style={{ background: 'rgba(0,230,118,0.05)', borderRadius: 8, padding: 10, marginBottom: 4 }}>
-                            <div className="adm-form-group">
-                              <label className="adm-label">Nome categoria</label>
-                              <input className="adm-input" required value={editingCategory.name}
-                                onChange={ev => setEditingCategory(f => ({ ...f, name: ev.target.value }))} autoFocus />
-                            </div>
-                            <PrizesEditor prizes={editingCategory.prizes || []} onChange={p => setEditingCategory(f => ({ ...f, prizes: p }))} />
-                            <div className="adm-form-actions">
-                              <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditingCategory(null)}>Annulla</button>
-                              <button type="submit" className="adm-btn adm-btn-sm">Salva</button>
-                            </div>
-                          </form>
-                        ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid var(--border-1)' }}>
-                            <div style={{ flex: 1 }}>
-                              <span style={{ fontSize: 13, color: 'var(--brand-green)', fontWeight: 600 }}>{t.name}</span>
-                              {(t.prizes?.length > 0) && t.prizes.map((p, i) => (
-                                <span key={i} style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 8 }}>🏆 {p.label && `${p.label} `}{p.amount}€</span>
-                              ))}
-                              {(!t.prizes?.length && (t.prize_first > 0)) && (
-                                <span style={{ fontSize: 11, color: 'var(--fg-3)', marginLeft: 8 }}>🏆 {t.prize_first}€</span>
-                              )}
-                            </div>
-                            <button
-                              onClick={() => setEditingCategory({ id: t.id, name: t.name, prizes: t.prizes?.length ? t.prizes.map(p => ({ label: p.label || '', amount: p.amount || '' })) : [] })}
-                              className="adm-btn adm-btn-ghost adm-btn-sm"
-                              title="Modifica">✎</button>
-                            <button onClick={() => setConfirmDeleteCategory({ editionId: e.id, categoryId: t.id, name: t.name })}
-                              className="adm-btn adm-btn-danger adm-btn-sm">✕</button>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })
-          }
-        </div>
-      </div>
-
-      <div style={{ textAlign: 'center', marginTop: 24 }}>
+      <div style={{ textAlign: 'center', marginTop: 24, paddingBottom: 8 }}>
         <a href="index.html" style={{ color: 'var(--brand-green)', fontSize: 14 }}>← Vai al sito pubblico</a>
       </div>
+
       {confirmDeleteCategory && (
         <Confirm
-          msg={`Eliminare la categoria "${confirmDeleteCategory.name}"? Questa operazione è irreversibile e rimuove gironi, partite e iscrizioni collegate.`}
+          msg={`Eliminare "${confirmDeleteCategory.name}"? Rimuove gironi, partite e iscrizioni collegate.`}
           onOk={() => deleteCategory(confirmDeleteCategory.editionId, confirmDeleteCategory.categoryId)}
           onCancel={() => setConfirmDeleteCategory(null)}
         />

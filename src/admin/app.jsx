@@ -7,6 +7,7 @@ import { DashboardSection } from './sections/dashboard.jsx';
 import { LiveSection } from './sections/live.jsx';
 import { NewsSection } from './sections/news.jsx';
 import { GironiSection } from './sections/gironi.jsx';
+import { SetupSection } from './sections/setup.jsx';
 import { MatchesSection } from './sections/matches.jsx';
 import { StandingsSection } from './sections/standings.jsx';
 import { ScorersSection } from './sections/scorers.jsx';
@@ -22,7 +23,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-const VALID_TABS = ['dashboard','live','news','settings','gironi','matches','standings','scorers','teams','events','honors','sponsors'];
+const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','scorers','teams','events','honors','sponsors'];
 
 function tabFromHash() {
   const h = window.location.hash.replace('#', '');
@@ -126,9 +127,17 @@ function AdminApp() {
     if (msg) setToast({ msg, type: 'success' });
   }
 
-  const [teamsPerGroupAdvance, setTeamsPerGroupAdvance] = useState(2);
+  const [teamsPerGroupAdvance, setTeamsPerGroupAdvance] = useState(() => {
+    const saved = localStorage.getItem('rm_teams_per_group_advance');
+    return saved ? parseInt(saved) : 2;
+  });
 
-  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories, teamsPerGroupAdvance, onTeamsPerGroupAdvance: setTeamsPerGroupAdvance };
+  function handleTeamsPerGroupAdvance(n) {
+    setTeamsPerGroupAdvance(n);
+    localStorage.setItem('rm_teams_per_group_advance', n);
+  }
+
+  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories, teamsPerGroupAdvance, onTeamsPerGroupAdvance: handleTeamsPerGroupAdvance };
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
 
@@ -194,6 +203,7 @@ function AdminApp() {
         {tab === 'live'       && <LiveSection {...props} />}
         {tab === 'news'       && <NewsSection {...props} />}
         {tab === 'gironi'     && <GironiSection {...props} />}
+        {tab === 'fasi'       && <SetupSection {...props} />}
         {tab === 'matches'    && <MatchesSection {...props} />}
         {tab === 'standings'  && <StandingsSection {...props} />}
         {tab === 'scorers'    && <ScorersSection {...props} />}

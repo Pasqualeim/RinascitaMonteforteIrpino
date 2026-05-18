@@ -53,6 +53,18 @@ select:disabled {
   cursor: not-allowed;
 }
 
+/* ── Native date/time pickers ───────────────────────────────── */
+input[type="date"],
+input[type="time"] {
+  color-scheme: dark;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.6);
+  cursor: pointer;
+}
+
 /* ── Login page ─────────────────────────────────────────────── */
 .adm-login {
   flex: 1;
@@ -153,6 +165,10 @@ select:disabled {
 .adm-input,
 .adm-textarea {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
   background: #141414;
   border: 1px solid rgba(255,255,255,0.22);
   color: #fff;
@@ -167,6 +183,20 @@ select:disabled {
 .adm-input:focus {
   border-color: var(--brand-green);
   box-shadow: 0 0 0 3px rgba(0, 230, 118, 0.1);
+}
+
+.adm-input-datetime {
+  color-scheme: dark;
+  max-width: 100%;
+  width: 100%;
+  overflow: hidden;
+  cursor: pointer;
+  text-align: left;
+  padding-left: 14px;
+}
+.adm-input-datetime::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
 }
 
 /* Buttons */
@@ -696,11 +726,12 @@ select:disabled {
   background: #0a0a0a;
   border: 1px solid var(--border-1);
   width: 100%;
-  max-width: 600px;
+  max-width: min(600px, 100vw);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   animation: admSlideUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
-  
+
   /* Mobile Full-Screen Layout */
   min-height: 100vh;
   min-height: 100dvh;
@@ -722,6 +753,7 @@ select:disabled {
 .adm-modal-scroll {
   padding: 20px 20px 32px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -774,6 +806,7 @@ select:disabled {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .adm-textarea {

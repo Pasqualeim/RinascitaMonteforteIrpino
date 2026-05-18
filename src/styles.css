@@ -323,8 +323,7 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   display: grid;
   grid-template-areas:
     "time time time"
-    "home score away"
-    "pitch pitch pitch";
+    "home score away";
   grid-template-columns: 1fr 80px 1fr;
   align-items: center; gap: 8px 6px;
   padding: 12px 14px; background: #0a0a0a; border: 1px solid var(--border-1); border-radius: 10px;
@@ -333,6 +332,12 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-match:hover { border-color: var(--border-strong); }
 .rm-match.live { border-color: var(--border-brand); box-shadow: var(--glow-green-sm); }
 .rm-match.done { opacity: 0.75; }
+.rm-match.tbd { opacity: 0.7; border-style: dashed; }
+.rm-ko-phase { color: var(--brand-gold) !important; }
+.rm-ko-divider { display: flex; align-items: center; gap: 10px; margin: 28px 0 16px; color: var(--brand-gold); font-family: var(--font-display); font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; }
+.rm-ko-divider::before, .rm-ko-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, rgba(245,197,24,0.3), transparent); }
+.rm-ko-notice { display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px; background: rgba(245,197,24,0.05); border: 1px dashed rgba(245,197,24,0.25); border-radius: 10px; font-size: 13px; color: var(--fg-2); line-height: 1.5; }
+.rm-ko-notice-icon { flex: none; font-size: 16px; margin-top: 1px; }
 
 .rm-match-time {
   grid-area: time;
@@ -355,8 +360,6 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-match-score { grid-area: score; text-align: center; font-family: var(--font-display); font-size: 26px; letter-spacing: 0.06em; color: #fff; line-height: 1; }
 .rm-match-score i { font-style: normal; color: var(--brand-green); margin: 0 3px; }
 .rm-vs { font-size: 15px; color: var(--fg-3); letter-spacing: 0.14em; }
-.rm-match-pitch { grid-area: pitch; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); display: flex; gap: 10px; font-family: var(--font-mono); }
-.rm-match-pitch b { color: var(--fg-2); font-weight: 400; font-size: 12px; }
 
 /* Day group */
 .rm-match-day { margin-bottom: 24px; }
@@ -634,7 +637,6 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   .rm-match-team--home { grid-area: unset; justify-content: flex-end; }
   .rm-match-team--away { grid-area: unset; }
   .rm-match-score { grid-area: unset; font-size: 30px; }
-  .rm-match-pitch { grid-area: unset; flex-direction: column; text-align: right; justify-content: center; }
   .rm-team-name { font-size: 15px; }
   .rm-footer { padding: 56px 32px 28px; }
   .rm-footer-grid { max-width: 1280px; margin: 0 auto; }

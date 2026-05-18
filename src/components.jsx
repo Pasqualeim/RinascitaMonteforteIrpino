@@ -203,11 +203,15 @@ function SponsorWink() {
 
 // ── Match row ─────────────────────────────────────────────────────────────
 function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }) {
-  if (!home || !away) return null;
+  const isTbd = !home || !away;
+  if (isTbd && !date && !time) return null;
   const live = status === 'live';
   const done = status === 'ft';
+  const tbdTeam = { name: 'Da definire', short: '?', color: 'var(--fg-3)' };
+  const homeTeam = home || tbdTeam;
+  const awayTeam = away || tbdTeam;
   return (
-    <div className={`rm-match ${live ? 'live' : ''} ${done ? 'done' : ''}`}>
+    <div className={`rm-match ${live ? 'live' : ''} ${done ? 'done' : ''}${isTbd ? ' tbd' : ''}`}>
       <div className="rm-match-time">
         {live ? (
           <span className="rm-live-tag"><span className="dot"></span>LIVE · {minute}'</span>
@@ -219,23 +223,20 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
         ) : (
           <>
             <span className="date">{date}</span>
-            <span className="time">{time}</span>
+            <span className="time">{time || (isTbd ? 'Orario TBD' : '')}</span>
           </>
         )}
       </div>
       <div className="rm-match-team rm-match-team--home">
-        <span className="rm-team-name">{home.name}</span>
-        <span className="rm-crest" style={{ borderColor: home.color || 'var(--brand-green)', color: home.color || 'var(--brand-green)' }}>{home.short}</span>
+        <span className="rm-team-name">{homeTeam.name}</span>
+        <span className="rm-crest" style={{ borderColor: homeTeam.color || 'var(--brand-green)', color: homeTeam.color || 'var(--brand-green)' }}>{homeTeam.short}</span>
       </div>
       <div className="rm-match-score">
         {hs != null ? <span>{hs}<i>–</i>{as_}</span> : <span className="rm-vs">VS</span>}
       </div>
       <div className="rm-match-team rm-match-team--away">
-        <span className="rm-crest" style={{ borderColor: away.color || 'var(--brand-green)', color: away.color || 'var(--brand-green)' }}>{away.short}</span>
-        <span className="rm-team-name">{away.name}</span>
-      </div>
-      <div className="rm-match-pitch">
-        <b>{pitch || 'Campo Sportivo'}</b>
+        <span className="rm-crest" style={{ borderColor: awayTeam.color || 'var(--brand-green)', color: awayTeam.color || 'var(--brand-green)' }}>{awayTeam.short}</span>
+        <span className="rm-team-name">{awayTeam.name}</span>
       </div>
     </div>
   );

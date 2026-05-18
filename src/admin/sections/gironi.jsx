@@ -34,25 +34,36 @@ function nextGroupName(existingGroups) {
   return '';
 }
 
-export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerGroupAdvance = 2, onTeamsPerGroupAdvance }) {
+const ADVANCE_LABELS = ['Solo 1°', '1° e 2°', '1°, 2°, 3°', 'Tutti'];
+
+export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdvance, onTeamsPerGroupAdvance }) {
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
   const [deletingGroupId, setDeletingGroupId] = useState(null);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  // Auto-setup wizard state
+  // Auto-setup wizard
   const [setupOpen, setSetupOpen] = useState(false);
   const [numGroups, setNumGroups] = useState(null);
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMsg, setSetupMsg] = useState('');
   const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
 
-  // Generate matches state
-  const [genMsg, setGenMsg] = useState('');
+  // Qualificazione
+  const [pendingAdvance, setPendingAdvance] = useState(null);
+  const [qualConfirmed, setQualConfirmed] = useState(
+    () => localStorage.getItem('rm_teams_per_group_advance') !== null
+  );
+  const [qualRemodify, setQualRemodify] = useState(false);
+  const [qualOpen, setQualOpen] = useState(false);
+
+  // Partite di girone
+  const [genMode, setGenMode] = useState('single');
   const [genBusy, setGenBusy] = useState(false);
+  const [genMsg, setGenMsg] = useState('');
   const [genConfirm, setGenConfirm] = useState(false);
-  const [genMode, setGenMode] = useState('single'); // 'single' | 'double'
+  const [matchGenOpen, setMatchGenOpen] = useState(false);
 
   const groups = data.groups || [];
   const allTeams = data.teams || [];
@@ -63,7 +74,7 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
     return (
       <div>
         <h2 className="adm-section-title" style={{ margin: 0 }}>Gironi</h2>
-        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata. Seleziona una categoria dal menu in alto.</div></div>
+        <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata.</div></div>
       </div>
     );
   }
@@ -130,7 +141,6 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
     setSetupBusy(true);
     setSetupMsg('');
     try {
-      // Create groups
       const created = [];
       for (let i = 0; i < effectiveNumGroups; i++) {
         const res = await rmAdminDomain.createGroup({
@@ -141,7 +151,6 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
         });
         created.push(res.data || res);
       }
-      // Shuffle + assign round-robin
       const shuffled = shuffle(allTeams);
       for (let i = 0; i < shuffled.length; i++) {
         const t = shuffled[i];
@@ -178,63 +187,54 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
     }
   }
 
+  const allAssigned = allTeams.length > 0 && allTeams.every(t => t.group_id);
+  const groupNames = new Set(groups.map(g => g.name));
+  const hasGroupMatches = (data.matches_giornata || []).some(g => groupNames.has(g.day) && (g.items || []).length > 0);
+  const groupSizes = groups.map(g => allTeams.filter(t => t.group_id === g.id).length);
+  const minGroupSize = groupSizes.length > 0 ? Math.min(...groupSizes) : 4;
+  const maxAdvanceOptions = Math.max(1, minGroupSize);
+  const selectedAdvance = pendingAdvance ?? teamsPerGroupAdvance;
+
   async function generateGroupMatches() {
-    if (groups.length === 0) { setGenMsg('Crea prima i gironi.'); return; }
     setGenBusy(true);
     setGenMsg('');
     try {
-      // Delete existing group matches first
-      const groupNameSet = new Set(groups.map(g => g.name));
       const toDelete = (data.matches_giornata || [])
         .filter(day => groups.some(g => day.day === g.name || day.day?.startsWith(g.name + ' · ')))
         .flatMap(day => day.items || [])
         .filter(m => m.id);
-      for (const m of toDelete) {
-        await rmAdminDomain.deleteMatch(m.id);
-      }
-
+      for (const m of toDelete) await rmAdminDomain.deleteMatch(m.id);
       let created = 0;
       for (const g of groups) {
         const groupTeams = allTeams.filter(t => t.group_id === g.id);
         if (groupTeams.length < 2) continue;
-        // Generate pairs
         const pairs = [];
-        for (let a = 0; a < groupTeams.length; a++) {
-          for (let b = a + 1; b < groupTeams.length; b++) {
+        for (let a = 0; a < groupTeams.length; a++)
+          for (let b = a + 1; b < groupTeams.length; b++)
             pairs.push([groupTeams[a], groupTeams[b]]);
-          }
-        }
-        // Andata
         for (const [home, away] of pairs) {
           await rmAdminDomain.createMatch({
-            tournament_id: tournamentId,
-            group_id: g.id,
-            home_team_id: home.id,
-            away_team_id: away.id,
+            tournament_id: tournamentId, group_id: g.id,
+            home_team_id: home.id, away_team_id: away.id,
             status: 'sch',
             phase: genMode === 'double' ? `${g.name} · Andata` : g.name,
-            sort_order: created,
+            sort_order: created++,
           });
-          created++;
         }
-        // Ritorno (se double)
         if (genMode === 'double') {
           for (const [home, away] of pairs) {
             await rmAdminDomain.createMatch({
-              tournament_id: tournamentId,
-              group_id: g.id,
-              home_team_id: away.id,
-              away_team_id: home.id,
-              status: 'sch',
-              phase: `${g.name} · Ritorno`,
-              sort_order: created,
+              tournament_id: tournamentId, group_id: g.id,
+              home_team_id: away.id, away_team_id: home.id,
+              status: 'sch', phase: `${g.name} · Ritorno`,
+              sort_order: created++,
             });
-            created++;
           }
         }
       }
+      setGenConfirm(false);
       await onRefresh(`${created} partite di girone generate`);
-      setGenMsg(`✓ ${created} partite generate`);
+      setGenMsg(`✓ ${created} partite`);
     } catch (err) {
       setGenMsg('Errore: ' + (err?.message || ''));
     } finally {
@@ -242,9 +242,13 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
     }
   }
 
-  const allAssigned = allTeams.length > 0 && allTeams.every(t => t.group_id);
-  const groupNames = new Set(groups.map(g => g.name));
-  const hasGroupMatches = (data.matches_giornata || []).some(g => groupNames.has(g.day) && (g.items || []).length > 0);
+  function confirmAdvance(n) {
+    onTeamsPerGroupAdvance(n);
+    localStorage.setItem('rm_teams_per_group_advance', n);
+    setQualConfirmed(true);
+    setPendingAdvance(null);
+    setQualOpen(false);
+  }
 
   return (
     <div>
@@ -254,16 +258,11 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
           <p className="adm-section-sub" style={{ margin: 0 }}>{allTeams.length} squadre · {groups.length} gironi</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {groups.length === 0 && allTeams.length > 0 && (
-            <button className="adm-btn adm-btn-sm" onClick={() => setSetupOpen(o => !o)} disabled={setupBusy}>
-              ⚡ Setup auto
-            </button>
-          )}
-          {groups.length > 0 && (
-            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setSetupOpen(o => !o)} disabled={setupBusy}>
-              ⚡ Setup auto
-            </button>
-          )}
+          <button
+            className={`adm-btn adm-btn-sm ${groups.length === 0 && allTeams.length > 0 ? '' : 'adm-btn-ghost'}`}
+            onClick={() => setSetupOpen(o => !o)} disabled={setupBusy}>
+            ⚡ Setup auto
+          </button>
           <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: nextGroupName(groups) })} disabled={busy}>+ Girone</button>
         </div>
       </div>
@@ -274,7 +273,7 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
           <div className="adm-card-header"><span className="adm-card-title">⚡ Setup Automatico Gironi</span></div>
           <div className="adm-card-body">
             <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
-              {allTeams.length} squadre registrate. Suggerimento: <strong style={{ color: 'var(--brand-green)' }}>{suggested} gironi</strong> da ~{Math.ceil(allTeams.length / suggested)} squadre ciascuno.
+              {allTeams.length} squadre. Suggerimento: <strong style={{ color: 'var(--brand-green)' }}>{suggested} gironi</strong> da ~{Math.ceil(allTeams.length / suggested)} squadre.
             </div>
 
             {groups.length === 0 ? (
@@ -283,15 +282,14 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
                   <div className="adm-form-group" style={{ flex: '0 0 140px' }}>
                     <label className="adm-label">N° gironi</label>
                     <input type="number" className="adm-input" min="1" max="16"
-                      value={effectiveNumGroups}
-                      onChange={e => setNumGroups(parseInt(e.target.value) || 1)} />
+                      value={effectiveNumGroups} onChange={e => setNumGroups(parseInt(e.target.value) || 1)} />
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--fg-3)', paddingTop: 20 }}>
                     → {GROUP_LETTERS.slice(0, effectiveNumGroups).split('').map(l => `Girone ${l}`).join(', ')}
                   </div>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 12 }}>
-                  Le squadre verranno distribuite casualmente nei gironi.
+                  Squadre distribuite casualmente nei gironi.
                 </div>
                 <div className="adm-form-actions">
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setSetupOpen(false)}>Annulla</button>
@@ -303,16 +301,11 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
             ) : (
               <>
                 <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
-                  Gironi esistenti: {groups.map(g => g.name).join(', ')}. Rimescola la distribuzione delle squadre mantenendo i gironi attuali.
+                  Gironi esistenti: {groups.map(g => g.name).join(', ')}. Rimescola le squadre mantenendo i gironi attuali.
                 </div>
                 {reshuffleConfirm ? (
                   <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px', marginBottom: 8 }}>
-                    <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 6 }}>
-                      ⚠️ Le squadre verranno riassegnate casualmente ai gironi.
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>
-                      Le assegnazioni attuali andranno perse. Eventuali partite già generate potrebbero non corrispondere ai nuovi gironi.
-                    </div>
+                    <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 6 }}>⚠️ Le assegnazioni attuali andranno perse.</div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setReshuffleConfirm(false)}>Annulla</button>
                       <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setReshuffleConfirm(false); reshuffleTeams(); }} disabled={setupBusy}>
@@ -335,112 +328,127 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
         </div>
       )}
 
-      {/* Qualificazione */}
-      {groups.length > 0 && (
-        <div className="adm-card" style={{ marginBottom: 16 }}>
-          <div className="adm-card-header"><span className="adm-card-title">Qualificazione al turno successivo</span></div>
-          <div className="adm-card-body" style={{ paddingTop: 8 }}>
-            <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
-              Quante squadre per girone passano alla fase eliminatoria?
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {[1, 2, 3, 4].map(n => {
-                const total = groups.length * n;
-                const isActive = teamsPerGroupAdvance === n;
-                return (
-                  <button key={n} type="button"
-                    onClick={() => onTeamsPerGroupAdvance && onTeamsPerGroupAdvance(n)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
-                      background: isActive ? 'var(--brand-green)' : 'transparent',
-                      border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                      color: isActive ? '#000' : 'var(--fg-2)',
-                      fontWeight: isActive ? 700 : 400,
-                      fontSize: 13, transition: 'all 140ms',
-                    }}>
-                    {n === 1 ? 'Solo 1°' : n === 2 ? '1° e 2°' : n === 3 ? '1°, 2°, 3°' : 'Tutte e 4'}
-                    <div style={{ fontSize: 11, color: isActive ? 'rgba(0,0,0,0.6)' : 'var(--fg-3)', marginTop: 2 }}>
-                      {total} squadre totali
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-            {groups.length > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 10 }}>
-                {(() => {
-                  const tot = groups.length * teamsPerGroupAdvance;
-                  const fase = tot <= 2 ? 'Finale' : tot <= 4 ? 'Semifinali' : tot <= 8 ? 'Quarti di finale' : `Round di ${tot}`;
-                  return `${groups.length} gironi × ${teamsPerGroupAdvance} = ${tot} qualificate → prima fase knockout: ${fase}`;
-                })()}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Generate group matches */}
-      {groups.length > 0 && allAssigned && (
-        <div className="adm-card" style={{ marginBottom: 16 }}>
-          <div className="adm-card-header">
-            <span className="adm-card-title">Partite di girone</span>
-          </div>
-          <div className="adm-card-body" style={{ paddingTop: 8 }}>
-            {/* Mode selector */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {[
-                { id: 'single', label: 'Sola andata', desc: `Ogni coppia si affronta 1 volta`, count: groups.reduce((s,g) => { const n = allTeams.filter(t=>t.group_id===g.id).length; return s + n*(n-1)/2; }, 0) },
-                { id: 'double', label: 'Andata e ritorno', desc: `Ogni coppia si affronta 2 volte`, count: groups.reduce((s,g) => { const n = allTeams.filter(t=>t.group_id===g.id).length; return s + n*(n-1); }, 0) },
-              ].map(opt => (
-                <button key={opt.id} type="button"
-                  onClick={() => setGenMode(opt.id)}
-                  style={{
-                    flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
-                    background: genMode === opt.id ? 'rgba(0,230,118,0.08)' : 'transparent',
-                    border: `1px solid ${genMode === opt.id ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                    color: '#fff', transition: 'all 140ms',
-                  }}>
-                  <div style={{ fontWeight: 600, fontSize: 13, color: genMode === opt.id ? 'var(--brand-green)' : '#fff', marginBottom: 2 }}>{opt.label}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{opt.desc}</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}><strong style={{ color: 'var(--brand-green)' }}>{opt.count}</strong> partite totali</div>
-                </button>
-              ))}
-            </div>
-            {genMode === 'double' && (
-              <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 12, padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: 6 }}>
-                📍 Campo unico: casa/trasferta non si applica. Le partite vengono generate come <em>Andata</em> e <em>Ritorno</em> senza distinzione di campo.
-              </div>
-            )}
-            {genConfirm ? (
-              <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
-                <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 8 }}>
-                  ⚠️ Esistono già {(data.matches_giornata || []).filter(day => groups.some(g => day.day === g.name || day.day?.startsWith(g.name + ' · '))).reduce((s, d) => s + (d.items?.length || 0), 0)} partite di girone.
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>
-                  Rigenerando verranno cancellate e ricreate. I risultati già inseriti andranno persi.
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setGenConfirm(false)}>Annulla</button>
-                  <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setGenConfirm(false); generateGroupMatches(); }} disabled={genBusy}>
-                    Rigenera comunque
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <button className="adm-btn adm-btn-sm"
-                  onClick={() => hasGroupMatches ? setGenConfirm(true) : generateGroupMatches()}
-                  disabled={genBusy}>
-                  {genBusy ? 'Generazione…' : hasGroupMatches ? '🔄 Rigenera partite' : '⚽ Genera partite round-robin'}
-                </button>
-                {genMsg && <span style={{ fontSize: 13, color: genMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{genMsg}</span>}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
+
+      {/* ── Qualificazione ── */}
+      {groups.length > 0 && (
+        <div className="adm-card" style={{ marginBottom: 12 }}>
+          <div className="adm-card-header" style={{ cursor: 'pointer' }} onClick={() => setQualOpen(o => !o)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="adm-card-title">Qualificazione al turno successivo</span>
+              {qualConfirmed && !qualOpen && (
+                <span style={{ fontSize: 11, color: 'var(--brand-green)', background: 'rgba(0,230,118,0.1)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
+                  ✓ {teamsPerGroupAdvance} sqq/girone
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: 16, color: 'var(--fg-3)', transform: qualOpen ? 'rotate(180deg)' : 'none', transition: 'transform 180ms', display: 'inline-block' }}>▾</span>
+          </div>
+          {qualOpen && (
+            <div className="adm-card-body" style={{ paddingTop: 8 }}>
+              {qualRemodify ? (
+                <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 6 }}>⚠️ Attenzione</div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>Cambiando questa impostazione il bracket eliminatorio già generato non sarà più valido.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setQualRemodify(false)}>Annulla</button>
+                    <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setQualRemodify(false); setQualConfirmed(false); setPendingAdvance(teamsPerGroupAdvance); }}>Sì, rimodifica</button>
+                  </div>
+                </div>
+              ) : qualConfirmed ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px' }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{ADVANCE_LABELS[teamsPerGroupAdvance - 1] || `Top ${teamsPerGroupAdvance}`} per girone</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>
+                      {groups.length} × {teamsPerGroupAdvance} = {groups.length * teamsPerGroupAdvance} qualificate
+                    </div>
+                  </div>
+                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setQualRemodify(true)}>🔄 Rimodifica</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
+                    Quante squadre per girone passano alla fase eliminatoria?
+                    {minGroupSize < 4 && <span style={{ color: 'var(--fg-3)', fontSize: 12 }}> (gironi da {minGroupSize} squadre)</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {Array.from({ length: maxAdvanceOptions }, (_, i) => i + 1).map(n => {
+                      const isActive = selectedAdvance === n;
+                      return (
+                        <button key={n} type="button" onClick={() => setPendingAdvance(n)}
+                          style={{ flex: '1 1 80px', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                            background: isActive ? 'var(--brand-green)' : 'transparent',
+                            border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                            color: isActive ? '#000' : 'var(--fg-2)', fontWeight: isActive ? 700 : 400, fontSize: 13, transition: 'all 140ms' }}>
+                          <div>{ADVANCE_LABELS[n - 1] || `Top ${n}`}</div>
+                          <div style={{ fontSize: 11, color: isActive ? 'rgba(0,0,0,0.6)' : 'var(--fg-3)', marginTop: 2 }}>{groups.length * n} squadre totali</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 12 }}>
+                    {(() => { const tot = groups.length * selectedAdvance; const fase = tot <= 2 ? 'Finale' : tot <= 4 ? 'Semifinali' : tot <= 8 ? 'Quarti di finale' : tot <= 16 ? 'Ottavi di finale' : tot <= 32 ? 'Sedicesimi di finale' : `Turno di ${tot}`; return `${groups.length} gironi × ${selectedAdvance} = ${tot} qualificate → ${fase}`; })()}
+                  </div>
+                  <button className="adm-btn adm-btn-sm" onClick={() => confirmAdvance(selectedAdvance)}>Conferma</button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Partite di girone ── */}
+      {groups.length > 0 && allAssigned && (
+        <div className="adm-card" style={{ marginBottom: 12 }}>
+          <div className="adm-card-header" style={{ cursor: 'pointer' }} onClick={() => setMatchGenOpen(o => !o)}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span className="adm-card-title">Partite di girone</span>
+              {hasGroupMatches && !matchGenOpen && (
+                <span style={{ fontSize: 11, color: 'var(--brand-green)', background: 'rgba(0,230,118,0.1)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>✓ Generate</span>
+              )}
+            </div>
+            <span style={{ fontSize: 16, color: 'var(--fg-3)', transform: matchGenOpen ? 'rotate(180deg)' : 'none', transition: 'transform 180ms', display: 'inline-block' }}>▾</span>
+          </div>
+          {matchGenOpen && (
+            <div className="adm-card-body" style={{ paddingTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                {[
+                  { id: 'single', label: 'Sola andata', desc: 'Ogni coppia 1 volta', count: groups.reduce((s, g) => { const n = allTeams.filter(t => t.group_id === g.id).length; return s + n * (n - 1) / 2; }, 0) },
+                  { id: 'double', label: 'Andata e ritorno', desc: 'Ogni coppia 2 volte', count: groups.reduce((s, g) => { const n = allTeams.filter(t => t.group_id === g.id).length; return s + n * (n - 1); }, 0) },
+                ].map(opt => (
+                  <button key={opt.id} type="button" onClick={() => setGenMode(opt.id)}
+                    style={{ flex: 1, padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                      background: genMode === opt.id ? 'rgba(0,230,118,0.08)' : 'transparent',
+                      border: `1px solid ${genMode === opt.id ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                      color: '#fff', transition: 'all 140ms' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: genMode === opt.id ? 'var(--brand-green)' : '#fff', marginBottom: 2 }}>{opt.label}</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{opt.desc}</div>
+                    <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}><strong style={{ color: 'var(--brand-green)' }}>{opt.count}</strong> partite totali</div>
+                  </button>
+                ))}
+              </div>
+              {genConfirm ? (
+                <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 8 }}>⚠️ Esistono già partite di girone. Rigenerando verranno cancellate — i risultati andranno persi.</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setGenConfirm(false)}>Annulla</button>
+                    <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setGenConfirm(false); generateGroupMatches(); }} disabled={genBusy}>Rigenera comunque</button>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button className="adm-btn adm-btn-sm"
+                    onClick={() => hasGroupMatches ? setGenConfirm(true) : generateGroupMatches()}
+                    disabled={genBusy}>
+                    {genBusy ? 'Generazione…' : hasGroupMatches ? '🔄 Rigenera partite' : '⚽ Genera partite'}
+                  </button>
+                  {genMsg && <span style={{ fontSize: 13, color: genMsg.startsWith('Errore') ? '#FF3D3D' : 'var(--brand-green)' }}>{genMsg}</span>}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {groups.length === 0 ? (
         <div className="adm-card"><div className="adm-empty">{allTeams.length === 0 ? 'Registra prima le squadre, poi crea i gironi.' : 'Nessun girone. Usa "Setup auto" o "+ Girone".'}</div></div>
@@ -523,7 +531,7 @@ export function GironiSection({ data, onSave, onRefresh, tournamentId, teamsPerG
                 </div>
                 <div className="adm-form-actions" style={{ marginTop: 24 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name.trim() || busy}>Salva</button>
+                  <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name?.trim() || busy}>Salva</button>
                 </div>
               </div>
             </div>

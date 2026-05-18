@@ -179,7 +179,6 @@ function TeamForm({ team, groups, onSave, onClose }) {
 export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [deletingTeam, setDeletingTeam] = useState(null);
-  const [filterGroup, setFilterGroup] = useState('all');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
@@ -244,9 +243,6 @@ export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
   }
 
   const groupMap = Object.fromEntries(groups.map(g => [g.id, g.name]));
-  const filtered = filterGroup === 'all' ? teams
-    : filterGroup === 'none' ? teams.filter(t => !t.group_id)
-    : teams.filter(t => t.group_id === filterGroup);
 
   return (
     <div>
@@ -260,23 +256,9 @@ export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
-      {groups.length > 0 && (
-        <div className="rm-tabs" style={{ marginBottom: 12 }}>
-          <button className={`rm-tab ${filterGroup === 'all' ? 'on' : ''}`} onClick={() => setFilterGroup('all')}>Tutte ({teams.length})</button>
-          {groups.map(g => (
-            <button key={g.id} className={`rm-tab ${filterGroup === g.id ? 'on' : ''}`} onClick={() => setFilterGroup(g.id)}>
-              {g.name} ({teams.filter(t => t.group_id === g.id).length})
-            </button>
-          ))}
-          <button className={`rm-tab ${filterGroup === 'none' ? 'on' : ''}`} onClick={() => setFilterGroup('none')}>
-            Senza girone ({teams.filter(t => !t.group_id).length})
-          </button>
-        </div>
-      )}
-
       <div className="adm-card">
-        {filtered.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra{filterGroup !== 'all' ? ' in questo girone' : ' registrata'}</div>}
-        {filtered.map(t => {
+        {teams.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--fg-3)' }}>Nessuna squadra registrata</div>}
+        {teams.map(t => {
           const gName = groupMap[t.group_id] || (t.group_id ? t.group_id : 'Nessun girone');
           return (
             <div key={t.id || t.short} className="adm-item-row">
