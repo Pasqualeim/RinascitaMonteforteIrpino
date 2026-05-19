@@ -9,7 +9,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   const halfDuration = data.match_settings?.half_duration || 30;
 
   const [lm, setLm] = useState(() => JSON.parse(JSON.stringify(data.live_match)));
-  const [teams] = useState(data.teams || []);
+  const teams = data.teams || [];
   const [selectedKey, setSelectedKey] = useState(null);
   const [confirmStart, setConfirmStart] = useState(false);
   const [confirmTerminate, setConfirmTerminate] = useState(false);
@@ -47,6 +47,15 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     else if (action === 'adj_hs_-1') adjustScore('hs', -1);
     else if (action === 'adj_as_-1') adjustScore('as', -1);
   }
+
+  useEffect(() => {
+    setLm(JSON.parse(JSON.stringify(data.live_match)));
+    setDisplayMinute(data.live_match?.minute || 0);
+    setSelectedKey(null);
+    setGoalFlow(null);
+    setCardFlow(null);
+    setPending(null);
+  }, [tournamentId]);
 
   const lmRef = useRef(lm);
   useEffect(() => { lmRef.current = lm; }, [lm]);
@@ -138,6 +147,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     if (tournamentId) {
       rmAdminDomain.updateLive({
         tournament_id: tournamentId,
+        match_id: newLm.match_id || null,
         active: newLm.active ?? false,
         home_team_id: getTeamId(newLm.home?.short),
         away_team_id: getTeamId(newLm.away?.short),
@@ -150,16 +160,23 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
         events: newLm.events || [],
       }).catch(e => console.warn('Live sync:', e));
     }
+    if (updatedScorers && tournamentId) {
+      updatedScorers.forEach(s => {
+        if (s.id) {
+          rmAdminDomain.updateScorer(s.id, { goals: s.goals }).catch(e => console.warn('Scorer sync:', e));
+        }
+      });
+    }
   }
 
-  function updateScorer(playerName, teamShort, teamName, delta) {
+  function updateScorer(playerName, teamShort, delta) {
     let scorers = [...(data.scorers || [])];
-    const idx = scorers.findIndex(s => s.name === playerName && (s.short === teamShort || s.team === teamName));
+    const idx = scorers.findIndex(s => s.name === playerName && s.team === teamShort);
     if (idx >= 0) {
       scorers[idx] = { ...scorers[idx], goals: Math.max(0, (scorers[idx].goals || 0) + delta) };
     } else if (delta > 0) {
-      const t = teams.find(x => x.short === teamShort || x.name === teamName);
-      scorers.push({ name: playerName, team: teamName, short: teamShort || t?.short || '', color: t?.color || '#00E676', goals: delta });
+      const t = teams.find(x => x.short === teamShort);
+      scorers.push({ name: playerName, team: teamShort, flag: t?.flag || '', color: t?.color || '#00E676', goals: delta });
     }
     return scorers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
   }
@@ -169,6 +186,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     const updated = {
       ...lm, active: true, phase: 'first_half',
       timer_started_at: Date.now(),
+      match_id: selectedMatchObj.id || null,
       home: selectedMatchObj.home, away: selectedMatchObj.away,
       hs: 0, as: 0, minute: 0, events: [],
     };
@@ -179,7 +197,15 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   }
 
   function doTerminate() {
-    persistLm({ ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute });
+    const terminatedLm = { ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute };
+    persistLm(terminatedLm);
+    if (lm.match_id) {
+      rmAdminDomain.updateMatch(lm.match_id, {
+        status: 'ft',
+        home_score: lm.hs ?? 0,
+        away_score: lm.as ?? 0,
+      }).catch(e => console.warn('Match finish sync:', e));
+    }
     setConfirmTerminate(false);
   }
 
@@ -207,24 +233,26 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     const { scoringSide, scoringShort } = goalFlow;
     const autogolFromShort = isAutogolStep ? goalFlow.autogolFromShort : null;
 
-    const eventTeamShort = autogolFromShort || scoringShort;
-    const eventTeamObj = teams.find(t => t.short === eventTeamShort)
-      || (lm.home?.short === eventTeamShort ? lm.home : lm.away);
+    // Per autogol: _ts indica il lato beneficiante (scoringShort), non il lato del giocatore
+    const displayTeamShort = scoringShort;
+    const playerTeamShort = autogolFromShort || scoringShort;
+    const playerTeamObj = teams.find(t => t.short === playerTeamShort)
+      || (lm.home?.short === playerTeamShort ? lm.home : lm.away);
 
     const newEvent = {
       min: displayMinute,
       type: 'goal',
       player: playerName,
-      team: eventTeamObj?.name || '',
-      _ts: eventTeamShort,
-      ...(autogolFromShort ? { _autogol: true } : {}),
+      team: playerTeamObj?.name || '',
+      _ts: displayTeamShort,
+      ...(autogolFromShort ? { _autogol: true, _player_ts: autogolFromShort } : {}),
     };
     const events = [...(lm.events || []), newEvent].sort((a, b) => a.min - b.min);
     const updatedLm = { ...lm, [scoringSide]: (lm[scoringSide] || 0) + 1, events, minute: displayMinute };
 
     let updatedScorers = null;
     if (!autogolFromShort) {
-      updatedScorers = updateScorer(playerName, scoringShort, eventTeamObj?.name || '', 1);
+      updatedScorers = updateScorer(playerName, scoringShort, 1);
     }
 
     persistLm(updatedLm, updatedScorers);
@@ -260,10 +288,12 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     const events = lm.events.filter((_, i) => i !== origIdx);
     const updatedLm = { ...lm, events };
     let updatedScorers = null;
-    if (ev.type === 'goal' && !ev._autogol) {
+    if (ev.type === 'goal') {
       const side = ev._ts === lm.home?.short ? 'hs' : 'as';
       updatedLm[side] = Math.max(0, (lm[side] || 0) - 1);
-      updatedScorers = updateScorer(ev.player, ev._ts || '', ev.team, -1);
+      if (!ev._autogol) {
+        updatedScorers = updateScorer(ev.player, ev._ts || '', -1);
+      }
     }
     persistLm(updatedLm, updatedScorers);
   }
@@ -305,7 +335,23 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
             <div style={{ padding: '0 12px 12px' }}>
               {allMatches.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--fg-3)', margin: '8px 0 0' }}>Nessuna partita da giocare.</p>
-              ) : allMatches.map((m) => {
+              ) : (() => {
+                // Group by _group preserving order
+                const grouped = [];
+                const seen = new Map();
+                for (const m of allMatches) {
+                  const g = m._group || '';
+                  if (!seen.has(g)) { seen.set(g, []); grouped.push({ label: g, items: seen.get(g) }); }
+                  seen.get(g).push(m);
+                }
+                return grouped.map(({ label, items }) => (
+                  <div key={label || '_'}>
+                    {label && (
+                      <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--fg-3)', letterSpacing: '0.1em', padding: '8px 0 4px', borderBottom: '1px solid var(--border-1)', marginBottom: 8 }}>
+                        {label} · {items.length} {items.length === 1 ? 'partita' : 'partite'}
+                      </div>
+                    )}
+                    {items.map((m) => {
                 const k = matchKey(m);
                 const isSelected = k === activeKey;
                 const isToday = m.date === today || m.date === 'Oggi';
@@ -318,7 +364,6 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                     borderRadius: 8, cursor: 'pointer', color: '#fff', width: '100%',
                     textAlign: 'left', marginBottom: 8,
                   }}>
-                    {/* Date + time column */}
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 54, flexShrink: 0 }}>
                       {dateLabel && (
                         <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: isToday ? 'var(--brand-green)' : 'var(--fg-3)', letterSpacing: '0.08em' }}>
@@ -329,7 +374,6 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                         {m.time || '--:--'}
                       </span>
                     </div>
-                    {/* Teams */}
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 16 }}>{getFlag(m.home)}</span>
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.home?.short}</span>
@@ -337,14 +381,15 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.away?.short}</span>
                       <span style={{ fontSize: 16 }}>{getFlag(m.away)}</span>
                     </div>
-                    {/* Group + check */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {m._group && <span style={{ fontSize: 10, color: 'var(--fg-3)' }}>{m._group}</span>}
                       {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 14 }}>✓</span>}
                     </div>
                   </button>
                 );
               })}
+                  </div>
+                ))}
+              )()}
             </div>
           </div>
           <button

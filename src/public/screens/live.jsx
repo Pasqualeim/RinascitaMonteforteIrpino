@@ -1,11 +1,11 @@
 import { DEFAULT_LIVE_MATCH } from '../../data.js';
 import { EmptyState, LiveBoard, MatchRow } from '../../components.jsx';
+import { rmDeriveMatchesToday } from '../../domain.js';
 
 export function LiveScreen({ data, tournament }) {
   const liveMatch = tournament?.live_match || data?.live_match || DEFAULT_LIVE_MATCH;
-  const today = new Date().toISOString().slice(0, 10);
-  const allMatches = tournament?.matches || data?.matches || [];
-  const matchesToday = allMatches.filter(m => m.date === today || m.status === 'live').slice(0, 10);
+  const matchesGiornata = tournament?.matches_giornata || data?.matches_giornata || [];
+  const matchesToday = rmDeriveMatchesToday(matchesGiornata).slice(0, 10);
   return (
     <div data-screen-label="live">
       <section className="rm-section">

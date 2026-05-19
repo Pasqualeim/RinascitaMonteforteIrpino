@@ -8,7 +8,7 @@ function playerDisplayName(p) {
   return p.name || '';
 }
 
-function TeamForm({ team, groups, onSave, onClose }) {
+function TeamForm({ team, existingTeams, groups, onSave, onClose }) {
   const nations = DEFAULT_NATIONS_2026;
   const [formError, setFormError] = useState('');
   const [editing, setEditing] = useState({
@@ -31,8 +31,15 @@ function TeamForm({ team, groups, onSave, onClose }) {
     setSelectedNationShort(ns);
     const n = nations.find(x => x.short === ns);
     if (n) {
+      const alreadyTaken = existingTeams.some(t => t.short === ns && t.id !== team.id);
+      if (alreadyTaken) {
+        setFormError(`${n.flag} ${n.name} già registrata. Seleziona un'altra nazione.`);
+      } else {
+        setFormError('');
+      }
       setEditing(f => ({ ...f, nation: n.name, name: n.name, flag: n.flag, short: n.short }));
     } else {
+      setFormError('');
       setEditing(f => ({ ...f, nation: '', name: '', flag: '', short: '' }));
     }
   }
@@ -40,7 +47,16 @@ function TeamForm({ team, groups, onSave, onClose }) {
   function addPlayer(e) {
     e.preventDefault();
     if (!newNome && !newCognome) return;
-    const p = { id: Date.now().toString(), nome: newNome.trim(), cognome: newCognome.trim(), name: [newNome.trim(), newCognome.trim()].filter(Boolean).join(' ') };
+    const nome = newNome.trim();
+    const cognome = newCognome.trim();
+    const fullName = [nome, cognome].filter(Boolean).join(' ').toLowerCase();
+    const duplicate = editing.players.some(p => [p.nome, p.cognome].filter(Boolean).join(' ').toLowerCase() === fullName);
+    if (duplicate) {
+      setFormError(`Giocatore "${[nome, cognome].filter(Boolean).join(' ')}" già presente in questa squadra.`);
+      return;
+    }
+    setFormError('');
+    const p = { id: Date.now().toString(), nome, cognome, name: [nome, cognome].filter(Boolean).join(' ') };
     setEditing(f => ({ ...f, players: [...f.players, p] }));
     setNewNome('');
     setNewCognome('');
@@ -165,6 +181,8 @@ function TeamForm({ team, groups, onSave, onClose }) {
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
               <button className="adm-btn adm-btn-sm" onClick={() => {
                 if (!editing.short) { setFormError('Seleziona una nazione per la squadra'); return; }
+                const alreadyTaken = existingTeams.some(t => t.short === editing.short && t.id !== team.id);
+                if (alreadyTaken) { setFormError(`${editing.flag} ${editing.nation} già registrata. Seleziona un'altra nazione.`); return; }
                 setFormError('');
                 onSave(editing);
               }}>Salva Squadra</button>
@@ -210,7 +228,7 @@ export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
         const res = await rmAdminDomain.createTeam({ name: item.name, short: item.short, nation: item.nation, flag: item.flag, color: item.color });
         const newId = res?.data?.id || res?.id;
         if (newId) {
-          await rmAdminDomain.upsertRegistration({ team_id: newId, tournament_id: tournamentId, group_id: item.group_id || null });
+          await rmAdminDomain.upsertRegistration({ team_id: newId, tournament_id: tournamentId, group_id: item.group_id || null, captain: item.captain || null, players: item.players || [] });
         }
       }
       setEditing(null);
@@ -226,6 +244,8 @@ export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
     setBusy(true);
     setErrMsg('');
     try {
+      const teamScorers = (data.scorers || []).filter(s => s.team === team.short);
+      await Promise.all(teamScorers.filter(s => s.id).map(s => rmAdminDomain.deleteScorer(s.id).catch(() => {})));
       if (team.registration_id) {
         await rmAdminDomain.deleteRegistration(team.registration_id);
       }
@@ -275,7 +295,7 @@ export function TeamsSection({ data, onSave, onRefresh, tournamentId }) {
           );
         })}
       </div>
-      {editing && <TeamForm team={editing} groups={groups} onSave={saveItem} onClose={() => setEditing(null)} />}
+      {editing && <TeamForm team={editing} existingTeams={teams} groups={groups} onSave={saveItem} onClose={() => setEditing(null)} />}
       {deletingTeam && (
         <Confirm
           msg="Eliminare questa squadra?"

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions, rmNormalizeTournamentData } from '../data.js';
-import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, BellIcon, MenuIcon } from './shared.jsx';
+import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, BellIcon, SettingsIcon } from './shared.jsx';
 import { LoginScreen } from './auth.jsx';
 import { DashboardSection } from './sections/dashboard.jsx';
 import { LiveSection } from './sections/live.jsx';
@@ -219,7 +219,7 @@ function AdminApp() {
           <BellIcon size={24}/><span>Avvisi</span>
         </button>
         <button className={`adm-bn-item ${bottomNav === 'settings' ? 'on' : ''}`} onClick={() => navigateTo('settings')}>
-          <MenuIcon size={24}/><span>Impost.</span>
+          <SettingsIcon size={24}/><span>Impost.</span>
         </button>
       </nav>
 

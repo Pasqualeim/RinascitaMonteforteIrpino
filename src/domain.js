@@ -64,9 +64,10 @@ export function rmHydrateTournamentData(saved, defaults = {}) {
 }
 
 export function rmDeriveMatchesToday(matchesGiornata) {
+  const todayISO = new Date().toISOString().slice(0, 10);
   return (matchesGiornata || [])
     .flatMap(group => group.items || [])
-    .filter(match => match?.home && match?.away && (match.status === 'live' || match.date === 'Oggi'))
+    .filter(match => match?.home && match?.away && (match.status === 'live' || match.date === 'Oggi' || match.date === todayISO))
     .slice(0, 5);
 }
 

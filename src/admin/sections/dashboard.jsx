@@ -1,5 +1,4 @@
-import { GridIcon, CalIcon, StarIcon, UsersIcon } from '../shared.jsx';
-import { MatchesSection } from './matches.jsx';
+import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon } from '../shared.jsx';
 
 export function DashboardSection({ data, onSave, onRefresh, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
@@ -17,26 +16,9 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <h2 className="adm-section-title" style={{ margin: 0 }}>{data.edition?.name || 'Rinascita Cup 2026'}</h2>
       <p className="adm-section-sub">{data.edition?.location || 'Campo Sportivo Monteforte Irpino'}</p>
 
-      {tournamentCategories.length > 0 && (
-        <div style={{ marginTop: 10, marginBottom: 4 }}>
-          {activeCategory && (
-            <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 6 }}>
-              Stai gestendo: <strong style={{ color: 'var(--brand-green)' }}>{activeCategory.name}</strong>
-            </div>
-          )}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {tournamentCategories.map(t => {
-              const isActive = t.id === tournamentId;
-              return (
-                <span key={t.id} style={{
-                  padding: '4px 12px', borderRadius: 16, fontSize: 12, fontWeight: 600,
-                  background: isActive ? 'var(--brand-green)' : 'rgba(0,230,118,0.08)',
-                  border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-brand)'}`,
-                  color: isActive ? '#000' : 'var(--brand-green)',
-                }}>{t.name}</span>
-              );
-            })}
-          </div>
+      {activeCategory && (
+        <div style={{ marginTop: 10, marginBottom: 4, fontSize: 12, color: 'var(--fg-3)' }}>
+          Stai gestendo: <strong style={{ color: 'var(--brand-green)' }}>{activeCategory.name}</strong>
         </div>
       )}
 
@@ -66,15 +48,12 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
         <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}><GridIcon size={28}/><span>Gironi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('fasi')}><GridIcon size={28}/><span>Eliminatorie</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
       </div>
 
-      {/* ── Regia ── */}
-      <div className="adm-eyebrow">Centro di controllo</div>
-      <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Regia</h3>
-
-      {/* Live */}
+      {/* Live attiva */}
       {liveMatch.active && (
-        <div className="adm-card" style={{ marginBottom: 12, border: '1px solid rgba(255,61,61,0.4)', background: 'rgba(255,61,61,0.04)' }}>
+        <div className="adm-card" style={{ marginBottom: 16, border: '1px solid rgba(255,61,61,0.4)', background: 'rgba(255,61,61,0.04)' }}>
           <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 12, color: '#FF3D3D', fontWeight: 700, flexShrink: 0 }}>🔴 LIVE</span>
             <span style={{ fontSize: 16, fontFamily: 'var(--font-display)', color: '#fff', flex: 1, letterSpacing: '0.04em' }}>
@@ -85,8 +64,6 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
           </div>
         </div>
       )}
-
-      <MatchesSection data={data} onSave={onSave} onRefresh={onRefresh} tournamentId={tournamentId} compact />
 
       {/* Portale */}
       <div className="adm-eyebrow">Sito pubblico</div>

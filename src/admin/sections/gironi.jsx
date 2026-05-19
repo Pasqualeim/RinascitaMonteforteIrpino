@@ -256,13 +256,19 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
 
             {groups.length === 0 ? (
               <>
-                <div className="adm-form-row" style={{ alignItems: 'center', marginBottom: 12 }}>
-                  <div className="adm-form-group" style={{ flex: '0 0 140px' }}>
-                    <label className="adm-label">N° gironi</label>
-                    <input type="number" className="adm-input" min="1" max="16"
-                      value={effectiveNumGroups} onChange={e => setNumGroups(parseInt(e.target.value) || 1)} />
+                <div style={{ marginBottom: 12 }}>
+                  <label className="adm-label">N° gironi</label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                    {[1, 2, 3, 4, 6, 8].map(n => (
+                      <button key={n} type="button" onClick={() => setNumGroups(n)} style={{
+                        width: 48, height: 48, borderRadius: 10, border: `2px solid ${effectiveNumGroups === n ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                        background: effectiveNumGroups === n ? 'rgba(0,230,118,0.12)' : 'var(--bg-surface)',
+                        color: effectiveNumGroups === n ? 'var(--brand-green)' : 'var(--fg-2)',
+                        fontFamily: 'var(--font-display)', fontSize: 22, cursor: 'pointer', transition: 'all 0.15s',
+                      }}>{n}</button>
+                    ))}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', paddingTop: 20 }}>
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 8 }}>
                     → {GROUP_LETTERS.slice(0, effectiveNumGroups).split('').map(l => `Girone ${l}`).join(', ')}
                   </div>
                 </div>

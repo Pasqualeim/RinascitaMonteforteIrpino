@@ -35,12 +35,47 @@ export async function buildBootstrap(editionId: string) {
       db.from("standings_view").select("*").eq("tournament_id", t.id),
     ]);
 
-    const groups   = groupsRes.data || [];
-    const regs     = regsRes.data || [];
-    const matches  = matchesRes.data || [];
-    const live     = liveRes.data;
-    const scorers  = scorersRes.data || [];
+    const matchIds = (matchesRes.data || []).map((m: any) => m.id);
+    const goalEventsRes = matchIds.length > 0
+      ? await db.from("match_events")
+          .select("player_name, team_id, teams!team_id(short, flag)")
+          .eq("event_type", "goal")
+          .in("match_id", matchIds)
+      : { data: [] };
+
+    const groups      = groupsRes.data || [];
+    const regs        = regsRes.data || [];
+    const matches     = matchesRes.data || [];
+    const live        = liveRes.data;
+    const manualScorers = scorersRes.data || [];
+    const goalEvents  = goalEventsRes.data || [];
     const standingsRaw = standingsRes.data || [];
+
+    // Build auto-scorers from match_events goals
+    const autoMap: Record<string, { name: string; team: string; flag: string; goals: number }> = {};
+    for (const ev of goalEvents) {
+      if (!ev.player_name) continue;
+      const key = `${ev.player_name}__${(ev as any).teams?.short || ev.team_id}`;
+      if (!autoMap[key]) autoMap[key] = { name: ev.player_name, team: (ev as any).teams?.short || "", flag: (ev as any).teams?.flag || "", goals: 0 };
+      autoMap[key].goals++;
+    }
+    // Also count goals from live match events (not yet committed to match_events)
+    if (live?.active && Array.isArray(live.events)) {
+      for (const ev of live.events) {
+        if (ev.type !== 'goal' || !ev.player) continue;
+        const teamShort = ev._ts || "";
+        const key = `${ev.player}__${teamShort}`;
+        if (!autoMap[key]) autoMap[key] = { name: ev.player, team: teamShort, flag: "", goals: 0 };
+        autoMap[key].goals++;
+      }
+    }
+    // Merge: manual overrides auto (staff correction), auto fills new players
+    const manualKeys = new Set(manualScorers.map((s: any) => s.player_name));
+    const autoOnlyScorers = Object.values(autoMap).filter(a => !manualKeys.has(a.name));
+    const mergedScorers = [
+      ...manualScorers.map((s: any) => ({ id: s.id, name: s.player_name, team: s.teams?.short || "", flag: s.teams?.flag || "", goals: s.goals })),
+      ...autoOnlyScorers.map(a => ({ id: null, name: a.name, team: a.team, flag: a.flag, goals: a.goals })),
+    ].sort((a, b) => b.goals - a.goals);
 
     const teams = regs.map((r: any) => ({
       id: r.teams.id, name: r.teams.name, short: r.teams.short,
@@ -87,7 +122,7 @@ export async function buildBootstrap(editionId: string) {
       live_match: liveMatch,
       matches,
       matches_giornata: Object.values(phaseMap),
-      scorers: scorers.map((s: any) => ({ id: s.id, name: s.player_name, team: s.teams?.short || "", flag: s.teams?.flag || "", goals: s.goals })),
+      scorers: mergedScorers,
     };
   }));
 

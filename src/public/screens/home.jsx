@@ -1,5 +1,6 @@
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
 import { EmptyState, Countdown, SponsorWink, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
+import { rmDeriveMatchesToday } from '../../domain.js';
 
 function fmtDateIt(iso) {
   if (!iso) return '';
@@ -11,15 +12,18 @@ function fmtDateIt(iso) {
 
 export function HomeScreen({ onNav, data, tournament }) {
   const d = data || {};
-  const liveMatch       = d.live_match       || DEFAULT_LIVE_MATCH;
-  const matchesToday    = d.matches_today    || DEFAULT_MATCHES_TODAY;
-  const standingsGroups = d.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
+  const liveMatch       = tournament?.live_match       || d.live_match       || DEFAULT_LIVE_MATCH;
+  const matchesGiornata = tournament?.matches_giornata || [];
+  const matchesToday    = matchesGiornata.length > 0
+    ? rmDeriveMatchesToday(matchesGiornata)
+    : (d.matches_today || DEFAULT_MATCHES_TODAY);
+  const standingsGroups = tournament?.standings_groups || d.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
   const standingsA      = standingsGroups[0]?.rows || [];
-  const scorers         = d.scorers          || DEFAULT_SCORERS;
+  const scorers         = tournament?.scorers          || d.scorers          || DEFAULT_SCORERS;
   const news            = d.news             || DEFAULT_NEWS;
   const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
-  const teams           = d.teams            || [];
-  const groups          = d.groups           || [];
+  const teams           = tournament?.teams  || d.teams            || [];
+  const groups          = tournament?.groups || d.groups           || [];
 
   // Edition metadata — dynamic from bootstrap, hardcoded defaults as fallback
   const edition          = d.edition || {};

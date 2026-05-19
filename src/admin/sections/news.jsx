@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
+function fmtDate(raw) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;
+  return d.toLocaleString('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
 export function NewsSection({ data, onSave, onRefresh, editionId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -10,12 +17,6 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
 
   const news = data.news || [];
 
-  const TONE_OPTS = [
-    { value: '', label: 'Normale' },
-    { value: 'alert', label: 'Alert (rosso)' },
-    { value: 'warn', label: 'Attenzione (giallo)' },
-  ];
-  const CAT_OPTS = ['News', 'Avviso', 'Regolamento', 'Eventi', 'Sponsor'];
 
   if (!editionId) {
     return (
@@ -61,13 +62,13 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
   }
 
   function newItem() {
-    setEditing({ category: 'News', tone: '', date: new Date().toLocaleDateString('it-IT', { day: 'numeric', month: 'short' }), title: '', body: '', pinned: false });
+    setEditing({ title: '', body: '' });
   }
 
   return (
     <div>
       <h2 className="adm-section-title">Avvisi & News</h2>
-      <p className="adm-section-sub">Gestisci la bacheca pubblica. Gli avvisi in evidenza appaiono in cima.</p>
+      <p className="adm-section-sub">Gestisci la bacheca pubblica.</p>
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
@@ -82,8 +83,8 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
           news.map(n => (
             <div key={n.id} className="adm-item-row">
               <div className="adm-item-row-body">
-                <div className="adm-item-title">{n.pinned ? '📌 ' : ''}{n.title || '(senza titolo)'}</div>
-                <div className="adm-item-meta">{n.category || n.cat} · {n.date} {n.tone ? `· ${n.tone}` : ''}</div>
+                <div className="adm-item-title">{n.title || '(senza titolo)'}</div>
+                <div className="adm-item-meta">{fmtDate(n.date || n.created_at)}</div>
               </div>
               <div className="adm-item-actions">
                 <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...n })}><EditIcon size={16}/></button>
@@ -95,8 +96,7 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
       </div>
 
       {editing && (
-        <NewsForm item={editing} catOpts={CAT_OPTS} toneOpts={TONE_OPTS}
-          onSave={saveItem} onClose={() => setEditing(null)} busy={busy} />
+        <NewsForm item={editing} onSave={saveItem} onClose={() => setEditing(null)} busy={busy} />
       )}
       {deleting && (
         <Confirm msg="Eliminare questo avviso?" onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)} />
@@ -105,7 +105,7 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
   );
 }
 
-function NewsForm({ item, catOpts, toneOpts, onSave, onClose, busy }) {
+function NewsForm({ item, onSave, onClose, busy }) {
   const [form, setForm] = useState({ ...item });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
@@ -117,24 +117,6 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose, busy }) {
         </div>
         <div className="adm-modal-scroll">
           <div className="adm-form">
-            <div className="adm-form-row">
-              <div className="adm-form-group">
-                <label className="adm-label">Categoria</label>
-                <select className="adm-select" value={form.category || form.cat || ''} onChange={e => set('category', e.target.value)}>
-                  {catOpts.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="adm-form-group">
-                <label className="adm-label">Tono</label>
-                <select className="adm-select" value={form.tone || ''} onChange={e => set('tone', e.target.value)}>
-                  {toneOpts.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="adm-form-group">
-              <label className="adm-label">Data</label>
-              <input className="adm-input" value={form.date || ''} onChange={e => set('date', e.target.value)} placeholder="es. 29 Giu · 14:20" />
-            </div>
             <div className="adm-form-group">
               <label className="adm-label">Titolo</label>
               <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo dell'avviso" required />
@@ -143,10 +125,6 @@ function NewsForm({ item, catOpts, toneOpts, onSave, onClose, busy }) {
               <label className="adm-label">Testo</label>
               <textarea className="adm-textarea" value={form.body} onChange={e => set('body', e.target.value)} placeholder="Descrizione..." rows={4} />
             </div>
-            <label className="adm-checkbox-row">
-              <input type="checkbox" checked={!!form.pinned} onChange={e => set('pinned', e.target.checked)} />
-              In evidenza (📌)
-            </label>
             <div className="adm-form-actions">
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
               <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim() || busy}>Salva</button>

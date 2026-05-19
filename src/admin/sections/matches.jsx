@@ -205,7 +205,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
     <div>
       {compact ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <h3 className="adm-section-title" style={{ margin: 0 }}>Partite <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--fg-3)', fontFamily: 'var(--font-body)' }}>{totalMatches} totali</span></h3>
+          <span style={{ fontSize: 13, color: 'var(--fg-3)' }}>{totalMatches} partite</span>
           <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
         </div>
       ) : (
@@ -410,23 +410,28 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
             {/* ── Stato ── */}
             <div className="adm-form-group">
               <label className="adm-label">Stato</label>
-              <select className="adm-select" value={form.status || 'sch'} onChange={e => set('status', e.target.value)}>
+              <select className="adm-select" value={form.status || 'sch'} onChange={e => {
+                const s = e.target.value;
+                setForm(f => ({ ...f, status: s, hs: s === 'ft' ? (f.hs ?? 0) : null, as: s === 'ft' ? (f.as ?? 0) : null }));
+              }}>
                 <option value="sch">Da giocare</option>
                 <option value="ft">Giocata</option>
               </select>
             </div>
 
-            {/* ── Risultato ── */}
+            {/* ── Risultato (solo per partite giocate) ── */}
+            {(form.status === 'ft' || form.status === 'live') && (
             <div className="adm-form-row">
               <div className="adm-form-group">
                 <label className="adm-label">Gol Casa</label>
-                <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+                <input type="number" className="adm-input" value={form.hs ?? 0} onChange={e => set('hs', e.target.value === '' ? 0 : parseInt(e.target.value))} min="0" />
               </div>
               <div className="adm-form-group">
                 <label className="adm-label">Gol Ospite</label>
-                <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+                <input type="number" className="adm-input" value={form.as ?? 0} onChange={e => set('as', e.target.value === '' ? 0 : parseInt(e.target.value))} min="0" />
               </div>
             </div>
+            )}
 
             {/* ── Data e Orario ── */}
             <div className="adm-form-group">

@@ -55,7 +55,7 @@ function App() {
     [data, activeTournamentId]
   );
 
-  const hasLive = !!(data?.live_match?.active);
+  const hasLive = !!(activeTournament?.live_match?.active || data?.live_match?.active);
 
   return (
     <div className="rm-app">

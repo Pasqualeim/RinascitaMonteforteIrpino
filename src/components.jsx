@@ -81,7 +81,7 @@ function BottomNav({ current, onNav, hasLive }) {
     { id: 'home',     label: 'Home',      icon: HomeIcon },
     { id: 'live',     label: 'Live',      icon: ZapIcon,  live: true },
     { id: 'calendar', label: 'Calendario', icon: CalIcon },
-    { id: 'table',    label: 'Classifica', icon: GridIcon },
+    { id: 'table',    label: 'Classifica', icon: TrophyIcon },
   ];
 
   const more = [
@@ -92,7 +92,7 @@ function BottomNav({ current, onNav, hasLive }) {
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
-  const isMoreActive = ['teams','events','news','honors'].includes(current);
+  const isMoreActive = drawerOpen || ['teams','events','news','honors'].includes(current);
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }
@@ -229,13 +229,17 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
       </div>
       <div className="rm-match-team rm-match-team--home">
         <span className="rm-team-name">{homeTeam.name}</span>
-        <span className="rm-crest" style={{ borderColor: homeTeam.color || 'var(--brand-green)', color: homeTeam.color || 'var(--brand-green)' }}>{homeTeam.short}</span>
+        <span className="rm-crest" style={{ borderColor: homeTeam.color || 'var(--brand-green)', color: homeTeam.color || 'var(--brand-green)', fontSize: homeTeam.flag ? 18 : undefined }}>
+          {homeTeam.flag || homeTeam.short}
+        </span>
       </div>
       <div className="rm-match-score">
         {hs != null ? <span>{hs}<i>–</i>{as_}</span> : <span className="rm-vs">VS</span>}
       </div>
       <div className="rm-match-team rm-match-team--away">
-        <span className="rm-crest" style={{ borderColor: awayTeam.color || 'var(--brand-green)', color: awayTeam.color || 'var(--brand-green)' }}>{awayTeam.short}</span>
+        <span className="rm-crest" style={{ borderColor: awayTeam.color || 'var(--brand-green)', color: awayTeam.color || 'var(--brand-green)', fontSize: awayTeam.flag ? 18 : undefined }}>
+          {awayTeam.flag || awayTeam.short}
+        </span>
         <span className="rm-team-name">{awayTeam.name}</span>
       </div>
     </div>
@@ -290,7 +294,7 @@ function LiveBoard({ match }) {
       </div>
       <div className="rm-live-board">
         <div className="rm-live-team">
-          <div className="rm-live-crest" style={{ borderColor: home.color, color: home.color }}>{home.short}</div>
+          <div className="rm-live-crest" style={{ borderColor: home.color, color: home.color, fontSize: home.flag ? 28 : undefined }}>{home.flag || home.short}</div>
           <div className="rm-live-team-name">{home.name}</div>
           <div className="rm-live-team-meta">Casa</div>
         </div>
@@ -299,7 +303,7 @@ function LiveBoard({ match }) {
           <div className="rm-live-min">{phaseLabel}{!isHalfTime && ` · ${displayMinute}'`}</div>
         </div>
         <div className="rm-live-team">
-          <div className="rm-live-crest" style={{ borderColor: away.color, color: away.color }}>{away.short}</div>
+          <div className="rm-live-crest" style={{ borderColor: away.color, color: away.color, fontSize: away.flag ? 28 : undefined }}>{away.flag || away.short}</div>
           <div className="rm-live-team-name">{away.name}</div>
           <div className="rm-live-team-meta">Ospite</div>
         </div>
@@ -364,10 +368,10 @@ function TeamCard({ team }) {
         <div className="rm-team-card-name">{team.name}</div>
         <div className="rm-team-card-sub">{team.captain ? 'Cap. ' + team.captain : team.flag || ''}</div>
         <div className="rm-team-stats">
-          <span><b>{team.played}</b> G</span>
-          <span><b>{team.won}</b> V</span>
-          <span><b>{team.goals}</b> GF</span>
-          <span className="rm-team-stat-pts"><b>{team.points}</b> Pt</span>
+          <span><b>{team.played ?? 0}</b> G</span>
+          <span><b>{team.won ?? 0}</b> V</span>
+          <span><b>{team.goals ?? 0}</b> GF</span>
+          <span className="rm-team-stat-pts"><b>{team.points ?? 0}</b> Pt</span>
         </div>
       </div>
     </div>
