@@ -67,8 +67,10 @@ function AdminApp() {
     const tournament = bootstrapCache.tournaments?.find(t => t.id === tournamentId)
       || bootstrapCache.tournaments?.[0];
     if (!tournament) return;
+    const localData = rmGetAllData();
     setData(rmMergeDefaults(rmNormalizeTournamentData({
       ...bootstrapCache,
+      match_settings:   bootstrapCache.match_settings || localData.match_settings,
       groups:           tournament.groups           || [],
       teams:            tournament.teams             || [],
       standings_groups: tournament.standings_groups  || [],

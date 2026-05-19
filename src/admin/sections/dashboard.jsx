@@ -1,4 +1,4 @@
-import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon } from '../shared.jsx';
+import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon, TrophyIcon } from '../shared.jsx';
 
 export function DashboardSection({ data, onSave, onRefresh, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
@@ -48,6 +48,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
         <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}><GridIcon size={28}/><span>Gironi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('fasi')}><GridIcon size={28}/><span>Eliminatorie</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
       </div>
 

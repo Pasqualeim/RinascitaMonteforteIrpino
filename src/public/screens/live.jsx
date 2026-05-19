@@ -26,7 +26,7 @@ export function LiveScreen({ data, tournament }) {
           </div>
         </div>
         {matchesToday.length === 0
-          ? <EmptyState icon="⚡" title="Nessuna partita in corso" sub="Quando inizia una partita, il live comparirà qui."/>
+          ? <EmptyState icon="⚡" title="Nessuna partita oggi" sub="Non ci sono partite programmate per oggi."/>
           : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}</div>
         }
       </section>

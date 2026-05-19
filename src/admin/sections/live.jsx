@@ -5,7 +5,7 @@ function matchKey(m) {
   return `${m.home?.short || ''}-${m.away?.short || ''}-${m.date || ''}-${m.time || ''}`;
 }
 
-export function LiveSection({ data, onSave, editionId, tournamentId }) {
+export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }) {
   const halfDuration = data.match_settings?.half_duration || 30;
 
   const [lm, setLm] = useState(() => JSON.parse(JSON.stringify(data.live_match)));
@@ -77,18 +77,21 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
 
   const allMatches = (data.matches_giornata || [])
-    .flatMap(g => (g.items || []).map(m => ({ ...m, _group: g.label || g.name || '' })))
-    .filter(m => m.home && m.away && m.status === 'sch')
+    .flatMap(g => (g.items || []).map(m => ({ ...m, _group: g.day || '' })))
+    .filter(m => m.home && m.away && (m.status === 'sch' || m.status === 'ft'))
     .sort((a, b) => {
+      // sch before ft, then by date/time
+      if (a.status !== b.status) return a.status === 'sch' ? -1 : 1;
       const da = a.date === 'Oggi' ? today : (a.date || '9999');
       const db = b.date === 'Oggi' ? today : (b.date || '9999');
       if (da !== db) return da < db ? -1 : 1;
       return (a.time || '00:00') < (b.time || '00:00') ? -1 : 1;
     });
 
-  const todayMatches = allMatches.filter(m => (m.date === 'Oggi' || m.date === today));
+  const todayMatches = allMatches.filter(m => m.status === 'sch' && (m.date === 'Oggi' || m.date === today));
+  const scheduledMatches = allMatches.filter(m => m.status === 'sch');
   const smartDefault = (() => {
-    if (!todayMatches.length) return allMatches[0] || null;
+    if (!todayMatches.length) return scheduledMatches[0] || null;
     let best = todayMatches[0], bestDelta = Infinity;
     for (const m of todayMatches) {
       if (!m.time) continue;
@@ -100,7 +103,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   })();
   const smartDefaultKey = smartDefault ? matchKey(smartDefault) : null;
   const activeKey = selectedKey || smartDefaultKey;
-  const selectedMatchObj = allMatches.find(m => matchKey(m) === activeKey) || null;
+  const selectedMatchObj = scheduledMatches.find(m => matchKey(m) === activeKey) || null;
 
   function formatDateLabel(key) {
     if (key === '__today__') return 'Oggi';
@@ -181,32 +184,109 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
     return scorers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
   }
 
+  function updateGiornataMatch(giornata, predicate, patch) {
+    return (giornata || []).map(g => ({
+      ...g,
+      items: (g.items || []).map(m => predicate(m) ? { ...m, ...patch } : m),
+    }));
+  }
+
   function doStartLive() {
     if (!selectedMatchObj) return;
-    const updated = {
+    const updatedLm = {
       ...lm, active: true, phase: 'first_half',
       timer_started_at: Date.now(),
       match_id: selectedMatchObj.id || null,
       home: selectedMatchObj.home, away: selectedMatchObj.away,
       hs: 0, as: 0, minute: 0, events: [],
     };
+    const updatedGiornata = updateGiornataMatch(
+      data.matches_giornata,
+      m => matchKey(m) === activeKey,
+      { status: 'live' }
+    );
     setDisplayMinute(0);
-    persistLm(updated);
+    onSave({ ...data, live_match: updatedLm, matches_giornata: updatedGiornata }, 'Diretta avviata');
+    setLm({ ...updatedLm });
+    if (tournamentId) {
+      rmAdminDomain.updateLive({
+        tournament_id: tournamentId,
+        match_id: updatedLm.match_id,
+        active: true,
+        home_team_id: getTeamId(updatedLm.home?.short),
+        away_team_id: getTeamId(updatedLm.away?.short),
+        home_score: 0, away_score: 0, minute: 0,
+        phase: 'first_half',
+        timer_started_at: updatedLm.timer_started_at,
+        pitch: updatedLm.pitch || '', events: [],
+      }).catch(e => console.warn('Live start sync:', e));
+    }
     setSelectedKey(null);
     setConfirmStart(false);
   }
 
-  function doTerminate() {
-    const terminatedLm = { ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute };
-    persistLm(terminatedLm);
-    if (lm.match_id) {
-      rmAdminDomain.updateMatch(lm.match_id, {
-        status: 'ft',
-        home_score: lm.hs ?? 0,
-        away_score: lm.as ?? 0,
-      }).catch(e => console.warn('Match finish sync:', e));
-    }
+  async function doTerminate() {
     setConfirmTerminate(false);
+    const terminatedLm = { ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute };
+    const isThisMatch = m =>
+      (lm.match_id && m.id === lm.match_id) ||
+      (!lm.match_id && m.home?.short === lm.home?.short && m.away?.short === lm.away?.short);
+    const updatedGiornata = updateGiornataMatch(
+      data.matches_giornata,
+      isThisMatch,
+      { status: 'ft', hs: lm.hs ?? 0, as: lm.as ?? 0 }
+    );
+    onSave({ ...data, live_match: terminatedLm, matches_giornata: updatedGiornata }, 'Partita terminata');
+    setLm({ ...terminatedLm });
+
+    const promises = [];
+
+    if (tournamentId) {
+      promises.push(
+        rmAdminDomain.updateLive({
+          tournament_id: tournamentId, match_id: null, active: false,
+          home_team_id: null, away_team_id: null,
+          home_score: 0, away_score: 0, minute: 0,
+          phase: null, timer_started_at: null, pitch: '', events: [],
+        }).catch(e => console.warn('Live reset sync:', e))
+      );
+    }
+
+    if (lm.match_id) {
+      promises.push(
+        rmAdminDomain.updateMatch(lm.match_id, {
+          status: 'ft',
+          home_score: lm.hs ?? 0,
+          away_score: lm.as ?? 0,
+        }).catch(e => console.warn('Match finish sync:', e))
+      );
+    }
+
+    // Sync all scorers: create new (no id), update existing
+    if (tournamentId) {
+      for (const s of (data.scorers || [])) {
+        if (s.id) {
+          promises.push(
+            rmAdminDomain.updateScorer(s.id, { goals: s.goals })
+              .catch(e => console.warn('Scorer update sync:', e))
+          );
+        } else {
+          promises.push(
+            rmAdminDomain.createScorer({
+              tournament_id: tournamentId,
+              name: s.name,
+              team: s.team,
+              goals: s.goals,
+              flag: s.flag || '',
+              color: s.color || '#00E676',
+            }).catch(e => console.warn('Scorer create sync:', e))
+          );
+        }
+      }
+    }
+
+    await Promise.allSettled(promises);
+    onRefresh?.();
   }
 
   function endFirstHalf() {
@@ -353,20 +433,22 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                     )}
                     {items.map((m) => {
                 const k = matchKey(m);
-                const isSelected = k === activeKey;
+                const isFt = m.status === 'ft';
+                const isSelected = !isFt && k === activeKey;
                 const isToday = m.date === today || m.date === 'Oggi';
                 const dateLabel = m.date ? (isToday ? 'Oggi' : formatDateLabel(m.date.includes('-') ? m.date : m.date)) : null;
                 return (
-                  <button key={k} onClick={() => setSelectedKey(k)} style={{
+                  <button key={k} onClick={() => !isFt && setSelectedKey(k)} disabled={isFt} style={{
                     display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
                     background: isSelected ? 'rgba(0,230,118,0.08)' : 'transparent',
                     border: `1px solid ${isSelected ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                    borderRadius: 8, cursor: 'pointer', color: '#fff', width: '100%',
-                    textAlign: 'left', marginBottom: 8,
+                    borderRadius: 8, cursor: isFt ? 'default' : 'pointer',
+                    color: isFt ? 'var(--fg-3)' : '#fff', width: '100%',
+                    textAlign: 'left', marginBottom: 8, opacity: isFt ? 0.55 : 1,
                   }}>
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 54, flexShrink: 0 }}>
                       {dateLabel && (
-                        <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: isToday ? 'var(--brand-green)' : 'var(--fg-3)', letterSpacing: '0.08em' }}>
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: isToday && !isFt ? 'var(--brand-green)' : 'var(--fg-3)', letterSpacing: '0.08em' }}>
                           {dateLabel}
                         </span>
                       )}
@@ -377,11 +459,15 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 16 }}>{getFlag(m.home)}</span>
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.home?.short}</span>
-                      <span style={{ color: 'var(--fg-3)', fontSize: 11, margin: '0 2px' }}>vs</span>
+                      {isFt
+                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--fg-2)', margin: '0 2px' }}>{m.hs ?? 0}–{m.as ?? 0}</span>
+                        : <span style={{ color: 'var(--fg-3)', fontSize: 11, margin: '0 2px' }}>vs</span>
+                      }
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.away?.short}</span>
                       <span style={{ fontSize: 16 }}>{getFlag(m.away)}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {isFt && <span style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--fg-3)', letterSpacing: '0.08em', border: '1px solid var(--border-1)', borderRadius: 4, padding: '2px 5px' }}>FT</span>}
                       {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 14 }}>✓</span>}
                     </div>
                   </button>
@@ -478,13 +564,19 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                   <button className="adm-live-ev-btn adm-ev-red" onClick={() => openCard('red', lm.home?.short)} style={{ flex: 1, minHeight: 44, fontSize: 20 }}>🟥</button>
                 </div>
                 {pending === 'adj_hs_-1' ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                    <span style={{ fontSize: 12, color: '#FF3D3D' }}>−1 gol?</span>
-                    <button onClick={executePending} style={{ padding: '3px 10px', background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.4)', borderRadius: 5, color: '#FF3D3D', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Sì</button>
-                    <button onClick={cancelPending} style={{ padding: '3px 8px', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 5, color: 'var(--fg-3)', fontSize: 12, cursor: 'pointer' }}>No</button>
+                  <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <span style={{ fontSize: 15 }}>⚠️</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#FF3D3D', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TOGLI GOL?</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--fg-3)', marginBottom: 10 }}>Rimuove 1 gol da <strong style={{ color: 'var(--fg-1)' }}>{lm.home?.short}</strong>. Non annullabile.</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={executePending} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,61,61,0.2)', border: '1px solid rgba(255,61,61,0.5)', borderRadius: 6, color: '#FF3D3D', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Conferma</button>
+                      <button onClick={cancelPending} style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 12, cursor: 'pointer' }}>Annulla</button>
+                    </div>
                   </div>
                 ) : (
-                  <button onClick={() => requestConfirm('adj_hs_-1')} style={{ background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 12, padding: '4px 0', cursor: 'pointer' }}>−1 correzione</button>
+                  <button onClick={() => requestConfirm('adj_hs_-1')} style={{ background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 11, padding: '5px 0', cursor: 'pointer', letterSpacing: '0.03em' }}>− correzione gol</button>
                 )}
               </div>
               {/* Away */}
@@ -497,13 +589,19 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
                   <button className="adm-live-ev-btn adm-ev-red" onClick={() => openCard('red', lm.away?.short)} style={{ flex: 1, minHeight: 44, fontSize: 20 }}>🟥</button>
                 </div>
                 {pending === 'adj_as_-1' ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                    <span style={{ fontSize: 12, color: '#FF3D3D' }}>−1 gol?</span>
-                    <button onClick={executePending} style={{ padding: '3px 10px', background: 'rgba(255,61,61,0.15)', border: '1px solid rgba(255,61,61,0.4)', borderRadius: 5, color: '#FF3D3D', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Sì</button>
-                    <button onClick={cancelPending} style={{ padding: '3px 8px', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 5, color: 'var(--fg-3)', fontSize: 12, cursor: 'pointer' }}>No</button>
+                  <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                      <span style={{ fontSize: 15 }}>⚠️</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#FF3D3D', fontFamily: 'var(--font-display)', letterSpacing: '0.05em' }}>TOGLI GOL?</span>
+                    </div>
+                    <div style={{ fontSize: 11, color: 'var(--fg-3)', marginBottom: 10 }}>Rimuove 1 gol da <strong style={{ color: 'var(--fg-1)' }}>{lm.away?.short}</strong>. Non annullabile.</div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button onClick={executePending} style={{ flex: 1, padding: '7px 0', background: 'rgba(255,61,61,0.2)', border: '1px solid rgba(255,61,61,0.5)', borderRadius: 6, color: '#FF3D3D', fontSize: 12, cursor: 'pointer', fontWeight: 700 }}>Conferma</button>
+                      <button onClick={cancelPending} style={{ flex: 1, padding: '7px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 12, cursor: 'pointer' }}>Annulla</button>
+                    </div>
                   </div>
                 ) : (
-                  <button onClick={() => requestConfirm('adj_as_-1')} style={{ background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 12, padding: '4px 0', cursor: 'pointer' }}>−1 correzione</button>
+                  <button onClick={() => requestConfirm('adj_as_-1')} style={{ background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 6, color: 'var(--fg-3)', fontSize: 11, padding: '5px 0', cursor: 'pointer', letterSpacing: '0.03em' }}>− correzione gol</button>
                 )}
               </div>
             </div>
