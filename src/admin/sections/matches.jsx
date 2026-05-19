@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
-import { supabase } from '../../lib/supabase.js';
 
 const KNOCKOUT_PRESETS = ['Sedicesimi di finale', 'Ottavi di finale', 'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale', '3° posto'];
 const KNOCKOUT_SET = new Set(KNOCKOUT_PRESETS);
@@ -22,14 +21,13 @@ function italianToIso(str) {
   return `${new Date().getFullYear()}-${month}-${match[1].padStart(2,'0')}`;
 }
 
-export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
+export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
-  const [view, setView] = useState('lista');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
   const [saveError, setSaveError] = useState(''); // API error shown inside modal
-  const [openPhases, setOpenPhases] = useState(new Set());
+  const [closedPhases, setClosedPhases] = useState(new Set());
 
   function humanizeError(err) {
     const msg = err?.message || '';
@@ -60,7 +58,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
   }
 
   function togglePhase(day) {
-    setOpenPhases(prev => {
+    setClosedPhases(prev => {
       const next = new Set(prev);
       next.has(day) ? next.delete(day) : next.add(day);
       return next;
@@ -86,8 +84,10 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
       const dayKey = updated._day || updated.phase || defaultPhase;
       const phase = phaseFromDay(dayKey);
       const group_id = groupIdFromPhase(dayKey);
-      const home_team_id = updated.home?.id || null;
-      const away_team_id = updated.away?.id || null;
+      const homeTeam = updated.home?.id ? updated.home : teams.find(t => t.short === updated.home?.short);
+      const awayTeam = updated.away?.id ? updated.away : teams.find(t => t.short === updated.away?.short);
+      const home_team_id = homeTeam?.id || null;
+      const away_team_id = awayTeam?.id || null;
       const home_score = updated.hs != null ? parseInt(updated.hs) : null;
       const away_score = updated.as != null ? parseInt(updated.as) : null;
 
@@ -107,12 +107,10 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
           sort_order: 0,
         });
       } else {
-        const teamsLocked = updated.status === 'live' || updated.status === 'ft' || (updated.events?.length > 0);
-        const forceTeams = !!updated._forceTeams;
         await rmAdminDomain.updateMatch(updated.id, {
-          ...((forceTeams || (!teamsLocked && home_team_id)) ? { home_team_id: home_team_id ?? null } : {}),
-          ...((forceTeams || (!teamsLocked && away_team_id)) ? { away_team_id: away_team_id ?? null } : {}),
-          ...(!teamsLocked && group_id ? { group_id } : {}),
+          home_team_id: home_team_id ?? null,
+          away_team_id: away_team_id ?? null,
+          group_id: group_id ?? null,
           home_score,
           away_score,
           status: updated.status || 'sch',
@@ -162,7 +160,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
   const totalMatches = giornate.reduce((s, d) => s + (d.items?.length || 0), 0);
 
   function PhaseSection({ day, items, accent }) {
-    const isOpen = openPhases.has(day);
+    const isOpen = !closedPhases.has(day);
     const done = items.filter(m => m.status === 'ft').length;
     const live = items.filter(m => m.status === 'live').length;
     return (
@@ -205,79 +203,75 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
 
   return (
     <div>
-      <div className="adm-section-head">
-        <div>
-          <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
-          <p className="adm-section-sub" style={{ margin: 0 }}>{totalMatches} partite totali</p>
-        </div>
-        <div className="adm-section-actions">
-          <button className={`adm-btn adm-btn-sm ${view === 'lista' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('lista')}>Lista</button>
-          <button className={`adm-btn adm-btn-sm ${view === 'bracket' ? '' : 'adm-btn-ghost'}`} onClick={() => setView('bracket')}>Tabellone</button>
+      {compact ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <h3 className="adm-section-title" style={{ margin: 0 }}>Partite <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--fg-3)', fontFamily: 'var(--font-body)' }}>{totalMatches} totali</span></h3>
           <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
         </div>
-      </div>
-
-      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
-
-      {view === 'lista' && (
-        <div>
-          {totalMatches === 0 && (
-            <div className="adm-card"><div className="adm-empty">Nessuna partita. Generale dal tab Gironi o aggiungi manualmente.</div></div>
-          )}
-
-          {/* ── Gironi ── */}
-          {groupPhases.length > 0 && (
-            <div className="adm-card" style={{ marginBottom: 12 }}>
-              <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--fg-3)', textTransform: 'uppercase' }}>Fase a gironi</span>
-                <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>
-                  {groupPhases.reduce((s, d) => s + (d.items?.length || 0), 0)} partite
-                </span>
-              </div>
-              {groupPhases.map(d => (
-                <PhaseSection key={d.day} day={d.day} items={d.items || []} />
-              ))}
-            </div>
-          )}
-
-          {/* ── Eliminazione diretta (esclusa Finale) ── */}
-          {(() => {
-            const preFinale = knockoutPhases.filter(d => d.day !== 'Finale');
-            const finale = knockoutPhases.find(d => d.day === 'Finale');
-            return (
-              <>
-                {preFinale.length > 0 && (
-                  <div className="adm-card" style={{ marginBottom: 12 }}>
-                    <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--fg-2)', textTransform: 'uppercase' }}>Eliminazione diretta</span>
-                      <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>
-                        {preFinale.reduce((s, d) => s + (d.items?.length || 0), 0)} partite
-                      </span>
-                    </div>
-                    {preFinale.map(d => (
-                      <PhaseSection key={d.day} day={d.day} items={d.items || []} />
-                    ))}
-                  </div>
-                )}
-
-                {/* ── Finale ── */}
-                {finale && (
-                  <div className="adm-card" style={{ marginBottom: 12, border: '1px solid rgba(245,197,24,0.35)', background: 'rgba(245,197,24,0.03)' }}>
-                    <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--brand-gold)', textTransform: 'uppercase' }}>🏆 Finale</span>
-                      <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{finale.items?.length || 0} partita</span>
-                    </div>
-                    <PhaseSection day={finale.day} items={finale.items || []} accent="var(--brand-gold)" />
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
+      ) : (
+        <div className="adm-section-head">
+          <div>
+            <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
+            <p className="adm-section-sub" style={{ margin: 0 }}>{totalMatches} partite totali</p>
+          </div>
+          <div className="adm-section-actions">
+            <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
+          </div>
         </div>
       )}
 
-      {view === 'bracket' && <BracketView giornata={data.matches_giornata} />}
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
+
+      <div>
+        {totalMatches === 0 && (
+          <div className="adm-card"><div className="adm-empty">Nessuna partita. Generale dal tab Gironi o aggiungi manualmente.</div></div>
+        )}
+
+        {groupPhases.length > 0 && (
+          <div className="adm-card" style={{ marginBottom: 12 }}>
+            <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--fg-3)', textTransform: 'uppercase' }}>Fase a gironi</span>
+              <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>
+                {groupPhases.reduce((s, d) => s + (d.items?.length || 0), 0)} partite
+              </span>
+            </div>
+            {groupPhases.map(d => (
+              <PhaseSection key={d.day} day={d.day} items={d.items || []} />
+            ))}
+          </div>
+        )}
+
+        {(() => {
+          const preFinale = knockoutPhases.filter(d => d.day !== 'Finale');
+          const finale = knockoutPhases.find(d => d.day === 'Finale');
+          return (
+            <>
+              {preFinale.length > 0 && (
+                <div className="adm-card" style={{ marginBottom: 12 }}>
+                  <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--fg-2)', textTransform: 'uppercase' }}>Eliminazione diretta</span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>
+                      {preFinale.reduce((s, d) => s + (d.items?.length || 0), 0)} partite
+                    </span>
+                  </div>
+                  {preFinale.map(d => (
+                    <PhaseSection key={d.day} day={d.day} items={d.items || []} />
+                  ))}
+                </div>
+              )}
+              {finale && (
+                <div className="adm-card" style={{ marginBottom: 12, border: '1px solid rgba(245,197,24,0.35)', background: 'rgba(245,197,24,0.03)' }}>
+                  <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', color: 'var(--brand-gold)', textTransform: 'uppercase' }}>Finale</span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{finale.items?.length || 0} partita</span>
+                  </div>
+                  <PhaseSection day={finale.day} items={finale.items || []} accent="var(--brand-gold)" />
+                </div>
+              )}
+            </>
+          );
+        })()}
+      </div>
 
       {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
@@ -288,23 +282,20 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId }) {
 function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onClose, busy, saveError }) {
   const [form, setForm] = useState({ ...match });
   const [error, setError] = useState('');
-  const [pendingConfirm, setPendingConfirm] = useState(false);
-  const [pendingTeamChange, setPendingTeamChange] = useState(null); // { field, team }
-  const [pendingReset, setPendingReset] = useState(false);
-  const [resetOriginals, setResetOriginals] = useState(null); // { home, away } team objects
+  const [pendingTeamChange, setPendingTeamChange] = useState(null); // { field, team, strong }
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const sameTeamsSelected = !!form.home?.short && form.home?.short === form.away?.short;
 
-  // Teams are locked if match already started or has events — changing would break standings/events
-  const teamsLocked = !match._isNew && (match.status === 'live' || match.status === 'ft' || (match.events?.length > 0));
-  // Warn if teams already assigned — changing requires confirm
-  const teamsWarn = !match._isNew && !teamsLocked && !!(match.home?.short && match.away?.short);
+  // Partita con risultati o eventi registrati — warn forte al cambio squadra
+  const hasResults = !match._isNew && (match.status === 'ft' || match.status === 'live' || (match.events?.length > 0));
+  // Partita con squadre già assegnate — warn lieve
+  const hasTeams = !match._isNew && !!(match.home?.short && match.away?.short);
 
   function requestTeamChange(field, short) {
     const t = teams.find(x => x.short === short);
     if (!t) return;
-    if (teamsWarn && short !== match[field]?.short) {
-      setPendingTeamChange({ field, team: t });
+    if (short !== match[field]?.short && hasTeams) {
+      setPendingTeamChange({ field, team: t, strong: hasResults });
     } else {
       set(field, t);
     }
@@ -315,29 +306,6 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
     setPendingTeamChange(null);
   }
 
-  async function openReset() {
-    try {
-      const { data, error: dbErr } = await supabase
-        .from('matches')
-        .select('original_home_team_id, original_away_team_id')
-        .eq('id', match.id)
-        .single();
-      if (dbErr) throw dbErr;
-      const origHome = data?.original_home_team_id ? (teams.find(t => t.id === data.original_home_team_id) || null) : null;
-      const origAway = data?.original_away_team_id ? (teams.find(t => t.id === data.original_away_team_id) || null) : null;
-      setResetOriginals({ home: origHome, away: origAway });
-      setPendingReset(true);
-    } catch {
-      setError('Impossibile recuperare lo stato originale. Riprova.');
-    }
-  }
-
-  function confirmReset() {
-    if (!resetOriginals) return;
-    setPendingReset(false);
-    onSave({ ...form, home: resetOriginals.home, away: resetOriginals.away, hs: null, as: null, status: 'sch', _forceTeams: true });
-  }
-  // Phase selectors for new match
   const groupPresets = (groups || []).map(g => g.name);
   const koPresets = KNOCKOUT_PRESETS.filter(p => KNOCKOUT_SET.has(p));
   const chipStyle = (active) => ({
@@ -357,82 +325,28 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
 
   return (
     <>
-    {pendingReset && (
-      <div className="adm-overlay" style={{ zIndex: 1100 }} onClick={() => { setPendingReset(false); setResetOriginals(null); }}>
-        <div style={{
-          background: '#111', border: '1px solid var(--border-1)', borderRadius: 16,
-          margin: 'auto 20px', width: '100%', maxWidth: 380, overflow: 'hidden',
-          animation: 'admSlideUp 220ms cubic-bezier(0.16,1,0.3,1)',
-        }} onClick={e => e.stopPropagation()}>
-          {/* Header */}
-          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--fg-3)', marginBottom: 4 }}>
-              Ripristina partita
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>
-              Torna allo stato originale
-            </div>
-          </div>
-          {/* Match preview */}
-          <div style={{ padding: '16px 20px' }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--fg-3)', marginBottom: 10 }}>
-              Verrà ripristinato a
-            </div>
-            <div style={{
-              background: '#0a0a0a', border: '1px solid var(--border-1)', borderRadius: 10,
-              padding: '14px 16px', display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8,
-              marginBottom: 14,
-            }}>
-              <div style={{ textAlign: 'right' }}>
-                {resetOriginals?.home?.flag && <div style={{ fontSize: 22, lineHeight: 1, marginBottom: 2 }}>{resetOriginals.home.flag}</div>}
-                <div style={{ fontSize: 13, fontWeight: 700, color: resetOriginals?.home ? '#fff' : 'var(--fg-3)' }}>
-                  {resetOriginals?.home?.name || 'Da definire'}
-                </div>
-              </div>
-              <div style={{ textAlign: 'center', padding: '0 6px' }}>
-                <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>vs</div>
-              </div>
-              <div style={{ textAlign: 'left' }}>
-                {resetOriginals?.away?.flag && <div style={{ fontSize: 22, lineHeight: 1, marginBottom: 2 }}>{resetOriginals.away.flag}</div>}
-                <div style={{ fontSize: 13, fontWeight: 700, color: resetOriginals?.away ? '#fff' : 'var(--fg-3)' }}>
-                  {resetOriginals?.away?.name || 'Da definire'}
-                </div>
-              </div>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 18, lineHeight: 1.5 }}>
-              Risultato e stato verranno azzerati. Data e orario rimangono invariati.
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }}
-                onClick={() => { setPendingReset(false); setResetOriginals(null); }}>
-                Annulla
-              </button>
-              <button type="button" className="adm-btn adm-btn-sm" style={{
-                flex: 2, background: 'transparent',
-                border: '1px solid rgba(255,61,61,0.5)', color: '#FF6B6B',
-              }} onClick={confirmReset}>
-                ↩ Ripristina originale
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
     {pendingTeamChange && (
       <div className="adm-overlay" style={{ zIndex: 1100 }} onClick={() => setPendingTeamChange(null)}>
         <div className="adm-modal" style={{ maxHeight: 'auto', minHeight: 'auto', borderRadius: 12, margin: 'auto 16px' }} onClick={e => e.stopPropagation()}>
-          <div className="adm-modal-header" style={{ borderBottom: '1px solid rgba(245,197,24,0.25)' }}>
-            <h3 className="adm-modal-title" style={{ color: '#F5C518' }}>⚠️ Cambiare squadra</h3>
+          <div className="adm-modal-header" style={{ borderBottom: `1px solid ${pendingTeamChange.strong ? 'rgba(255,61,61,0.3)' : 'rgba(245,197,24,0.25)'}` }}>
+            <h3 className="adm-modal-title" style={{ color: pendingTeamChange.strong ? '#FF6B6B' : '#F5C518' }}>
+              ⚠️ Cambiare squadra
+            </h3>
           </div>
           <div style={{ padding: '16px 20px 20px' }}>
+            {pendingTeamChange.strong && (
+              <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 14, fontSize: 12, color: '#FF6B6B', lineHeight: 1.5 }}>
+                Questa partita ha <strong>risultati o eventi registrati</strong>. Cambiare la squadra invaliderà la classifica e gli eventi associati.
+              </div>
+            )}
             <p style={{ fontSize: 14, color: 'var(--fg-1)', lineHeight: 1.6, margin: '0 0 20px' }}>
-              Stai sostituendo <strong>{pendingTeamChange.field === 'home' ? form.home?.name : form.away?.name}</strong> con <strong>{pendingTeamChange.team.name}</strong>.<br/>
-              La modifica aggiornerà <strong>classifica e calendario</strong> ovunque nel sistema. Continuare?
+              Sostituisci <strong>{pendingTeamChange.field === 'home' ? form.home?.name : form.away?.name}</strong> con <strong>{pendingTeamChange.team.name}</strong>. Continuare?
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setPendingTeamChange(null)}>Annulla</button>
-              <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2 }} onClick={confirmTeamChange}>Sì, cambia squadra</button>
+              <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2, ...(pendingTeamChange.strong ? { background: 'transparent', border: '1px solid rgba(255,61,61,0.5)', color: '#FF6B6B' } : {}) }} onClick={confirmTeamChange}>
+                Sì, cambia squadra
+              </button>
             </div>
           </div>
         </div>
@@ -446,14 +360,6 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
         </div>
         <div className="adm-modal-scroll">
           <div className="adm-form">
-            {/* Info sistema */}
-            {!match._isNew && (
-              <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: 'rgba(0,230,118,0.05)', border: '1px solid rgba(0,230,118,0.2)', borderRadius: 8, fontSize: 12, color: 'var(--fg-2)' }}>
-                <span style={{ flex: 'none' }}>ℹ️</span>
-                <span>Le modifiche si propagano in tempo reale su calendario, classifica e sito pubblico.</span>
-              </div>
-            )}
-
             {error && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6 }}>{error}</div>}
             {saveError && <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, fontSize: 13, color: '#FF6B6B', lineHeight: 1.5 }}><span style={{ flex: 'none' }}>⚠️</span><span>{saveError}</span></div>}
 
@@ -483,52 +389,44 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
             )}
 
             {/* ── Squadre ── */}
-            {teamsLocked ? (
-              <div style={{ padding: '10px 12px', background: 'rgba(255,61,61,0.06)', border: '1px solid rgba(255,61,61,0.2)', borderRadius: 8, fontSize: 12, color: 'var(--fg-2)' }}>
-                <span style={{ display: 'block', fontWeight: 700, color: '#FF3D3D', marginBottom: 4 }}>⚠️ Squadre non modificabili</span>
-                Partita già iniziata o con eventi registrati. Cambiare le squadre causerebbe disallineamenti in classifica e statistiche. Per correggere, elimina la partita e ricreala.
-              </div>
-            ) : (
-              <>
-                <div className="adm-form-row">
-                  <div className="adm-form-group">
-                    <label className="adm-label">Casa</label>
-                    <select className="adm-select" value={form.home?.short || ''} onChange={e => requestTeamChange('home', e.target.value)}>
-                      <option value="">-- Seleziona --</option>
-                      {teams.filter(t => t.short !== form.away?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="adm-form-group">
-                    <label className="adm-label">Ospite</label>
-                    <select className="adm-select" value={form.away?.short || ''} onChange={e => requestTeamChange('away', e.target.value)}>
-                      <option value="">-- Seleziona --</option>
-                      {teams.filter(t => t.short !== form.home?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-                {sameTeamsSelected && <p className="adm-inline-hint" style={{ marginTop: -4 }}>Casa e ospite non possono coincidere.</p>}
-              </>
-            )}
-
-            {/* ── Risultato (solo se live/ft) ── */}
-            {(form.status === 'live' || form.status === 'ft') && (
-              <div className="adm-form-row">
-                <div className="adm-form-group">
-                  <label className="adm-label">Gol Casa</label>
-                  <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
-                </div>
-                <div className="adm-form-group">
-                  <label className="adm-label">Gol Ospite</label>
-                  <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
-                </div>
-              </div>
-            )}
-            {form.status === 'live' && (
+            <div className="adm-form-row">
               <div className="adm-form-group">
-                <label className="adm-label">Minuto</label>
-                <input type="number" className="adm-input" value={form.minute || ''} onChange={e => set('minute', parseInt(e.target.value))} min="0" max="120" />
+                <label className="adm-label">Casa</label>
+                <select className="adm-select" value={form.home?.short || ''} onChange={e => requestTeamChange('home', e.target.value)}>
+                  <option value="">-- Seleziona --</option>
+                  {teams.filter(t => t.short !== form.away?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
+                </select>
               </div>
-            )}
+              <div className="adm-form-group">
+                <label className="adm-label">Ospite</label>
+                <select className="adm-select" value={form.away?.short || ''} onChange={e => requestTeamChange('away', e.target.value)}>
+                  <option value="">-- Seleziona --</option>
+                  {teams.filter(t => t.short !== form.home?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+            {sameTeamsSelected && <p className="adm-inline-hint" style={{ marginTop: -4 }}>Casa e ospite non possono coincidere.</p>}
+
+            {/* ── Stato ── */}
+            <div className="adm-form-group">
+              <label className="adm-label">Stato</label>
+              <select className="adm-select" value={form.status || 'sch'} onChange={e => set('status', e.target.value)}>
+                <option value="sch">Da giocare</option>
+                <option value="ft">Giocata</option>
+              </select>
+            </div>
+
+            {/* ── Risultato ── */}
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Gol Casa</label>
+                <input type="number" className="adm-input" value={form.hs ?? ''} onChange={e => set('hs', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Gol Ospite</label>
+                <input type="number" className="adm-input" value={form.as ?? ''} onChange={e => set('as', e.target.value === '' ? null : parseInt(e.target.value))} min="0" />
+              </div>
+            </div>
 
             {/* ── Data e Orario ── */}
             <div className="adm-form-group">
@@ -544,9 +442,6 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
 
             <div className="adm-form-actions" style={{ marginTop: 24 }}>
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-              {!match._isNew && !teamsLocked && (
-                <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ color: '#FF6B6B', borderColor: 'rgba(255,107,107,0.4)' }} onClick={openReset}>↩ Originale</button>
-              )}
               <button className="adm-btn adm-btn-sm" onClick={submit} disabled={busy}>Salva Partita</button>
             </div>
           </div>

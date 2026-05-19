@@ -34,9 +34,7 @@ function nextGroupName(existingGroups) {
   return '';
 }
 
-const ADVANCE_LABELS = ['Solo 1°', '1° e 2°', '1°, 2°, 3°', 'Tutti'];
-
-export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdvance, onTeamsPerGroupAdvance }) {
+export function GironiSection({ data, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [openGroup, setOpenGroup] = useState(null);
   const [deletingGroupId, setDeletingGroupId] = useState(null);
@@ -49,14 +47,6 @@ export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdva
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMsg, setSetupMsg] = useState('');
   const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
-
-  // Qualificazione
-  const [pendingAdvance, setPendingAdvance] = useState(null);
-  const [qualConfirmed, setQualConfirmed] = useState(
-    () => localStorage.getItem('rm_teams_per_group_advance') !== null
-  );
-  const [qualRemodify, setQualRemodify] = useState(false);
-  const [qualOpen, setQualOpen] = useState(false);
 
   // Partite di girone
   const [genMode, setGenMode] = useState('single');
@@ -190,10 +180,6 @@ export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdva
   const allAssigned = allTeams.length > 0 && allTeams.every(t => t.group_id);
   const groupNames = new Set(groups.map(g => g.name));
   const hasGroupMatches = (data.matches_giornata || []).some(g => groupNames.has(g.day) && (g.items || []).length > 0);
-  const groupSizes = groups.map(g => allTeams.filter(t => t.group_id === g.id).length);
-  const minGroupSize = groupSizes.length > 0 ? Math.min(...groupSizes) : 4;
-  const maxAdvanceOptions = Math.max(1, minGroupSize);
-  const selectedAdvance = pendingAdvance ?? teamsPerGroupAdvance;
 
   async function generateGroupMatches() {
     setGenBusy(true);
@@ -240,14 +226,6 @@ export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdva
     } finally {
       setGenBusy(false);
     }
-  }
-
-  function confirmAdvance(n) {
-    onTeamsPerGroupAdvance(n);
-    localStorage.setItem('rm_teams_per_group_advance', n);
-    setQualConfirmed(true);
-    setPendingAdvance(null);
-    setQualOpen(false);
   }
 
   return (
@@ -329,73 +307,6 @@ export function GironiSection({ data, onRefresh, tournamentId, teamsPerGroupAdva
       )}
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
-
-      {/* ── Qualificazione ── */}
-      {groups.length > 0 && (
-        <div className="adm-card" style={{ marginBottom: 12 }}>
-          <div className="adm-card-header" style={{ cursor: 'pointer' }} onClick={() => setQualOpen(o => !o)}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span className="adm-card-title">Qualificazione al turno successivo</span>
-              {qualConfirmed && !qualOpen && (
-                <span style={{ fontSize: 11, color: 'var(--brand-green)', background: 'rgba(0,230,118,0.1)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
-                  ✓ {teamsPerGroupAdvance} sqq/girone
-                </span>
-              )}
-            </div>
-            <span style={{ fontSize: 16, color: 'var(--fg-3)', transform: qualOpen ? 'rotate(180deg)' : 'none', transition: 'transform 180ms', display: 'inline-block' }}>▾</span>
-          </div>
-          {qualOpen && (
-            <div className="adm-card-body" style={{ paddingTop: 8 }}>
-              {qualRemodify ? (
-                <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 13, color: '#FF3D3D', fontWeight: 600, marginBottom: 6 }}>⚠️ Attenzione</div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12 }}>Cambiando questa impostazione il bracket eliminatorio già generato non sarà più valido.</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setQualRemodify(false)}>Annulla</button>
-                    <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { setQualRemodify(false); setQualConfirmed(false); setPendingAdvance(teamsPerGroupAdvance); }}>Sì, rimodifica</button>
-                  </div>
-                </div>
-              ) : qualConfirmed ? (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0 4px' }}>
-                  <div>
-                    <div style={{ fontSize: 13, color: '#fff', fontWeight: 600 }}>{ADVANCE_LABELS[teamsPerGroupAdvance - 1] || `Top ${teamsPerGroupAdvance}`} per girone</div>
-                    <div style={{ fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>
-                      {groups.length} × {teamsPerGroupAdvance} = {groups.length * teamsPerGroupAdvance} qualificate
-                    </div>
-                  </div>
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setQualRemodify(true)}>🔄 Rimodifica</button>
-                </div>
-              ) : (
-                <>
-                  <div style={{ fontSize: 13, color: 'var(--fg-2)', marginBottom: 12 }}>
-                    Quante squadre per girone passano alla fase eliminatoria?
-                    {minGroupSize < 4 && <span style={{ color: 'var(--fg-3)', fontSize: 12 }}> (gironi da {minGroupSize} squadre)</span>}
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                    {Array.from({ length: maxAdvanceOptions }, (_, i) => i + 1).map(n => {
-                      const isActive = selectedAdvance === n;
-                      return (
-                        <button key={n} type="button" onClick={() => setPendingAdvance(n)}
-                          style={{ flex: '1 1 80px', padding: '10px 12px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
-                            background: isActive ? 'var(--brand-green)' : 'transparent',
-                            border: `1px solid ${isActive ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                            color: isActive ? '#000' : 'var(--fg-2)', fontWeight: isActive ? 700 : 400, fontSize: 13, transition: 'all 140ms' }}>
-                          <div>{ADVANCE_LABELS[n - 1] || `Top ${n}`}</div>
-                          <div style={{ fontSize: 11, color: isActive ? 'rgba(0,0,0,0.6)' : 'var(--fg-3)', marginTop: 2 }}>{groups.length * n} squadre totali</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', marginBottom: 12 }}>
-                    {(() => { const tot = groups.length * selectedAdvance; const fase = tot <= 2 ? 'Finale' : tot <= 4 ? 'Semifinali' : tot <= 8 ? 'Quarti di finale' : tot <= 16 ? 'Ottavi di finale' : tot <= 32 ? 'Sedicesimi di finale' : `Turno di ${tot}`; return `${groups.length} gironi × ${selectedAdvance} = ${tot} qualificate → ${fase}`; })()}
-                  </div>
-                  <button className="adm-btn adm-btn-sm" onClick={() => confirmAdvance(selectedAdvance)}>Conferma</button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Partite di girone ── */}
       {groups.length > 0 && allAssigned && (

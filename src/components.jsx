@@ -218,7 +218,7 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
         ) : done ? (
           <>
             <span className="date">{date}</span>
-            <span className="rm-ft">Finale</span>
+            <span className="rm-ft">FT</span>
           </>
         ) : (
           <>
@@ -336,29 +336,21 @@ function StandingsTable({ rows, group, updatedLabel }) {
         <h3 className="rm-table-title">{group && group.toLowerCase().startsWith('girone') ? group : `Girone ${group}`}</h3>
         <span className="rm-eyebrow muted">{updatedLabel}</span>
       </div>
-      <div className="rm-table-scroll">
-        <table className="rm-table">
-          <thead>
-            <tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>GF</th><th>GS</th><th>DR</th><th>Forma</th><th>Pt</th></tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={r.short + i} className={i < 2 ? 'top' : ''}>
-                <td className="pos">{i + 1}</td>
-                <td><div className="rm-team-cell"><span className="rm-crest rm-crest-xs" style={{ borderColor: r.color, color: r.color }}>{r.short}</span>{r.name}</div></td>
-                <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
-                <td>{r.gf}</td><td>{r.gs}</td><td>{r.gf - r.gs > 0 ? '+' : ''}{r.gf - r.gs}</td>
-                <td>
-                  <div className="rm-form-pills">
-                    {r.form?.map((f, j) => <span key={j} className={`rm-form-pill ${f}`}>{f}</span>)}
-                  </div>
-                </td>
-                <td><span className="rm-pts">{r.pt}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <table className="rm-table">
+        <thead>
+          <tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>Pt</th></tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.short + i} className={i < 2 ? 'top' : ''}>
+              <td className="pos">{i + 1}</td>
+              <td><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1 }}>{r.flag || '🏳️'}</span>{r.name}</div></td>
+              <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
+              <td><span className="rm-pts">{r.pt}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -384,16 +376,22 @@ function TeamCard({ team }) {
 
 // ── Top scorers ───────────────────────────────────────────────────────────
 function TopScorers({ list }) {
+  if (!list?.length) return (
+    <div className="rm-empty">
+      <div className="rm-empty-icon">⚽</div>
+      <div className="rm-empty-title">Nessun marcatore</div>
+      <div className="rm-empty-sub">I marcatori verranno aggiornati dallo staff.</div>
+    </div>
+  );
   return (
     <div className="rm-scorers">
       {list.map((s, i) => (
-        <div key={i} className="rm-scorer">
+        <div key={s.id || i} className="rm-scorer">
           <div className="rm-scorer-pos">{i + 1}</div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div className="rm-scorer-name">{s.name}</div>
-            <div className="rm-scorer-team">{s.team}</div>
+            <div className="rm-scorer-team">{s.flag || ''} {s.team || s.short}</div>
           </div>
-          <span className="rm-crest rm-crest-xs" style={{ borderColor: s.color, color: s.color }}>{s.short}</span>
           <div className="rm-scorer-goals"><BallIcon size={15}/>{s.goals}</div>
         </div>
       ))}

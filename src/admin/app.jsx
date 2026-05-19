@@ -127,17 +127,7 @@ function AdminApp() {
     if (msg) setToast({ msg, type: 'success' });
   }
 
-  const [teamsPerGroupAdvance, setTeamsPerGroupAdvance] = useState(() => {
-    const saved = localStorage.getItem('rm_teams_per_group_advance');
-    return saved ? parseInt(saved) : 2;
-  });
-
-  function handleTeamsPerGroupAdvance(n) {
-    setTeamsPerGroupAdvance(n);
-    localStorage.setItem('rm_teams_per_group_advance', n);
-  }
-
-  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories, teamsPerGroupAdvance, onTeamsPerGroupAdvance: handleTeamsPerGroupAdvance };
+  const props = { data, onSave: handleSave, onRefresh: refresh, adminUser, onUserChange: setAdminUser, editionId, tournamentId, tournamentCategories };
   const isMainTab = ['dashboard', 'live', 'news', 'settings'].includes(tab);
   const bottomNav = isMainTab ? tab : 'dashboard';
 
@@ -199,7 +189,7 @@ function AdminApp() {
           </button>
         )}
 
-        {tab === 'dashboard'  && <DashboardSection data={data} editionId={editionId} tournamentId={tournamentId} tournamentCategories={tournamentCategories} setTab={navigateTo} />}
+        {tab === 'dashboard'  && <DashboardSection data={data} onSave={handleSave} onRefresh={refresh} editionId={editionId} tournamentId={tournamentId} tournamentCategories={tournamentCategories} setTab={navigateTo} />}
         {tab === 'live'       && <LiveSection {...props} />}
         {tab === 'news'       && <NewsSection {...props} />}
         {tab === 'gironi'     && <GironiSection {...props} />}
@@ -226,7 +216,7 @@ function AdminApp() {
           <span>Live</span>
         </button>
         <button className={`adm-bn-item ${bottomNav === 'news' ? 'on' : ''}`} onClick={() => navigateTo('news')}>
-          <BellIcon size={24}/><span>Bacheca</span>
+          <BellIcon size={24}/><span>Avvisi</span>
         </button>
         <button className={`adm-bn-item ${bottomNav === 'settings' ? 'on' : ''}`} onClick={() => navigateTo('settings')}>
           <MenuIcon size={24}/><span>Impost.</span>

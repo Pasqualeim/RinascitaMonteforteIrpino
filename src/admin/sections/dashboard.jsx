@@ -1,13 +1,7 @@
-import { GridIcon, BellIcon, CalIcon, StarIcon, UsersIcon } from '../shared.jsx';
+import { GridIcon, CalIcon, StarIcon, UsersIcon } from '../shared.jsx';
+import { MatchesSection } from './matches.jsx';
 
-const IT_MONTHS = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
-function isoToShort(iso) {
-  if (!iso) return '';
-  const [, m, d] = iso.split('-');
-  return `${parseInt(d)} ${IT_MONTHS[parseInt(m) - 1]}`;
-}
-
-export function DashboardSection({ data, editionId, tournamentId, tournamentCategories, setTab }) {
+export function DashboardSection({ data, onSave, onRefresh, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
   const activeCategory = tournamentCategories.find(t => t.id === tournamentId);
 
@@ -16,26 +10,6 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
   const allMatches   = (data.matches_giornata || []).flatMap(g => g.items || []);
   const matchesTotal = allMatches.length;
   const matchesFt    = allMatches.filter(m => m.status === 'ft').length;
-  const matchesLive  = allMatches.filter(m => m.status === 'live').length;
-
-  // Regia: history + upcoming
-  const completedMatches = allMatches
-    .filter(m => m.status === 'ft' && m.home && m.away)
-    .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const upcomingMatches = allMatches
-    .filter(m => m.status === 'sch' && m.home && m.away)
-    .sort((a, b) => (a.date || '9').localeCompare(b.date || '9') || (a.time || '').localeCompare(b.time || ''));
-
-  // Seeding alert
-  const groupNames = new Set((data.groups || []).map(g => g.name));
-  const KNOCKOUT_PHASES = new Set(['Sedicesimi di finale', 'Ottavi di finale', 'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale']);
-  const groupMatches = (data.matches_giornata || []).filter(g => groupNames.has(g.day)).flatMap(g => g.items || []);
-  const groupsDone = groupMatches.length > 0 && groupMatches.every(m => m.status === 'ft');
-  const koSlots = (data.matches_giornata || []).filter(g => KNOCKOUT_PHASES.has(g.day)).flatMap(g => g.items || []);
-  const hasUnseededKo = koSlots.some(m => !m.home && !m.away);
-  const showSeedingAlert = groupsDone && hasUnseededKo;
-
-  const rowStyle = { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border-1)' };
 
   return (
     <div>
@@ -84,22 +58,6 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
         ))}
       </div>
 
-      {/* Seeding alert */}
-      {showSeedingAlert && (
-        <div className="adm-card" style={{ marginBottom: 16, border: '1px solid rgba(0,230,118,0.35)', background: 'rgba(0,230,118,0.04)' }}>
-          <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <span style={{ fontSize: 20, flex: 'none', marginTop: 1 }}>🎯</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--brand-green)', marginBottom: 4 }}>Gironi conclusi — abbinamenti pronti</div>
-              <div style={{ fontSize: 12, color: 'var(--fg-2)', marginBottom: 12, lineHeight: 1.5 }}>
-                Puoi applicare gli abbinamenti automatici agli slot della fase eliminatoria.
-              </div>
-              <button className="adm-btn adm-btn-sm" onClick={() => setTab('fasi')}>Vai alle fasi eliminatorie →</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── Setup Torneo ── */}
       <div className="adm-eyebrow" style={{ marginTop: 4 }}>Preparazione pre-torneo</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Setup Torneo</h3>
@@ -111,7 +69,7 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
       </div>
 
       {/* ── Regia ── */}
-      <div className="adm-eyebrow">Centro controllo</div>
+      <div className="adm-eyebrow">Centro di controllo</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Regia</h3>
 
       {/* Live */}
@@ -128,62 +86,12 @@ export function DashboardSection({ data, editionId, tournamentId, tournamentCate
         </div>
       )}
 
-      {/* Storico + prossime */}
-      <div className="adm-card" style={{ marginBottom: 12 }}>
-        <div className="adm-card-header">
-          <span className="adm-card-title">📊 Storico risultati</span>
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setTab('matches')}>Tutte →</button>
-        </div>
-        {completedMatches.length === 0 ? (
-          <div style={{ padding: '10px 16px 14px', fontSize: 13, color: 'var(--fg-3)' }}>Nessun risultato registrato.</div>
-        ) : (
-          <div style={{ padding: '0 16px 4px' }}>
-            {completedMatches.slice(0, 6).map((m, i) => (
-              <div key={m.id || i} style={rowStyle}>
-                <span style={{ fontSize: 11, color: 'var(--fg-3)', flexShrink: 0, minWidth: 52 }}>{isoToShort(m.date) || '—'}</span>
-                <span style={{ fontSize: 14, color: '#fff', flex: 1, fontFamily: 'var(--font-display)', letterSpacing: '0.04em' }}>
-                  {m.home?.short} <span style={{ color: 'var(--brand-green)' }}>{m.hs}–{m.as}</span> {m.away?.short}
-                </span>
-                <span style={{ fontSize: 10, color: 'var(--fg-3)', flexShrink: 0 }}>FT</span>
-              </div>
-            ))}
-            {completedMatches.length > 6 && (
-              <div style={{ padding: '8px 0', fontSize: 12, color: 'var(--fg-3)' }}>
-                +{completedMatches.length - 6} altri risultati
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="adm-card" style={{ marginBottom: 24 }}>
-        <div className="adm-card-header">
-          <span className="adm-card-title">📅 Prossime partite</span>
-          <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setTab('matches')}>Gestisci →</button>
-        </div>
-        {upcomingMatches.length === 0 ? (
-          <div style={{ padding: '10px 16px 14px', fontSize: 13, color: 'var(--fg-3)' }}>Nessuna partita in programma.</div>
-        ) : (
-          <div style={{ padding: '0 16px 4px' }}>
-            {upcomingMatches.slice(0, 5).map((m, i) => (
-              <div key={m.id || i} style={rowStyle}>
-                <span style={{ fontSize: 11, color: 'var(--fg-3)', flexShrink: 0, minWidth: 52 }}>
-                  {m.date ? `${isoToShort(m.date)}${m.time ? ` · ${m.time}` : ''}` : 'TBD'}
-                </span>
-                <span style={{ fontSize: 14, color: 'var(--fg-2)', flex: 1 }}>
-                  {m.home?.short} <span style={{ color: 'var(--fg-3)', fontSize: 12 }}>vs</span> {m.away?.short}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <MatchesSection data={data} onSave={onSave} onRefresh={onRefresh} tournamentId={tournamentId} compact />
 
       {/* Portale */}
       <div className="adm-eyebrow">Sito pubblico</div>
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Portale</h3>
       <div className="adm-grid-menu">
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('news')}><BellIcon size={28}/><span>Avvisi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}><CalIcon size={28}/><span>Regolamento</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('sponsors')}><StarIcon size={28}/><span>Sponsor</span></button>
       </div>

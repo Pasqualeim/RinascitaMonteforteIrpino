@@ -69,7 +69,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
 
   const allMatches = (data.matches_giornata || [])
     .flatMap(g => (g.items || []).map(m => ({ ...m, _group: g.label || g.name || '' })))
-    .filter(m => m.home && m.away && m.status !== 'ft')
+    .filter(m => m.home && m.away && m.status === 'sch')
     .sort((a, b) => {
       const da = a.date === 'Oggi' ? today : (a.date || '9999');
       const db = b.date === 'Oggi' ? today : (b.date || '9999');
@@ -77,14 +77,7 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
       return (a.time || '00:00') < (b.time || '00:00') ? -1 : 1;
     });
 
-  const matchGroups = allMatches.reduce((acc, m) => {
-    const key = (m.date === 'Oggi' || m.date === today) ? '__today__' : (m.date || '__other__');
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(m);
-    return acc;
-  }, {});
-
-  const todayMatches = matchGroups['__today__'] || [];
+  const todayMatches = allMatches.filter(m => (m.date === 'Oggi' || m.date === today));
   const smartDefault = (() => {
     if (!todayMatches.length) return allMatches[0] || null;
     let best = todayMatches[0], bestDelta = Infinity;
@@ -99,10 +92,6 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
   const smartDefaultKey = smartDefault ? matchKey(smartDefault) : null;
   const activeKey = selectedKey || smartDefaultKey;
   const selectedMatchObj = allMatches.find(m => matchKey(m) === activeKey) || null;
-
-  // Preview teams for scoreboard when not yet live
-  const displayHome = lm.active ? lm.home : (selectedMatchObj?.home || lm.home);
-  const displayAway = lm.active ? lm.away : (selectedMatchObj?.away || lm.away);
 
   function formatDateLabel(key) {
     if (key === '__today__') return 'Oggi';
@@ -314,47 +303,48 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
               <span className="adm-card-title">Seleziona partita</span>
             </div>
             <div style={{ padding: '0 12px 12px' }}>
-              {allMatches.length === 0 && (
-                <p style={{ fontSize: 13, color: 'var(--fg-3)', margin: '8px 0 0' }}>Nessuna partita in programma.</p>
-              )}
-              {Object.entries(matchGroups).map(([dateKey, matches]) => (
-                <div key={dateKey}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 6px' }}>
-                    <span style={{ fontSize: 11, fontFamily: 'var(--font-display)', letterSpacing: '0.12em', color: dateKey === '__today__' ? 'var(--brand-green)' : 'var(--fg-3)', textTransform: 'uppercase' }}>
-                      {formatDateLabel(dateKey)}
-                    </span>
-                    <div style={{ flex: 1, height: 1, background: 'var(--border-1)' }} />
-                  </div>
-                  {matches.map((m) => {
-                    const k = matchKey(m);
-                    const isSelected = k === activeKey;
-                    return (
-                      <button key={k} onClick={() => setSelectedKey(k)} style={{
-                        display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px',
-                        background: isSelected ? 'rgba(0,230,118,0.08)' : 'transparent',
-                        border: `1px solid ${isSelected ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                        borderRadius: 8, cursor: 'pointer', color: '#fff', width: '100%',
-                        textAlign: 'left', marginBottom: 6,
-                      }}>
-                        <span style={{ minWidth: 42, fontSize: 12, fontFamily: 'var(--font-display)', color: isSelected ? 'var(--brand-green)' : 'var(--fg-3)', flexShrink: 0 }}>
-                          {m.time || '--:--'}
+              {allMatches.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--fg-3)', margin: '8px 0 0' }}>Nessuna partita da giocare.</p>
+              ) : allMatches.map((m) => {
+                const k = matchKey(m);
+                const isSelected = k === activeKey;
+                const isToday = m.date === today || m.date === 'Oggi';
+                const dateLabel = m.date ? (isToday ? 'Oggi' : formatDateLabel(m.date.includes('-') ? m.date : m.date)) : null;
+                return (
+                  <button key={k} onClick={() => setSelectedKey(k)} style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                    background: isSelected ? 'rgba(0,230,118,0.08)' : 'transparent',
+                    border: `1px solid ${isSelected ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                    borderRadius: 8, cursor: 'pointer', color: '#fff', width: '100%',
+                    textAlign: 'left', marginBottom: 8,
+                  }}>
+                    {/* Date + time column */}
+                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 54, flexShrink: 0 }}>
+                      {dateLabel && (
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: isToday ? 'var(--brand-green)' : 'var(--fg-3)', letterSpacing: '0.08em' }}>
+                          {dateLabel}
                         </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1 }}>
-                          <span style={{ fontSize: 18 }}>{getFlag(m.home)}</span>
-                          <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{m.home?.short}</span>
-                        </span>
-                        <span style={{ color: 'var(--fg-3)', fontFamily: 'var(--font-display)', fontSize: 12 }}>vs</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'flex-end' }}>
-                          <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{m.away?.short}</span>
-                          <span style={{ fontSize: 18 }}>{getFlag(m.away)}</span>
-                        </span>
-                        {m._group && <span style={{ fontSize: 10, color: 'var(--fg-3)', marginLeft: 4, flexShrink: 0 }}>{m._group}</span>}
-                        {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 14, flexShrink: 0 }}>✓</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
+                      )}
+                      <span style={{ fontSize: 13, fontFamily: 'var(--font-display)', color: isSelected ? 'var(--brand-green)' : 'var(--fg-2)' }}>
+                        {m.time || '--:--'}
+                      </span>
+                    </div>
+                    {/* Teams */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>{getFlag(m.home)}</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.home?.short}</span>
+                      <span style={{ color: 'var(--fg-3)', fontSize: 11, margin: '0 2px' }}>vs</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.away?.short}</span>
+                      <span style={{ fontSize: 16 }}>{getFlag(m.away)}</span>
+                    </div>
+                    {/* Group + check */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      {m._group && <span style={{ fontSize: 10, color: 'var(--fg-3)' }}>{m._group}</span>}
+                      {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 14 }}>✓</span>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <button
@@ -367,12 +357,12 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
         </>
       )}
 
-      {/* Scoreboard */}
-      <div className={`adm-live-board${lm.active ? ' adm-live-board--active' : ''}`}>
+      {/* Scoreboard — solo quando live */}
+      {lm.active && <div className="adm-live-board adm-live-board--active">
         <div className="adm-scoreboard">
           <div className="adm-sb-team">
-            <span className="adm-sb-flag">{getFlag(displayHome)}</span>
-            <span className="adm-sb-name" style={{ color: displayHome?.color || '#fff' }}>{displayHome?.short || 'CASA'}</span>
+            <span className="adm-sb-flag">{getFlag(lm.home)}</span>
+            <span className="adm-sb-name" style={{ color: lm.home?.color || '#fff' }}>{lm.home?.short}</span>
           </div>
           <div className="adm-sb-score">
             <span>{lm.hs || 0}</span>
@@ -380,8 +370,8 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
             <span>{lm.as || 0}</span>
           </div>
           <div className="adm-sb-team">
-            <span className="adm-sb-flag">{getFlag(displayAway)}</span>
-            <span className="adm-sb-name" style={{ color: displayAway?.color || '#fff' }}>{displayAway?.short || 'OSPITE'}</span>
+            <span className="adm-sb-flag">{getFlag(lm.away)}</span>
+            <span className="adm-sb-name" style={{ color: lm.away?.color || '#fff' }}>{lm.away?.short}</span>
           </div>
         </div>
 
@@ -519,12 +509,10 @@ export function LiveSection({ data, onSave, editionId, tournamentId }) {
         )}
 
         {/* Termina — bottom */}
-        {lm.active && (
-          <button onClick={() => setConfirmTerminate(true)} style={{ width: '100%', marginTop: 20, padding: '12px 0', background: 'transparent', border: '1px solid rgba(255,61,61,0.35)', borderRadius: 8, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 14, cursor: 'pointer', letterSpacing: '0.06em' }}>
-            TERMINA PARTITA
-          </button>
-        )}
-      </div>
+        <button onClick={() => setConfirmTerminate(true)} style={{ width: '100%', marginTop: 20, padding: '12px 0', background: 'transparent', border: '1px solid rgba(255,61,61,0.35)', borderRadius: 8, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 14, cursor: 'pointer', letterSpacing: '0.06em' }}>
+          TERMINA PARTITA
+        </button>
+      </div>}
 
       {/* Modal: confirm start */}
       {confirmStart && selectedMatchObj && (
