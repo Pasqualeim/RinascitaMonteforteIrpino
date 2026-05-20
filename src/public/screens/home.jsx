@@ -172,12 +172,18 @@ export function HomeScreen({ onNav, data, tournament }) {
           </div>
         </div>
         <div className="rm-sponsors">
-          {sponsors.map((s, i) => (
-            <div key={s.id || i} className="rm-sponsor-card">
-              <div className="rm-sponsor-name">{s.name}</div>
-              <div className="rm-sponsor-tag">{s.tag}</div>
-            </div>
-          ))}
+          {sponsors.map((s, i) => {
+            const card = (
+              <div key={s.id || i} className="rm-sponsor-card">
+                {s.logo_url && <img src={s.logo_url} alt={s.name} style={{ width: '100%', maxHeight: 56, objectFit: 'contain', marginBottom: 8 }} />}
+                <div className="rm-sponsor-name">{s.name}</div>
+                {s.website_url && <div style={{ fontSize: 10, color: 'var(--fg-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.website_url.replace(/^https?:\/\//, '')}</div>}
+              </div>
+            );
+            return s.website_url
+              ? <a key={s.id || i} href={s.website_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{card}</a>
+              : card;
+          })}
         </div>
       </section>
     </div>

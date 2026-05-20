@@ -174,12 +174,13 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
   function updateScorer(playerName, teamShort, delta) {
     let scorers = [...(data.scorers || [])];
-    const idx = scorers.findIndex(s => s.name === playerName && s.team === teamShort);
+    // Bootstrap returns s.short (not s.team) for the short code
+    const idx = scorers.findIndex(s => s.name === playerName && (s.short === teamShort || s.team === teamShort));
     if (idx >= 0) {
       scorers[idx] = { ...scorers[idx], goals: Math.max(0, (scorers[idx].goals || 0) + delta) };
     } else if (delta > 0) {
       const t = teams.find(x => x.short === teamShort);
-      scorers.push({ name: playerName, team: teamShort, flag: t?.flag || '', color: t?.color || '#00E676', goals: delta });
+      scorers.push({ name: playerName, short: teamShort, team: t?.name || teamShort, flag: t?.flag || '', color: t?.color || '#00E676', goals: delta });
     }
     return scorers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
   }
@@ -271,14 +272,14 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
               .catch(e => console.warn('Scorer update sync:', e))
           );
         } else {
+          const teamId = getTeamId(s.short || s.team);
           promises.push(
             rmAdminDomain.createScorer({
               tournament_id: tournamentId,
-              name: s.name,
-              team: s.team,
+              team_id: teamId || null,
+              player_name: s.name,
               goals: s.goals,
-              flag: s.flag || '',
-              color: s.color || '#00E676',
+              sort_order: 0,
             }).catch(e => console.warn('Scorer create sync:', e))
           );
         }
@@ -309,11 +310,10 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setGoalFlow({ scoringSide, scoringShort, step: 'pick' });
   }
 
-  function pickGoalPlayer(playerName, isAutogolStep) {
+  async function pickGoalPlayer(playerName, isAutogolStep) {
     const { scoringSide, scoringShort } = goalFlow;
     const autogolFromShort = isAutogolStep ? goalFlow.autogolFromShort : null;
 
-    // Per autogol: _ts indica il lato beneficiante (scoringShort), non il lato del giocatore
     const displayTeamShort = scoringShort;
     const playerTeamShort = autogolFromShort || scoringShort;
     const playerTeamObj = teams.find(t => t.short === playerTeamShort)
@@ -327,6 +327,23 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       _ts: displayTeamShort,
       ...(autogolFromShort ? { _autogol: true, _player_ts: autogolFromShort } : {}),
     };
+
+    // Create match_event in DB (persists even after match ends — bootstrap uses it for scorers)
+    if (!autogolFromShort && lm.match_id) {
+      try {
+        const res = await rmAdminDomain.createMatchEvent({
+          match_id: lm.match_id,
+          team_id: getTeamId(playerTeamShort) || null,
+          event_type: 'goal',
+          player_name: playerName,
+          minute: displayMinute,
+        });
+        if (res?.data?.id) newEvent._match_event_id = res.data.id;
+      } catch(e) {
+        console.warn('Match event create:', e);
+      }
+    }
+
     const events = [...(lm.events || []), newEvent].sort((a, b) => a.min - b.min);
     const updatedLm = { ...lm, [scoringSide]: (lm[scoringSide] || 0) + 1, events, minute: displayMinute };
 
@@ -373,6 +390,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       updatedLm[side] = Math.max(0, (lm[side] || 0) - 1);
       if (!ev._autogol) {
         updatedScorers = updateScorer(ev.player, ev._ts || '', -1);
+        if (ev._match_event_id) {
+          rmAdminDomain.deleteMatchEvent(ev._match_event_id).catch(e => console.warn('Match event delete:', e));
+        }
       }
     }
     persistLm(updatedLm, updatedScorers);

@@ -3,7 +3,8 @@ import { DEFAULT_EVENTS, DEFAULT_NEWS, DEFAULT_HONORS, rmGetAllEditions, rmLoadD
 import { EmptyState, EventRow, NewsCard, HonorCard } from '../../components.jsx';
 
 export function EventsScreen({ data }) {
-  const articles = data?.events || DEFAULT_EVENTS;
+  const entry = (data?.events || DEFAULT_EVENTS).find(e => e.event_type === 'regolamento') || (data?.events || [])[0] || null;
+  const text = entry?.description || '';
   return (
     <div data-screen-label="events">
       <section className="rm-section">
@@ -13,18 +14,10 @@ export function EventsScreen({ data }) {
             <h3 className="rm-section-title">Regolamento</h3>
           </div>
         </div>
-        {articles.length === 0
+        {!text
           ? <EmptyState icon="📋" title="Regolamento non ancora disponibile" sub="Lo staff pubblicherà il regolamento ufficiale a breve."/>
           : <div className="rm-rulebook">
-              {articles.map((art, i) => (
-                <div key={art.id || i} className="rm-rule-article">
-                  <div className="rm-rule-num">Art. {art.sort_order > 0 ? art.sort_order : i + 1}</div>
-                  <div className="rm-rule-body">
-                    <div className="rm-rule-title">{art.title}</div>
-                    {art.description && <div className="rm-rule-text">{art.description}</div>}
-                  </div>
-                </div>
-              ))}
+              <p style={{ fontSize: 14, lineHeight: 1.75, color: 'var(--fg-2)', whiteSpace: 'pre-wrap', margin: 0, padding: '4px 0' }}>{text}</p>
             </div>
         }
       </section>

@@ -26,10 +26,18 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
     try {
       const team = teams.find(t => t.short === item.short);
       const team_id = team?.id || null;
+      // Validate: if team has a roster, player must be in it
+      const roster = team?.players || [];
+      if (roster.length > 0 && !roster.some(p => p.name === item.name)) {
+        setErrMsg(`"${item.name}" non è nel roster di ${team?.name || item.short}. Controlla il nome o scegli la squadra corretta.`);
+        setBusy(false);
+        return;
+      }
+      const goals = parseInt(item.goals) || 0;
       if (item.id) {
-        await rmAdminDomain.updateScorer(item.id, { player_name: item.name, team_id, goals: item.goals || 0 });
+        await rmAdminDomain.updateScorer(item.id, { player_name: item.name, team_id, goals });
       } else {
-        await rmAdminDomain.createScorer({ tournament_id: tournamentId, team_id, player_name: item.name, goals: item.goals || 0, sort_order: 0 });
+        await rmAdminDomain.createScorer({ tournament_id: tournamentId, team_id, player_name: item.name, goals, sort_order: 0 });
       }
       setEditing(null);
       await onRefresh('Marcatori aggiornati');
@@ -76,7 +84,7 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
             </div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 24, color: 'var(--brand-green)', marginRight: 8 }}>⚽{s.goals}</div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s })}><EditIcon size={16}/></button>
+              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s, short: s.short || s.team })}><EditIcon size={16}/></button>
               <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(s)}><TrashIcon size={16}/></button>
             </div>
           </div>
@@ -95,8 +103,13 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
                   <label className="adm-label">Squadra</label>
                   <select className="adm-select" value={editing.short || ''} onChange={e => {
                     const t = teams.find(x => x.short === e.target.value);
-                    if (t) setEditing(f => ({ ...f, short: t.short, team: t.name, color: t.color || '#00E676', name: '' }));
-                    else setEditing(f => ({ ...f, short: e.target.value }));
+                    if (t) {
+                      const roster = t.players || [];
+                      const keepName = roster.length === 0 || roster.some(p => p.name === editing.name);
+                      setEditing(f => ({ ...f, short: t.short, team: t.name, color: t.color || '#00E676', name: keepName ? f.name : '' }));
+                    } else {
+                      setEditing(f => ({ ...f, short: e.target.value }));
+                    }
                   }}>
                     <option value="">-- Seleziona Squadra --</option>
                     {teams.map(t => <option key={t.id || t.short} value={t.short}>{t.name}</option>)}
@@ -120,7 +133,7 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
                 </div>
                 <div className="adm-form-group">
                   <label className="adm-label">Gol</label>
-                  <input type="number" className="adm-input" value={editing.goals} onChange={e => setEditing(f => ({ ...f, goals: parseInt(e.target.value) || 0 }))} min="0" />
+                  <input type="number" className="adm-input" value={editing.goals ?? ''} onChange={e => setEditing(f => ({ ...f, goals: e.target.value === '' ? '' : Math.max(0, parseInt(e.target.value) || 0) }))} min="0" placeholder="0" />
                 </div>
                 <div className="adm-form-actions" style={{ marginTop: 24 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>

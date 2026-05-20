@@ -3,12 +3,11 @@ import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 export function EventsSection({ data, onSave, onRefresh, editionId }) {
-  const [editing, setEditing] = useState(null);
-  const [deleting, setDeleting] = useState(null);
+  const existing = (data.events || []).find(e => e.event_type === 'regolamento') || (data.events || [])[0] || null;
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
-
-  const articles = data.events || [];
 
   if (!editionId) {
     return (
@@ -19,34 +18,26 @@ export function EventsSection({ data, onSave, onRefresh, editionId }) {
     );
   }
 
-  async function saveItem(item) {
-    setBusy(true);
+  function startEdit() {
+    setText(existing?.description || '');
+    setEditing(true);
     setErrMsg('');
-    try {
-      const sort_order = item.sort_order || articles.length + 1;
-      if (item.id) {
-        await rmAdminDomain.updateEvent(item.id, { title: item.title, description: item.description || '', sort_order });
-      } else {
-        await rmAdminDomain.createEvent({ edition_id: editionId, title: item.title, description: item.description || '', sort_order, event_type: 'regolamento' });
-      }
-      setEditing(null);
-      await onRefresh('Regolamento aggiornato');
-    } catch (err) {
-      setErrMsg(err?.message || 'Errore salvataggio articolo');
-    } finally {
-      setBusy(false);
-    }
   }
 
-  async function deleteItem(id) {
+  async function save() {
+    if (!text.trim()) { setErrMsg('Il testo non può essere vuoto.'); return; }
     setBusy(true);
     setErrMsg('');
     try {
-      await rmAdminDomain.deleteEvent(id);
-      setDeleting(null);
-      await onRefresh('Articolo eliminato');
+      if (existing?.id) {
+        await rmAdminDomain.updateEvent(existing.id, { description: text, title: 'Regolamento', sort_order: 1 });
+      } else {
+        await rmAdminDomain.createEvent({ edition_id: editionId, title: 'Regolamento', description: text, sort_order: 1, event_type: 'regolamento' });
+      }
+      setEditing(false);
+      await onRefresh('Regolamento salvato');
     } catch (err) {
-      setErrMsg(err?.message || 'Errore eliminazione articolo');
+      setErrMsg(err?.message || 'Errore salvataggio');
     } finally {
       setBusy(false);
     }
@@ -55,75 +46,49 @@ export function EventsSection({ data, onSave, onRefresh, editionId }) {
   return (
     <div>
       <h2 className="adm-section-title">Regolamento</h2>
-      <p className="adm-section-sub">Articoli visibili al pubblico nella sezione Regolamento.</p>
+      <p className="adm-section-sub">Testo del regolamento visibile al pubblico.</p>
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
-      <div className="adm-card">
-        <div className="adm-card-header">
-          <span className="adm-card-title">{articles.length} articoli</span>
-          <button className="adm-btn adm-btn-sm" disabled={busy}
-            onClick={() => setEditing({ title: '', description: '', sort_order: articles.length + 1 })}>
-            + Nuovo articolo
-          </button>
-        </div>
-        {articles.length === 0 && <div className="adm-empty">Nessun articolo. Aggiungi il primo.</div>}
-        {articles.map((art, i) => (
-          <div key={art.id || i} className="adm-item-row">
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: 'var(--brand-green)', minWidth: 36, textAlign: 'center' }}>
-              {art.sort_order > 0 ? art.sort_order : i + 1}
-            </div>
-            <div className="adm-item-row-body">
-              <div className="adm-item-title">{art.title}</div>
-              {art.description && <div className="adm-item-meta" style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{art.description}</div>}
-            </div>
-            <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...art })}><EditIcon size={16}/></button>
-              <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(art.id)}><TrashIcon size={16}/></button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {editing && (
-        <div className="adm-overlay" onClick={() => setEditing(null)}>
-          <div className="adm-modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
-            <div className="adm-modal-header">
-              <h3 className="adm-modal-title">{editing.id ? 'Modifica articolo' : 'Nuovo articolo'}</h3>
-              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing(null)}>✕</button>
-            </div>
-            <div className="adm-modal-scroll">
-              <div className="adm-form">
-                <div className="adm-form-row">
-                  <div className="adm-form-group" style={{ flex: '0 0 80px' }}>
-                    <label className="adm-label">N° Art.</label>
-                    <input type="number" className="adm-input" value={editing.sort_order || ''} min="1"
-                      onChange={e => setEditing(f => ({ ...f, sort_order: parseInt(e.target.value) || '' }))} />
-                  </div>
-                  <div className="adm-form-group" style={{ flex: 1 }}>
-                    <label className="adm-label">Titolo articolo</label>
-                    <input className="adm-input" value={editing.title || ''} autoFocus
-                      placeholder="es. Iscrizioni, Svolgimento, Premi…"
-                      onChange={e => setEditing(f => ({ ...f, title: e.target.value }))} />
-                  </div>
-                </div>
-                <div className="adm-form-group">
-                  <label className="adm-label">Testo</label>
-                  <textarea className="adm-input" rows={6} value={editing.description || ''}
-                    placeholder="Testo completo dell'articolo…"
-                    style={{ resize: 'vertical', fontFamily: 'var(--font-body)' }}
-                    onChange={e => setEditing(f => ({ ...f, description: e.target.value }))} />
-                </div>
-                <div className="adm-form-actions">
-                  <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)} disabled={busy || !editing.title}>Salva</button>
-                </div>
+      {!editing ? (
+        <div className="adm-card">
+          {existing?.description ? (
+            <>
+              <div style={{ padding: '14px 16px', fontSize: 13, color: 'var(--fg-2)', lineHeight: 1.7, whiteSpace: 'pre-wrap', fontFamily: 'var(--font-body)' }}>
+                {existing.description}
               </div>
+              <div style={{ padding: '0 16px 14px' }}>
+                <button className="adm-btn adm-btn-sm" onClick={startEdit}>Modifica</button>
+              </div>
+            </>
+          ) : (
+            <div style={{ padding: '24px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              <p style={{ color: 'var(--fg-3)', fontSize: 13, margin: 0 }}>Nessun regolamento inserito.</p>
+              <button className="adm-btn adm-btn-sm" onClick={startEdit}>+ Scrivi regolamento</button>
             </div>
+          )}
+        </div>
+      ) : (
+        <div className="adm-card">
+          <div style={{ padding: '14px 16px 12px' }}>
+            <textarea
+              className="adm-input"
+              rows={14}
+              autoFocus
+              value={text}
+              placeholder="Scrivi qui il testo completo del regolamento…"
+              style={{ resize: 'vertical', fontFamily: 'var(--font-body)', fontSize: 16, lineHeight: 1.7 }}
+              onChange={e => setText(e.target.value)}
+            />
+          </div>
+          <div style={{ padding: '0 16px 14px', display: 'flex', gap: 8 }}>
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(false)} disabled={busy}>Annulla</button>
+            <button className="adm-btn adm-btn-sm" onClick={save} disabled={busy || !text.trim()}>
+              {busy ? 'Salvataggio…' : 'Salva'}
+            </button>
           </div>
         </div>
       )}
-      {deleting && <Confirm msg="Eliminare questo articolo?" onOk={() => deleteItem(deleting)} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
@@ -248,6 +213,7 @@ export function SponsorsSection({ data, onSave, onRefresh, editionId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
   const sponsors = data.sponsors || [];
@@ -261,19 +227,40 @@ export function SponsorsSection({ data, onSave, onRefresh, editionId }) {
     );
   }
 
+  async function handleImageUpload(file) {
+    if (!file) return;
+    setUploading(true);
+    setErrMsg('');
+    try {
+      const { supabase } = await import('../../lib/supabase.js');
+      const ext = file.name.split('.').pop().toLowerCase() || 'jpg';
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage.from('sponsors').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('sponsors').getPublicUrl(path);
+      setEditing(f => ({ ...f, logo_url: urlData.publicUrl }));
+    } catch (err) {
+      setErrMsg('Errore caricamento immagine: ' + (err?.message || ''));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function saveItem(item) {
+    if (!item.name?.trim()) { setErrMsg('Nome obbligatorio.'); return; }
     setBusy(true);
     setErrMsg('');
     try {
+      const payload = { name: item.name.trim(), logo_url: item.logo_url || null, website_url: item.website_url || null, tag: '' };
       if (item.id && !String(item.id).startsWith('s')) {
-        await rmAdminDomain.updateSponsor(item.id, { name: item.name, logo_url: item.logo_url, website_url: item.website_url, tag: item.tag });
+        await rmAdminDomain.updateSponsor(item.id, payload);
       } else {
-        await rmAdminDomain.createSponsor({ edition_id: editionId, name: item.name, logo_url: item.logo_url || null, website_url: item.website_url || null, tag: item.tag || '', sort_order: 0 });
+        await rmAdminDomain.createSponsor({ edition_id: editionId, ...payload, sort_order: sponsors.length });
       }
       setEditing(null);
-      await onRefresh('Sponsor aggiornati');
+      await onRefresh('Sponsor aggiornato');
     } catch (err) {
-      setErrMsg(err?.message || 'Errore salvataggio sponsor');
+      setErrMsg(err?.message || 'Errore salvataggio');
     } finally {
       setBusy(false);
     }
@@ -281,13 +268,12 @@ export function SponsorsSection({ data, onSave, onRefresh, editionId }) {
 
   async function deleteItem(id) {
     setBusy(true);
-    setErrMsg('');
     try {
       await rmAdminDomain.deleteSponsor(id);
       setDeleting(null);
       await onRefresh('Sponsor eliminato');
     } catch (err) {
-      setErrMsg(err?.message || 'Errore eliminazione sponsor');
+      setErrMsg(err?.message || 'Errore eliminazione');
     } finally {
       setBusy(false);
     }
@@ -302,21 +288,24 @@ export function SponsorsSection({ data, onSave, onRefresh, editionId }) {
       <div className="adm-card">
         <div className="adm-card-header">
           <span className="adm-card-title">{sponsors.length} sponsor</span>
-          <button className="adm-btn adm-btn-sm" disabled={busy} onClick={() => setEditing({ name: '', tag: '', logo_url: '', website_url: '' })}>+ Nuovo</button>
+          <button className="adm-btn adm-btn-sm" disabled={busy} onClick={() => { setErrMsg(''); setEditing({ name: '', logo_url: '', website_url: '' }); }}>+ Nuovo</button>
         </div>
+        {sponsors.length === 0 && <div className="adm-empty">Nessuno sponsor. Aggiungi il primo.</div>}
         {sponsors.map((s, i) => (
           <div key={s.id || i} className="adm-item-row">
+            {s.logo_url && <img src={s.logo_url} alt="" style={{ width: 36, height: 36, objectFit: 'contain', borderRadius: 4, background: '#1a1a1a', flexShrink: 0 }} />}
             <div className="adm-item-row-body">
               <div className="adm-item-title">{s.name}</div>
-              <div className="adm-item-meta">{s.tag}</div>
+              {s.website_url && <div className="adm-item-meta" style={{ color: 'var(--brand-green)', fontSize: 11 }}>{s.website_url}</div>}
             </div>
             <div className="adm-item-actions">
-              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setEditing({ ...s })}><EditIcon size={16}/></button>
+              <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => { setErrMsg(''); setEditing({ ...s }); }}><EditIcon size={16}/></button>
               <button className="adm-btn adm-btn-danger adm-btn-icon" onClick={() => setDeleting(s.id)}><TrashIcon size={16}/></button>
             </div>
           </div>
         ))}
       </div>
+
       {editing && (
         <div className="adm-overlay" onClick={() => setEditing(null)}>
           <div className="adm-modal" onClick={e => e.stopPropagation()}>
@@ -326,13 +315,35 @@ export function SponsorsSection({ data, onSave, onRefresh, editionId }) {
             </div>
             <div className="adm-modal-scroll">
               <div className="adm-form">
-                <div className="adm-form-group"><label className="adm-label">Nome</label><input className="adm-input" value={editing.name || ''} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} /></div>
-                <div className="adm-form-group"><label className="adm-label">Categoria/Tag</label><input className="adm-input" value={editing.tag || ''} onChange={e => setEditing(f => ({ ...f, tag: e.target.value }))} placeholder="es. Food partner" /></div>
-                <div className="adm-form-group"><label className="adm-label">Logo URL (opz.)</label><input className="adm-input" value={editing.logo_url || ''} onChange={e => setEditing(f => ({ ...f, logo_url: e.target.value }))} placeholder="https://..." /></div>
-                <div className="adm-form-group"><label className="adm-label">Sito web (opz.)</label><input className="adm-input" value={editing.website_url || ''} onChange={e => setEditing(f => ({ ...f, website_url: e.target.value }))} placeholder="https://..." /></div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Nome *</label>
+                  <input className="adm-input" value={editing.name || ''} autoFocus placeholder="Nome sponsor" onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Social / Sito web (opz.)</label>
+                  <input className="adm-input" value={editing.website_url || ''} placeholder="https://instagram.com/… o https://…" onChange={e => setEditing(f => ({ ...f, website_url: e.target.value }))} />
+                </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Logo / Immagine (opz.)</label>
+                  {editing.logo_url && (
+                    <div style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <img src={editing.logo_url} alt="" style={{ height: 56, objectFit: 'contain', borderRadius: 6, background: '#1a1a1a', padding: 4 }} />
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(f => ({ ...f, logo_url: '' }))}>Rimuovi</button>
+                    </div>
+                  )}
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <span className="adm-btn adm-btn-ghost adm-btn-sm" style={{ pointerEvents: 'none' }}>
+                      {uploading ? 'Caricamento…' : '📎 Carica immagine'}
+                    </span>
+                    <input type="file" accept="image/*" style={{ display: 'none' }} disabled={uploading}
+                      onChange={e => handleImageUpload(e.target.files?.[0])} />
+                  </label>
+                  <p style={{ fontSize: 11, color: 'var(--fg-3)', margin: '6px 0 0' }}>Max 2 MB · JPG, PNG, WebP</p>
+                </div>
+                {errMsg && <div style={{ color: '#FF3D3D', fontSize: 12, marginBottom: 8 }}>{errMsg}</div>}
                 <div className="adm-form-actions">
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
-                  <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)} disabled={busy}>Salva</button>
+                  <button className="adm-btn adm-btn-sm" onClick={() => saveItem(editing)} disabled={busy || uploading}>Salva</button>
                 </div>
               </div>
             </div>
