@@ -7,10 +7,10 @@ import { LiveScreen } from './screens/live.jsx';
 import { CalendarScreen } from './screens/calendar.jsx';
 import { TableScreen } from './screens/table.jsx';
 import { TeamsScreen } from './screens/teams.jsx';
-import { EventsScreen, NewsScreen, HonorsScreen } from './screens/secondary.jsx';
+import { EventsScreen, NewsScreen } from './screens/secondary.jsx';
 import '../styles.css';
 
-const VALID_SCREENS = ['home','live','calendar','table','teams','events','news','honors'];
+const VALID_SCREENS = ['home','live','calendar','table','teams','events','news'];
 
 function App() {
   const [screen, setScreen] = useState(() => {
@@ -81,7 +81,6 @@ function App() {
       {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
       {screen === 'events'   && <EventsScreen                     data={data}/>}
       {screen === 'news'     && <NewsScreen                       data={data}/>}
-      {screen === 'honors'   && <HonorsScreen                     data={data}/>}
       <Footer onNav={setScreen}/>
       <BottomNav current={screen} onNav={setScreen} hasLive={hasLive}/>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { DEFAULT_MATCHES_GIORNATA } from '../../data.js';
-import { EmptyState, MatchRow } from '../../components.jsx';
+import { EmptyState, MatchRow, MatchDetailModal } from '../../components.jsx';
 
 const KNOCKOUT_ORDER = [
   'Sedicesimi di finale',
@@ -56,6 +56,7 @@ export function CalendarScreen({ data, tournament }) {
   ], [groupPhases, knockoutPhases]);
 
   const [selPhase, setSelPhase] = useState('all');
+  const [selectedMatch, setSelectedMatch] = useState(null);
 
   const showGroupPhases = selPhase === 'all'
     ? groupPhases
@@ -69,6 +70,7 @@ export function CalendarScreen({ data, tournament }) {
 
   return (
     <div data-screen-label="calendar">
+      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />}
       <section className="rm-section">
         <div className="rm-section-head">
           <div>
@@ -98,7 +100,7 @@ export function CalendarScreen({ data, tournament }) {
                   <div className="rm-match-day-date">{g.items.length} {g.items.length === 1 ? 'partita' : 'partite'}</div>
                 </div>
                 <div className="rm-match-list">
-                  {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} />)}
+                  {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
                 </div>
               </div>
             ))}
@@ -124,7 +126,7 @@ export function CalendarScreen({ data, tournament }) {
                     </div>
                   ) : (
                     <div className="rm-match-list">
-                      {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} />)}
+                      {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
                     </div>
                   )}
                 </div>

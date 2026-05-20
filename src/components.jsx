@@ -44,7 +44,6 @@ function Header({ current, onNav, hasLive }) {
     { id: 'teams',    label: 'Squadre' },
     { id: 'events',   label: 'Regolamento' },
     { id: 'news',     label: 'Avvisi' },
-    { id: 'honors',   label: "Albo d'oro" },
   ];
   return (
     <header className="rm-header">
@@ -88,11 +87,10 @@ function BottomNav({ current, onNav, hasLive }) {
     { id: 'teams',  label: 'Squadre',   icon: UsersIcon },
     { id: 'events', label: 'Regolamento', icon: NewspaperIcon },
     { id: 'news',   label: 'Avvisi',    icon: BellIcon },
-    { id: 'honors', label: "Albo d'oro", icon: TrophyIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
-  const isMoreActive = drawerOpen || ['teams','events','news','honors'].includes(current);
+  const isMoreActive = drawerOpen || ['teams','events','news'].includes(current);
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }
@@ -202,7 +200,7 @@ function SponsorWink() {
 }
 
 // ── Match row ─────────────────────────────────────────────────────────────
-function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }) {
+function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick }) {
   const isTbd = !home || !away;
   if (isTbd && !date && !time) return null;
   const live = status === 'live';
@@ -210,8 +208,13 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute }
   const tbdTeam = { name: 'Da definire', short: '?', color: 'var(--fg-3)' };
   const homeTeam = home || tbdTeam;
   const awayTeam = away || tbdTeam;
+  const clickable = !!onClick && !isTbd;
   return (
-    <div className={`rm-match ${live ? 'live' : ''} ${done ? 'done' : ''}${isTbd ? ' tbd' : ''}`}>
+    <div
+      className={`rm-match ${live ? 'live' : ''} ${done ? 'done' : ''}${isTbd ? ' tbd' : ''}${clickable ? ' clickable' : ''}`}
+      onClick={clickable ? onClick : undefined}
+      style={clickable ? { cursor: 'pointer' } : undefined}
+    >
       <div className="rm-match-time">
         {live ? (
           <span className="rm-live-tag"><span className="dot"></span>LIVE · {minute}'</span>
@@ -500,7 +503,6 @@ function Footer({ onNav }) {
           <ul>
             <li><a onClick={() => onNav('events')} style={{ cursor: 'pointer' }}>Regolamento</a></li>
             <li><a onClick={() => onNav('news')} style={{ cursor: 'pointer' }}>Avvisi</a></li>
-            <li><a onClick={() => onNav('honors')} style={{ cursor: 'pointer' }}>Albo d'oro</a></li>
           </ul>
         </div>
         <div>
@@ -524,9 +526,81 @@ function Footer({ onNav }) {
   );
 }
 
+// ── Match detail modal ────────────────────────────────────────────────────
+function MatchDetailModal({ match, onClose }) {
+  if (!match) return null;
+  const { home, away, hs, as: as_, date, time, status, phase, events = [] } = match;
+  const done = status === 'ft';
+  const live = status === 'live';
+  const hasScore = hs != null;
+
+  const EVENT_ICON = { goal: '⚽', yellow: '🟨', red: '🟥', yellow_red: '🟨🟥' };
+
+  function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) onClose();
+  }
+
+  return (
+    <div className="rm-modal-overlay" onClick={handleOverlayClick}>
+      <div className="rm-modal">
+        <div className="rm-modal-handle"/>
+        <div className="rm-modal-header">
+          <span className="rm-modal-phase">{phase || 'Partita'}</span>
+          <button className="rm-modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="rm-modal-score-block">
+          <div className="rm-modal-team">
+            <div className="rm-modal-team-flag" style={{ borderColor: home?.color || 'var(--brand-green)', fontSize: 24 }}>
+              {home?.flag || home?.short || '?'}
+            </div>
+            <div className="rm-modal-team-name">{home?.name || '?'}</div>
+          </div>
+
+          <div className={`rm-modal-scoreline${!hasScore ? ' vs' : ''}`}>
+            {hasScore ? `${hs} – ${as_}` : 'VS'}
+          </div>
+
+          <div className="rm-modal-team">
+            <div className="rm-modal-team-flag" style={{ borderColor: away?.color || 'var(--brand-green)', fontSize: 24 }}>
+              {away?.flag || away?.short || '?'}
+            </div>
+            <div className="rm-modal-team-name">{away?.name || '?'}</div>
+          </div>
+        </div>
+
+        <div className="rm-modal-meta">
+          {date && <span className="rm-modal-meta-item"><CalIcon size={12}/> {date}</span>}
+          {time && <span className="rm-modal-meta-item"><ClockIcon size={12}/> {time}</span>}
+          {done && <span className="rm-modal-meta-item" style={{ color: 'var(--brand-green)' }}>FT</span>}
+          {live && <span className="rm-modal-meta-item" style={{ color: '#ff4444' }}>🔴 LIVE</span>}
+        </div>
+
+        {(done || live || events.length > 0) && (
+          <div className="rm-modal-events">
+            <div className="rm-modal-events-title">Cronaca</div>
+            {events.length === 0 ? (
+              <div className="rm-modal-no-events">Nessun evento registrato</div>
+            ) : (
+              events.map((ev, i) => (
+                <div key={i} className="rm-event-row">
+                  <span className="rm-event-min">{ev.minute != null ? `${ev.minute}'` : '—'}</span>
+                  <span className="rm-event-icon">{EVENT_ICON[ev.type] || '•'}</span>
+                  <span className="rm-event-player">{ev.player || '—'}</span>
+                  <span className="rm-event-team">{ev.flag || ev.team}</span>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export {
   EmptyState,
-  Header, BottomNav, StatusStrip, Countdown, SponsorWink, MatchRow, LiveBoard,
+  Header, BottomNav, StatusStrip, Countdown, SponsorWink, MatchRow, MatchDetailModal, LiveBoard,
   StandingsTable, TeamCard, TopScorers, NewsCard, EventRow, HonorCard, Footer,
   TrophyIcon, BallIcon, CalIcon, PinIcon, UsersIcon, ArrowIcon, ClockIcon,
   BellIcon, InstaIcon, MailIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,

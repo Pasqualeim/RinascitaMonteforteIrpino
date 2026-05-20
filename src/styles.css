@@ -160,6 +160,7 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 .rm-drawer-title { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 12px; padding-left: 4px; }
 .rm-drawer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rm-drawer-grid > *:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .rm-drawer-item {
   display: flex; align-items: center; gap: 12px;
   padding: 14px 16px; background: #141414; border: 1px solid var(--border-subtle);
@@ -330,6 +331,7 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   transition: border-color 200ms;
 }
 .rm-match:hover { border-color: var(--border-strong); }
+.rm-match.clickable:hover { border-color: var(--brand-green); background: #0f150f; }
 .rm-match.live { border-color: var(--border-brand); box-shadow: var(--glow-green-sm); }
 .rm-match.done { opacity: 0.75; }
 .rm-match.tbd { opacity: 0.7; border-style: dashed; }
@@ -643,6 +645,93 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   .rm-footer-bot { max-width: 1280px; margin: 28px auto 0; }
   .rm-news-grid { grid-template-columns: 1.5fr 1fr 1fr; }
   .rm-news-card.featured { grid-column: auto; grid-row: span 2; }
+}
+
+/* ── Match detail modal ─────────────────────────────────────── */
+.rm-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.82); z-index: 60;
+  display: flex; align-items: flex-end; justify-content: center;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 150ms;
+}
+.rm-modal {
+  width: 100%; max-width: 540px; max-height: 86vh;
+  background: #0d0d0d; border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border-1);
+  overflow-y: auto; overscroll-behavior: contain;
+  animation: slideUp 220ms var(--ease-sport);
+}
+.rm-modal-handle {
+  width: 36px; height: 4px; background: var(--border-1);
+  border-radius: 2px; margin: 12px auto 0;
+}
+.rm-modal-header {
+  padding: 16px 16px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rm-modal-phase {
+  font-size: 11px; font-family: var(--font-display); letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--fg-3);
+}
+.rm-modal-close {
+  width: 28px; height: 28px; border-radius: 50%; background: #1a1a1a;
+  border: 0; color: var(--fg-2); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.rm-modal-score-block {
+  padding: 20px 16px 16px;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px;
+  text-align: center;
+}
+.rm-modal-team { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.rm-modal-team-flag {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--border-1); font-size: 24px;
+  background: #141414;
+}
+.rm-modal-team-name {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg-1);
+  line-height: 1.2;
+}
+.rm-modal-scoreline {
+  font-family: var(--font-display); font-size: 48px; letter-spacing: 0.04em;
+  color: var(--fg-1); line-height: 1;
+}
+.rm-modal-scoreline.vs { font-size: 18px; color: var(--fg-3); }
+.rm-modal-meta {
+  display: flex; gap: 12px; align-items: center; justify-content: center;
+  padding: 0 16px 16px; flex-wrap: wrap;
+}
+.rm-modal-meta-item {
+  font-size: 12px; color: var(--fg-3); display: flex; align-items: center; gap: 4px;
+}
+.rm-modal-events {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+.rm-modal-events-title {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--fg-3); font-family: var(--font-display);
+  padding: 12px 0 8px;
+}
+.rm-event-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.rm-event-row:last-child { border-bottom: 0; }
+.rm-event-min {
+  min-width: 32px; font-family: var(--font-display); font-size: 13px;
+  color: var(--fg-3); letter-spacing: 0.06em;
+}
+.rm-event-icon { font-size: 16px; }
+.rm-event-player { color: var(--fg-1); font-weight: 600; flex: 1; }
+.rm-event-team { color: var(--fg-3); font-size: 11px; }
+.rm-modal-no-events {
+  text-align: center; color: var(--fg-3); font-size: 13px; padding: 20px 0 8px;
 }
 
 /* ── Reduced motion ─────────────────────────────────────────── */

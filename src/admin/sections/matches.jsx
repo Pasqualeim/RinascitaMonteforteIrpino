@@ -91,8 +91,10 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
       const home_score = updated.hs != null ? parseInt(updated.hs) : null;
       const away_score = updated.as != null ? parseInt(updated.as) : null;
 
+      let matchId = updated.id;
+
       if (updated._isNew) {
-        await rmAdminDomain.createMatch({
+        const res = await rmAdminDomain.createMatch({
           tournament_id: tournamentId,
           group_id,
           home_team_id,
@@ -106,6 +108,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
           pitch: updated.pitch || 'Campo Sportivo',
           sort_order: 0,
         });
+        matchId = res?.data?.id || null;
       } else {
         await rmAdminDomain.updateMatch(updated.id, {
           home_team_id: home_team_id ?? null,
@@ -120,13 +123,40 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
           pitch: updated.pitch || 'Campo Sportivo',
         });
       }
+
+      // Sync events for finished matches
+      if (updated.status === 'ft' && matchId) {
+        const originalEvts = updated._originalEvents || [];
+        const localEvts = updated._localEvents || [];
+        const localIds = new Set(localEvts.filter(e => e.id).map(e => e.id));
+        // Delete removed events
+        for (const ev of originalEvts) {
+          if (ev.id && !localIds.has(ev.id)) {
+            await rmAdminDomain.deleteMatchEvent(ev.id).catch(e => console.warn('Event delete:', e));
+          }
+        }
+        // Add new events
+        for (const ev of localEvts) {
+          if (!ev.id) {
+            const teamObj = ev._side === 'home' ? homeTeam : awayTeam;
+            await rmAdminDomain.createMatchEvent({
+              match_id: matchId,
+              team_id: teamObj?.id || null,
+              event_type: ev.type,
+              player_name: ev.player || null,
+              minute: ev.minute ?? null,
+            }).catch(e => console.warn('Event create:', e));
+          }
+        }
+      }
+
       setEditing(null);
       setSaveError('');
       await onRefresh('Partita e classifica aggiornate');
     } catch (err) {
       const human = humanizeError(err);
-      setSaveError(human); // shown inside modal
-      setErrMsg(human);    // fallback shown in section
+      setSaveError(human);
+      setErrMsg(human);
     } finally {
       setBusy(false);
     }
@@ -273,17 +303,38 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
         })()}
       </div>
 
-      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
+      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} scorers={data.scorers || []} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
     </div>
   );
 }
 
-function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onClose, busy, saveError }) {
+const EVENT_TYPES = [
+  { value: 'goal',   label: '⚽ Gol' },
+  { value: 'yellow', label: '🟨 Giallo' },
+  { value: 'red',    label: '🟥 Rosso' },
+];
+
+function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [], onSave, onClose, busy, saveError }) {
   const [form, setForm] = useState({ ...match });
   const [error, setError] = useState('');
   const [pendingTeamChange, setPendingTeamChange] = useState(null); // { field, team, strong }
+  const [localEvents, setLocalEvents] = useState(match.events || []);
+  const [addingEvent, setAddingEvent] = useState(false);
+  const [newEv, setNewEv] = useState({ type: 'goal', player: '', minute: '', side: 'home' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  function addEvent() {
+    if (!newEv.player.trim()) return;
+    setLocalEvents(evs => [...evs, { type: newEv.type, player: newEv.player.trim(), minute: newEv.minute ? parseInt(newEv.minute) : null, _side: newEv.side }]
+      .sort((a, b) => (a.minute ?? 999) - (b.minute ?? 999)));
+    setNewEv({ type: 'goal', player: '', minute: '', side: 'home' });
+    setAddingEvent(false);
+  }
+
+  function removeEvent(idx) {
+    setLocalEvents(evs => evs.filter((_, i) => i !== idx));
+  }
   const sameTeamsSelected = !!form.home?.short && form.home?.short === form.away?.short;
 
   // Partita con risultati o eventi registrati — warn forte al cambio squadra
@@ -320,7 +371,7 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
     if (match._isNew && !form._day) { setError('Seleziona la fase'); return; }
     if (sameTeamsSelected) { setError('Casa e ospite non possono coincidere'); return; }
     setError('');
-    onSave(form);
+    onSave({ ...form, _localEvents: localEvents, _originalEvents: match.events || [] });
   }
 
   return (
@@ -431,6 +482,88 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, onSave, onC
                 <input type="number" className="adm-input" value={form.as ?? 0} onChange={e => set('as', e.target.value === '' ? 0 : parseInt(e.target.value))} min="0" />
               </div>
             </div>
+            )}
+
+            {/* ── Eventi (solo partite giocate) ── */}
+            {form.status === 'ft' && form.home && form.away && (
+              <div className="adm-form-group">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <label className="adm-label" style={{ margin: 0 }}>Gol e cartellini</label>
+                  {!addingEvent && (
+                    <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setAddingEvent(true)}>+ Aggiungi</button>
+                  )}
+                </div>
+
+                {localEvents.length === 0 && !addingEvent && (
+                  <div style={{ fontSize: 12, color: 'var(--fg-3)', padding: '8px 0' }}>Nessun evento. Aggiungi gol e cartellini.</div>
+                )}
+
+                {localEvents.map((ev, i) => {
+                  const icon = ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : '🟥';
+                  const teamName = (ev._side === 'home' || ev.team === form.home?.short)
+                    ? form.home?.name : form.away?.name;
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                      <span style={{ minWidth: 30, fontSize: 12, color: 'var(--fg-3)', fontFamily: 'var(--font-display)' }}>
+                        {ev.minute != null ? `${ev.minute}'` : '—'}
+                      </span>
+                      <span style={{ fontSize: 15 }}>{icon}</span>
+                      <span style={{ flex: 1, fontSize: 13, color: 'var(--fg-1)', fontWeight: 600 }}>{ev.player || '—'}</span>
+                      <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{teamName || ev.team || ''}</span>
+                      <button type="button" onClick={() => removeEvent(i)} style={{ background: 'transparent', border: 0, color: 'var(--fg-3)', cursor: 'pointer', fontSize: 13, padding: '0 4px' }}>✕</button>
+                    </div>
+                  );
+                })}
+
+                {addingEvent && (
+                  <div style={{ background: '#0f0f0f', border: '1px solid var(--border-1)', borderRadius: 8, padding: '12px', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {EVENT_TYPES.map(t => (
+                        <button key={t.value} type="button"
+                          style={{ fontSize: 12, padding: '5px 10px', background: newEv.type === t.value ? 'var(--brand-green)' : 'transparent', border: `1px solid ${newEv.type === t.value ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.type === t.value ? '#000' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer', fontWeight: newEv.type === t.value ? 700 : 400 }}
+                          onClick={() => setNewEv(e => ({ ...e, type: t.value }))}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button type="button"
+                        style={{ flex: 1, fontSize: 12, padding: '6px 8px', background: newEv.side === 'home' ? 'rgba(0,230,118,0.15)' : 'transparent', border: `1px solid ${newEv.side === 'home' ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.side === 'home' ? 'var(--brand-green)' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer' }}
+                        onClick={() => setNewEv(e => ({ ...e, side: 'home' }))}>
+                        {form.home?.name || 'Casa'}
+                      </button>
+                      <button type="button"
+                        style={{ flex: 1, fontSize: 12, padding: '6px 8px', background: newEv.side === 'away' ? 'rgba(0,230,118,0.15)' : 'transparent', border: `1px solid ${newEv.side === 'away' ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.side === 'away' ? 'var(--brand-green)' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer' }}
+                        onClick={() => setNewEv(e => ({ ...e, side: 'away' }))}>
+                        {form.away?.name || 'Ospite'}
+                      </button>
+                    </div>
+                    {(() => {
+                      const sideTeam = newEv.side === 'home' ? form.home : form.away;
+                      const teamPlayers = sideTeam?.players || [];
+                      return teamPlayers.length > 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {teamPlayers.map((p, i) => (
+                            <button key={p.id || i} type="button"
+                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: newEv.player === p.name ? 'rgba(0,230,118,0.12)' : 'var(--bg-canvas)', border: `1px solid ${newEv.player === p.name ? 'var(--brand-green)' : 'var(--border-1)'}`, borderRadius: 8, cursor: 'pointer', color: newEv.player === p.name ? 'var(--brand-green)' : '#fff', textAlign: 'left', fontWeight: newEv.player === p.name ? 700 : 400 }}
+                              onClick={() => setNewEv(ev => ({ ...ev, player: newEv.player === p.name ? '' : p.name }))}>
+                              <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null;
+                    })()}
+                    <input className="adm-input" placeholder="Altro giocatore..." value={newEv.player}
+                      onChange={e => setNewEv(ev => ({ ...ev, player: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && addEvent()} />
+
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => { setAddingEvent(false); setNewEv({ type: 'goal', player: '', minute: '', side: 'home' }); }}>Annulla</button>
+                      <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2 }} onClick={addEvent} disabled={!newEv.player.trim()}>Aggiungi</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* ── Data e Orario ── */}

@@ -261,6 +261,21 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
           away_score: lm.as ?? 0,
         }).catch(e => console.warn('Match finish sync:', e))
       );
+
+      // Persist all events not yet in match_events (cards have no _match_event_id pre-fix)
+      for (const ev of (lm.events || [])) {
+        if (!ev._match_event_id) {
+          promises.push(
+            rmAdminDomain.createMatchEvent({
+              match_id: lm.match_id,
+              team_id: getTeamId(ev._ts) || null,
+              event_type: ev.type,
+              player_name: ev.player || null,
+              minute: ev.min ?? null,
+            }).catch(e => console.warn('Event persist on terminate:', e))
+          );
+        }
+      }
     }
 
     // Sync all scorers: create new (no id), update existing
@@ -367,13 +382,29 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setCardFlow({ type, teamShort });
   }
 
-  function pickCardPlayer(playerName) {
+  async function pickCardPlayer(playerName) {
     const { type, teamShort } = cardFlow;
     const teamObj = teams.find(t => t.short === teamShort)
       || (lm.home?.short === teamShort ? lm.home : lm.away);
     const newEvents = [{ min: displayMinute, type, player: playerName, team: teamObj?.name || '', _ts: teamShort }];
     if (type === 'yellow' && getYellowCount(playerName, teamShort) >= 1) {
       newEvents.push({ min: displayMinute, type: 'red', player: playerName, team: teamObj?.name || '', _ts: teamShort, _reason: 'doppio_giallo' });
+    }
+    if (lm.match_id) {
+      for (const ev of newEvents) {
+        try {
+          const res = await rmAdminDomain.createMatchEvent({
+            match_id: lm.match_id,
+            team_id: getTeamId(teamShort) || null,
+            event_type: ev.type,
+            player_name: playerName,
+            minute: displayMinute,
+          });
+          if (res?.data?.id) ev._match_event_id = res.data.id;
+        } catch(e) {
+          console.warn('Match event card create:', e);
+        }
+      }
     }
     const events = [...(lm.events || []), ...newEvents].sort((a, b) => a.min - b.min);
     persistLm({ ...lm, events, minute: displayMinute });
@@ -385,14 +416,14 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     const events = lm.events.filter((_, i) => i !== origIdx);
     const updatedLm = { ...lm, events };
     let updatedScorers = null;
+    if (ev._match_event_id) {
+      rmAdminDomain.deleteMatchEvent(ev._match_event_id).catch(e => console.warn('Match event delete:', e));
+    }
     if (ev.type === 'goal') {
       const side = ev._ts === lm.home?.short ? 'hs' : 'as';
       updatedLm[side] = Math.max(0, (lm[side] || 0) - 1);
       if (!ev._autogol) {
         updatedScorers = updateScorer(ev.player, ev._ts || '', -1);
-        if (ev._match_event_id) {
-          rmAdminDomain.deleteMatchEvent(ev._match_event_id).catch(e => console.warn('Match event delete:', e));
-        }
       }
     }
     persistLm(updatedLm, updatedScorers);

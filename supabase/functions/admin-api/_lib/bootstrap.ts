@@ -36,12 +36,14 @@ export async function buildBootstrap(editionId: string) {
     ]);
 
     const matchIds = (matchesRes.data || []).map((m: any) => m.id);
-    const goalEventsRes = matchIds.length > 0
+    const allMatchEventsRes = matchIds.length > 0
       ? await db.from("match_events")
-          .select("player_name, team_id, teams!team_id(short, flag)")
-          .eq("event_type", "goal")
+          .select("id, match_id, player_name, team_id, event_type, minute, teams!team_id(short, flag)")
           .in("match_id", matchIds)
+          .order("minute", { ascending: true })
       : { data: [] };
+    const allMatchEvents = allMatchEventsRes.data || [];
+    const goalEventsRes = { data: allMatchEvents.filter((e: any) => e.event_type === "goal") };
 
     const groups      = groupsRes.data || [];
     const regs        = regsRes.data || [];
@@ -101,6 +103,19 @@ export async function buildBootstrap(editionId: string) {
       hs: live.home_score, as: live.away_score, minute: live.minute, phase: live.phase || null, timer_started_at: live.timer_started_at || null, pitch: live.pitch || "", events: Array.isArray(live.events) ? live.events : [],
     } : { active: false, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
 
+    const eventsPerMatch: Record<string, any[]> = {};
+    for (const ev of allMatchEvents) {
+      if (!eventsPerMatch[ev.match_id]) eventsPerMatch[ev.match_id] = [];
+      eventsPerMatch[ev.match_id].push({
+        id: ev.id,
+        type: ev.event_type,
+        player: ev.player_name || "",
+        team: (ev as any).teams?.short || "",
+        flag: (ev as any).teams?.flag || "",
+        minute: ev.minute ?? null,
+      });
+    }
+
     const phaseMap: Record<string, any> = {};
     for (const m of matches) {
       const phase = m.phase || "Girone";
@@ -111,6 +126,11 @@ export async function buildBootstrap(editionId: string) {
         away: m.away_team ? { short: m.away_team.short, flag: m.away_team.flag, name: m.away_team.name, color: m.away_team.color } : null,
         hs: m.home_score, as: m.away_score, status: m.status,
         date: m.match_date, time: m.match_time, pitch: m.pitch, phase: m.phase, group_id: m.group_id,
+        events: eventsPerMatch[m.id]?.length > 0
+          ? eventsPerMatch[m.id]
+          : (live?.match_id === m.id && Array.isArray(live.events)
+              ? live.events.map((ev: any) => ({ type: ev.type, player: ev.player || "", team: ev._ts || "", flag: "", minute: ev.min ?? null }))
+              : []),
       });
     }
 
@@ -145,7 +165,7 @@ export async function buildBootstrap(editionId: string) {
     news:    (newsRes.data    || []).map((n: any) => ({ id: n.id, title: n.title, body: n.body, category: n.category, tone: n.tone, pinned: n.pinned, date: n.created_at })),
     events:  (eventsRes.data  || []).map((e: any) => ({ id: e.id, title: e.title, date: e.event_date, time: e.event_time, type: e.event_type, description: e.description })),
     honors:  (honorsRes.data  || []).map((h: any) => ({ id: h.id, edition: h.edition_name, year: h.year, winner: h.winner, runner_up: h.runner_up, third: h.third_place, mvp: h.mvp, top_scorer: h.top_scorer })),
-    sponsors:(sponsorsRes.data|| []).map((s: any) => ({ id: s.id, name: s.name, logo: s.logo_url, url: s.website_url, tag: s.tag })),
+    sponsors:(sponsorsRes.data|| []).map((s: any) => ({ id: s.id, name: s.name, logo_url: s.logo_url, website_url: s.website_url, tag: s.tag })),
     strip_items: (stripRes.data || []).map((s: any) => s.text),
     updated_at: new Date().toISOString(),
   };
