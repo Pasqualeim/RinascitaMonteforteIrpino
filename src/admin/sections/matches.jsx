@@ -24,6 +24,7 @@ function italianToIso(str) {
 export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
+  const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
   const [saveError, setSaveError] = useState(''); // API error shown inside modal
@@ -176,6 +177,22 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
     }
   }
 
+  async function deleteAllMatches() {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      const allMatchIds = giornate.flatMap(d => (d.items || []).filter(m => m.id).map(m => m.id));
+      for (const id of allMatchIds) {
+        await rmAdminDomain.deleteMatch(id);
+      }
+      await onRefresh('Tutte le partite eliminate');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione partite');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const statusLabel = { live: '🔴 Live', ft: '✅ Finale', sch: '⏳' };
   const statusColor = { live: '#FF3D3D', ft: 'var(--brand-green)', sch: 'var(--fg-3)' };
 
@@ -245,6 +262,9 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
             <p className="adm-section-sub" style={{ margin: 0 }}>{totalMatches} partite totali</p>
           </div>
           <div className="adm-section-actions">
+            {totalMatches > 0 && (
+              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleteAllConfirm(true)} disabled={busy}>🗑 Elimina tutte</button>
+            )}
             <button className="adm-btn adm-btn-sm" onClick={newMatch} disabled={busy}>+ Nuova</button>
           </div>
         </div>
@@ -305,6 +325,13 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
 
       {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} scorers={data.scorers || []} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
+      {deleteAllConfirm && (
+        <Confirm
+          msg={`Eliminare tutte le ${totalMatches} partite? Questa azione non è reversibile.`}
+          onOk={() => { setDeleteAllConfirm(false); deleteAllMatches(); }}
+          onCancel={() => setDeleteAllConfirm(false)}
+        />
+      )}
     </div>
   );
 }
