@@ -47,6 +47,7 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMsg, setSetupMsg] = useState('');
   const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
+  const [resetAllConfirm, setResetAllConfirm] = useState(false);
 
   // Partite di girone
   const [genMode, setGenMode] = useState('single');
@@ -95,6 +96,27 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
       await onRefresh('Girone eliminato');
     } catch (err) {
       setErrMsg(err?.message || 'Errore eliminazione girone');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resetAllTeamsAndGroups() {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      for (const t of allTeams) {
+        const teamScorers = (data.scorers || []).filter(s => s.team === t.short);
+        await Promise.all(teamScorers.filter(s => s.id).map(s => rmAdminDomain.deleteScorer(s.id).catch(() => {})));
+        if (t.registration_id) await rmAdminDomain.deleteRegistration(t.registration_id).catch(() => {});
+        await rmAdminDomain.deleteTeam(t.id);
+      }
+      for (const g of groups) {
+        await rmAdminDomain.deleteGroup(g.id);
+      }
+      await onRefresh('Squadre e gironi eliminati');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore reset');
     } finally {
       setBusy(false);
     }
@@ -236,6 +258,11 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
           <p className="adm-section-sub" style={{ margin: 0 }}>{allTeams.length} squadre · {groups.length} gironi</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
+          {(allTeams.length > 0 || groups.length > 0) && (
+            <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setResetAllConfirm(true)} disabled={busy}>
+              🗑 Reset tutto
+            </button>
+          )}
           <button
             className={`adm-btn adm-btn-sm ${groups.length === 0 && allTeams.length > 0 ? '' : 'adm-btn-ghost'}`}
             onClick={() => setSetupOpen(o => !o)} disabled={setupBusy}>
@@ -460,6 +487,13 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
           msg="Eliminare questo girone? Le squadre assegnate perderanno il girone."
           onOk={() => { deleteGroup(deletingGroupId); setDeletingGroupId(null); }}
           onCancel={() => setDeletingGroupId(null)}
+        />
+      )}
+      {resetAllConfirm && (
+        <Confirm
+          msg={`Eliminare tutte le ${allTeams.length} squadre e tutti i ${groups.length} gironi? Questa azione non è reversibile.`}
+          onOk={() => { setResetAllConfirm(false); resetAllTeamsAndGroups(); }}
+          onCancel={() => setResetAllConfirm(false)}
         />
       )}
     </div>
