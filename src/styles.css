@@ -734,6 +734,52 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   text-align: center; color: var(--fg-3); font-size: 13px; padding: 20px 0 8px;
 }
 
+/* ── Team roster modal ──────────────────────────────────────── */
+.rm-roster-header {
+  padding: 16px 16px 14px;
+  display: flex; align-items: center; gap: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.rm-roster-crest {
+  width: 52px; height: 52px; border-radius: 50%; background: #1a1a1a;
+  border: 2px solid; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 18px; letter-spacing: 0.04em;
+  flex: none;
+}
+.rm-roster-team-name {
+  font-family: var(--font-display); font-size: 22px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #fff; line-height: 1.1;
+}
+.rm-roster-meta {
+  font-size: 12px; color: var(--fg-3); letter-spacing: 0.06em;
+  text-transform: uppercase; margin-top: 3px;
+}
+.rm-roster-body { padding: 12px 16px 20px; }
+.rm-roster-section-title {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--fg-3); font-family: var(--font-display);
+  padding: 8px 0 10px;
+}
+.rm-roster-empty {
+  text-align: center; color: var(--fg-3); font-size: 13px; padding: 20px 0;
+}
+.rm-player-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+  font-size: 14px; color: var(--fg-1);
+}
+.rm-player-row:last-child { border-bottom: 0; }
+.rm-player-num {
+  min-width: 22px; font-family: var(--font-display); font-size: 13px;
+  color: var(--fg-3); text-align: right;
+}
+.rm-player-name { flex: 1; font-weight: 500; }
+.rm-player-captain {
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--brand-gold); font-family: var(--font-display);
+  background: rgba(245,197,24,0.12); padding: 2px 7px; border-radius: 4px;
+}
+
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .rm-strip-track { animation: none; }

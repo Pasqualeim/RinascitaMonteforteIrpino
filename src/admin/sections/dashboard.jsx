@@ -1,4 +1,4 @@
-import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon, TrophyIcon } from '../shared.jsx';
+import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon, TrophyIcon, CardIcon } from '../shared.jsx';
 
 export function DashboardSection({ data, onSave, onRefresh, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
@@ -50,7 +50,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('discipline')}><span style={{ fontSize: 26 }}>🟨</span><span>Cartellini</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('discipline')}><CardIcon size={28}/><span>Cartellini</span></button>
       </div>
 
       {/* Live attiva */}
@@ -72,7 +72,6 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Portale</h3>
       <div className="adm-grid-menu">
         <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}><CalIcon size={28}/><span>Regolamento</span></button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('sponsors')}><StarIcon size={28}/><span>Sponsor</span></button>
       </div>
     </div>
   );

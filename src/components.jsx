@@ -363,13 +363,17 @@ function StandingsTable({ rows, group, updatedLabel }) {
 }
 
 // ── Team card ─────────────────────────────────────────────────────────────
-function TeamCard({ team }) {
+function TeamCard({ team, onClick }) {
+  const hasRoster = (team.players?.length ?? 0) > 0;
   return (
-    <div className="rm-team-card">
+    <div className="rm-team-card" onClick={onClick} style={onClick ? { cursor: 'pointer' } : undefined}>
       <div className="rm-team-crest-lg" style={{ borderColor: team.color, color: team.color }}>{team.short}</div>
       <div className="rm-team-meta">
         <div className="rm-team-card-name">{team.name}</div>
-        <div className="rm-team-card-sub">{team.captain ? 'Cap. ' + team.captain : team.flag || ''}</div>
+        <div className="rm-team-card-sub">
+          {team.captain ? 'Cap. ' + team.captain : team.flag || ''}
+          {hasRoster && <span style={{ marginLeft: 8, color: 'var(--brand-green)', fontWeight: 600 }}>{team.players.length} gioc.</span>}
+        </div>
         <div className="rm-team-stats">
           <span><b>{team.played ?? 0}</b> G</span>
           <span><b>{team.won ?? 0}</b> V</span>
@@ -377,6 +381,7 @@ function TeamCard({ team }) {
           <span className="rm-team-stat-pts"><b>{team.points ?? 0}</b> Pt</span>
         </div>
       </div>
+      {onClick && <span style={{ color: 'var(--fg-3)', fontSize: 18, flexShrink: 0 }}>›</span>}
     </div>
   );
 }

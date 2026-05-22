@@ -1,5 +1,5 @@
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
-import { EmptyState, Countdown, SponsorWink, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
+import { EmptyState, Countdown, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
 import { rmDeriveMatchesToday } from '../../domain.js';
 
 function fmtDateIt(iso) {
@@ -45,7 +45,6 @@ export function HomeScreen({ onNav, data, tournament }) {
       <section className="rm-hero">
         <div className="rm-hero-glow"></div>
         <div className="rm-hero-inner">
-          <SponsorWink/>
           <h1 className="rm-hero-title">Rinascita<br/><span className="accent">Monteforte</span></h1>
           <h2 className="rm-hero-sub">{editionName}</h2>
           <p className="rm-hero-meta">
@@ -164,28 +163,6 @@ export function HomeScreen({ onNav, data, tournament }) {
         })}
       </section>
 
-      <section className="rm-section">
-        <div className="rm-section-head">
-          <div>
-            <span className="rm-eyebrow">Hanno detto sì</span>
-            <h3 className="rm-section-title">Sponsor</h3>
-          </div>
-        </div>
-        <div className="rm-sponsors">
-          {sponsors.map((s, i) => {
-            const card = (
-              <div key={s.id || i} className="rm-sponsor-card">
-                {s.logo_url && <img src={s.logo_url} alt={s.name} style={{ width: '100%', maxHeight: 56, objectFit: 'contain', marginBottom: 8 }} />}
-                <div className="rm-sponsor-name">{s.name}</div>
-                {s.website_url && <div style={{ fontSize: 10, color: 'var(--fg-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.website_url.replace(/^https?:\/\//, '')}</div>}
-              </div>
-            );
-            return s.website_url
-              ? <a key={s.id || i} href={s.website_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{card}</a>
-              : card;
-          })}
-        </div>
-      </section>
     </div>
   );
 }
