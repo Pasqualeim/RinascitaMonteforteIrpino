@@ -734,6 +734,20 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   text-align: center; color: var(--fg-3); font-size: 13px; padding: 20px 0 8px;
 }
 
+/* ── Match modal: events grouped by team ───────────────────── */
+.rm-modal-team-group { margin-bottom: 4px; }
+.rm-modal-team-group-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0 6px;
+  border-bottom: 1px solid var(--border-1);
+}
+.rm-modal-team-group-flag { font-size: 20px; line-height: 1; }
+.rm-modal-team-group-name {
+  font-family: var(--font-display); font-size: 13px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-2);
+}
+.rm-modal-team-group .rm-event-row { padding-left: 4px; }
+
 /* ── Team roster modal ──────────────────────────────────────── */
 .rm-roster-header {
   padding: 16px 16px 14px;

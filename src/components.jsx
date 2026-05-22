@@ -587,14 +587,25 @@ function MatchDetailModal({ match, onClose }) {
             {events.length === 0 ? (
               <div className="rm-modal-no-events">Nessun evento registrato</div>
             ) : (
-              events.map((ev, i) => (
-                <div key={i} className="rm-event-row">
-                  <span className="rm-event-min">{ev.minute != null ? `${ev.minute}'` : '—'}</span>
-                  <span className="rm-event-icon">{EVENT_ICON[ev.type] || '•'}</span>
-                  <span className="rm-event-player">{ev.player || '—'}</span>
-                  <span className="rm-event-team">{ev.flag || ev.team}</span>
-                </div>
-              ))
+              <div className="rm-live-events" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+                {[...events]
+                  .sort((a, b) => (a.minute ?? 0) - (b.minute ?? 0))
+                  .map((ev, i) => {
+                    const isHome = ev.team === home?.short;
+                    const icon = EVENT_ICON[ev.type] || '•';
+                    return (
+                      <div key={i} className="rm-live-event-row">
+                        <div className="rm-lev-home">
+                          {isHome && <><span className="rm-lev-name">{ev.player || '—'}</span><span className="rm-lev-icon">{icon}</span></>}
+                        </div>
+                        <div className="rm-lev-min">{ev.minute != null ? `${ev.minute}'` : '—'}</div>
+                        <div className="rm-lev-away">
+                          {!isHome && <><span className="rm-lev-icon">{icon}</span><span className="rm-lev-name">{ev.player || '—'}</span></>}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             )}
           </div>
         )}
