@@ -29,8 +29,9 @@ export const rmAdminDomain = {
   updateMatch: (id,p) => rmAdminApiCrud('PUT', `/matches/${id}`, p),
   deleteMatch: (id)   => rmAdminApiCrud('DELETE', `/matches/${id}`),
   // Match events
-  createMatchEvent: (p)  => rmAdminApiCrud('POST', '/match-events', p),
-  deleteMatchEvent: (id) => rmAdminApiCrud('DELETE', `/match-events/${id}`),
+  createMatchEvent: (p)    => rmAdminApiCrud('POST', '/match-events', p),
+  updateMatchEvent: (id,p) => rmAdminApiCrud('PUT',  `/match-events/${id}`, p),
+  deleteMatchEvent: (id)   => rmAdminApiCrud('DELETE', `/match-events/${id}`),
   // Live (per tournament)
   updateLive: (p) => rmAdminApiCrud('PUT', '/live', p),
   // Scorers (per tournament)

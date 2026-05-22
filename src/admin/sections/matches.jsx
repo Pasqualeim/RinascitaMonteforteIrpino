@@ -348,15 +348,27 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
   const [pendingTeamChange, setPendingTeamChange] = useState(null); // { field, team, strong }
   const [localEvents, setLocalEvents] = useState(match.events || []);
   const [addingEvent, setAddingEvent] = useState(false);
+  const [editingEventIdx, setEditingEventIdx] = useState(null);
+  const [deletingEventIdx, setDeletingEventIdx] = useState(null);
   const [newEv, setNewEv] = useState({ type: 'goal', player: '', minute: '', side: 'home' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   function addEvent() {
     if (!newEv.player.trim()) return;
-    setLocalEvents(evs => [...evs, { type: newEv.type, player: newEv.player.trim(), minute: newEv.minute ? parseInt(newEv.minute) : null, _side: newEv.side }]
-      .sort((a, b) => (a.minute ?? 999) - (b.minute ?? 999)));
+    const ev = { type: newEv.type, player: newEv.player.trim(), minute: newEv.minute ? parseInt(newEv.minute) : null, _side: newEv.side };
+    setLocalEvents(evs => {
+      const base = editingEventIdx !== null ? evs.filter((_, i) => i !== editingEventIdx) : evs;
+      return [...base, ev].sort((a, b) => (a.minute ?? 999) - (b.minute ?? 999));
+    });
     setNewEv({ type: 'goal', player: '', minute: '', side: 'home' });
+    setEditingEventIdx(null);
     setAddingEvent(false);
+  }
+
+  function cancelAddEvent() {
+    setAddingEvent(false);
+    setEditingEventIdx(null);
+    setNewEv({ type: 'goal', player: '', minute: '', side: 'home' });
   }
 
   function removeEvent(idx) {
@@ -401,67 +413,82 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
     onSave({ ...form, _localEvents: localEvents, _originalEvents: match.events || [] });
   }
 
+  const evPanelPlayers = (() => {
+    const sideShort = newEv.side === 'home' ? form.home?.short : form.away?.short;
+    const fullTeam = teams.find(t => t.short === sideShort);
+    return (fullTeam?.players || []).map(p => ({
+      ...p,
+      displayName: [p.nome, p.cognome].filter(Boolean).join(' ') || p.name || '',
+    }));
+  })();
+
   return (
     <>
     {pendingTeamChange && (
       <div className="adm-overlay" style={{ zIndex: 1100 }} onClick={() => setPendingTeamChange(null)}>
-        <div className="adm-modal" style={{ maxHeight: 'auto', minHeight: 'auto', borderRadius: 12, margin: 'auto 16px' }} onClick={e => e.stopPropagation()}>
-          <div className="adm-modal-header" style={{ borderBottom: `1px solid ${pendingTeamChange.strong ? 'rgba(255,61,61,0.3)' : 'rgba(245,197,24,0.25)'}` }}>
+        <div className="adm-modal" style={{ minHeight: 'auto', maxHeight: '90vh', borderRadius: 12 }} onClick={e => e.stopPropagation()}>
+          <div className="adm-modal-header" style={{ borderBottom: `1px solid ${pendingTeamChange.strong ? 'rgba(255,61,61,0.3)' : 'var(--border-1)'}` }}>
             <h3 className="adm-modal-title" style={{ color: pendingTeamChange.strong ? '#FF6B6B' : '#F5C518' }}>
               ⚠️ Cambiare squadra
             </h3>
+            <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setPendingTeamChange(null)}>✕</button>
           </div>
-          <div style={{ padding: '16px 20px 20px' }}>
+          <div style={{ padding: '20px' }}>
             {pendingTeamChange.strong && (
-              <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, padding: '10px 12px', marginBottom: 14, fontSize: 12, color: '#FF6B6B', lineHeight: 1.5 }}>
-                Questa partita ha <strong>risultati o eventi registrati</strong>. Cambiare la squadra invaliderà la classifica e gli eventi associati.
+              <div style={{ background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#FF6B6B', lineHeight: 1.5 }}>
+                Partita con risultati o eventi registrati. Cambiare squadra invalida la classifica.
               </div>
             )}
             <p style={{ fontSize: 14, color: 'var(--fg-1)', lineHeight: 1.6, margin: '0 0 20px' }}>
-              Sostituisci <strong>{pendingTeamChange.field === 'home' ? form.home?.name : form.away?.name}</strong> con <strong>{pendingTeamChange.team.name}</strong>. Continuare?
+              Sostituisci <strong>{pendingTeamChange.field === 'home' ? form.home?.name : form.away?.name}</strong> con <strong>{pendingTeamChange.team.name}</strong>?
             </p>
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="adm-form-actions" style={{ marginTop: 0 }}>
               <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setPendingTeamChange(null)}>Annulla</button>
-              <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2, ...(pendingTeamChange.strong ? { background: 'transparent', border: '1px solid rgba(255,61,61,0.5)', color: '#FF6B6B' } : {}) }} onClick={confirmTeamChange}>
-                Sì, cambia squadra
+              <button type="button" className={`adm-btn adm-btn-sm ${pendingTeamChange.strong ? 'adm-btn-danger' : ''}`} style={{ flex: 2 }} onClick={confirmTeamChange}>
+                Sì, cambia
               </button>
             </div>
           </div>
         </div>
       </div>
     )}
+
     <div className="adm-overlay" onClick={onClose}>
       <div className="adm-modal" onClick={e => e.stopPropagation()}>
         <div className="adm-modal-header">
           <h3 className="adm-modal-title">{match._isNew ? 'Nuova Partita' : 'Modifica Partita'}</h3>
           <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={onClose}>✕</button>
         </div>
+
         <div className="adm-modal-scroll">
           <div className="adm-form">
-            {error && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6 }}>{error}</div>}
-            {saveError && <div style={{ display: 'flex', gap: 8, padding: '10px 12px', background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.3)', borderRadius: 8, fontSize: 13, color: '#FF6B6B', lineHeight: 1.5 }}><span style={{ flex: 'none' }}>⚠️</span><span>{saveError}</span></div>}
+
+            {/* Errori */}
+            {(error || saveError) && (
+              <div style={{ display: 'flex', gap: 8, padding: '10px 14px', background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.25)', borderRadius: 8, fontSize: 13, color: '#FF6B6B', lineHeight: 1.5 }}>
+                <span>⚠️</span><span>{error || saveError}</span>
+              </div>
+            )}
 
             {/* ── Fase (solo nuova partita) ── */}
             {match._isNew && (
               <div className="adm-form-group">
                 <label className="adm-label">Fase *</label>
                 {groupPresets.length > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Gironi</div>
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'var(--font-display)' }}>Gironi</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {groupPresets.map(p => (
-                        <button key={p} type="button" style={chipStyle(form._day === p)} onClick={() => set('_day', p)}>{p}</button>
+                        <button key={p} type="button" className="adm-btn adm-btn-sm" style={chipStyle(form._day === p)} onClick={() => set('_day', p)}>{p}</button>
                       ))}
                     </div>
                   </div>
                 )}
-                <div>
-                  <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>Eliminazione diretta</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {koPresets.map(p => (
-                      <button key={p} type="button" style={chipStyle(form._day === p)} onClick={() => set('_day', p)}>{p}</button>
-                    ))}
-                  </div>
+                <div style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6, fontFamily: 'var(--font-display)' }}>Eliminazione diretta</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {koPresets.map(p => (
+                    <button key={p} type="button" className="adm-btn adm-btn-sm" style={chipStyle(form._day === p)} onClick={() => set('_day', p)}>{p}</button>
+                  ))}
                 </div>
               </div>
             )}
@@ -471,19 +498,25 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
               <div className="adm-form-group">
                 <label className="adm-label">Casa</label>
                 <select className="adm-select" value={form.home?.short || ''} onChange={e => requestTeamChange('home', e.target.value)}>
-                  <option value="">-- Seleziona --</option>
-                  {teams.filter(t => t.short !== form.away?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
+                  <option value="">— Seleziona —</option>
+                  {teams.filter(t => t.short !== form.away?.short).map(t => (
+                    <option key={t.short || t.id} value={t.short}>{t.flag ? `${t.flag} ` : ''}{t.name}</option>
+                  ))}
                 </select>
               </div>
               <div className="adm-form-group">
                 <label className="adm-label">Ospite</label>
                 <select className="adm-select" value={form.away?.short || ''} onChange={e => requestTeamChange('away', e.target.value)}>
-                  <option value="">-- Seleziona --</option>
-                  {teams.filter(t => t.short !== form.home?.short).map(t => <option key={t.short || t.id} value={t.short}>{t.name}</option>)}
+                  <option value="">— Seleziona —</option>
+                  {teams.filter(t => t.short !== form.home?.short).map(t => (
+                    <option key={t.short || t.id} value={t.short}>{t.flag ? `${t.flag} ` : ''}{t.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
-            {sameTeamsSelected && <p className="adm-inline-hint" style={{ marginTop: -4 }}>Casa e ospite non possono coincidere.</p>}
+            {sameTeamsSelected && (
+              <p style={{ margin: 0, fontSize: 12, color: '#FF6B6B' }}>Casa e ospite non possono coincidere.</p>
+            )}
 
             {/* ── Stato ── */}
             <div className="adm-form-group">
@@ -497,117 +530,166 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
               </select>
             </div>
 
-            {/* ── Risultato (solo per partite giocate) ── */}
+            {/* ── Risultato ── */}
             {(form.status === 'ft' || form.status === 'live') && (
-            <div className="adm-form-row">
-              <div className="adm-form-group">
-                <label className="adm-label">Gol Casa</label>
-                <input type="number" className="adm-input" value={form.hs ?? 0} onChange={e => set('hs', e.target.value === '' ? 0 : parseInt(e.target.value))} min="0" />
+              <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-1)', borderRadius: 10, padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                  {/* Casa */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 28 }}>{form.home?.flag || '🏳️'}</span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{form.home?.name || 'Casa'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ minHeight: 32, width: 32, padding: 0, fontSize: 18, fontFamily: 'monospace' }}
+                        onClick={() => set('hs', Math.max(0, (form.hs ?? 0) - 1))}>−</button>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: '#fff', minWidth: 36, textAlign: 'center', lineHeight: 1 }}>{form.hs ?? 0}</span>
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ minHeight: 32, width: 32, padding: 0, fontSize: 18, fontFamily: 'monospace' }}
+                        onClick={() => set('hs', (form.hs ?? 0) + 1)}>+</button>
+                    </div>
+                  </div>
+                  {/* Separatore */}
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 28, color: 'var(--fg-3)', alignSelf: 'center', marginTop: 16 }}>—</span>
+                  {/* Ospite */}
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontSize: 28 }}>{form.away?.flag || '🏳️'}</span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{form.away?.name || 'Ospite'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ minHeight: 32, width: 32, padding: 0, fontSize: 18, fontFamily: 'monospace' }}
+                        onClick={() => set('as', Math.max(0, (form.as ?? 0) - 1))}>−</button>
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 32, color: '#fff', minWidth: 36, textAlign: 'center', lineHeight: 1 }}>{form.as ?? 0}</span>
+                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ minHeight: 32, width: 32, padding: 0, fontSize: 18, fontFamily: 'monospace' }}
+                        onClick={() => set('as', (form.as ?? 0) + 1)}>+</button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="adm-form-group">
-                <label className="adm-label">Gol Ospite</label>
-                <input type="number" className="adm-input" value={form.as ?? 0} onChange={e => set('as', e.target.value === '' ? 0 : parseInt(e.target.value))} min="0" />
-              </div>
-            </div>
             )}
 
-            {/* ── Eventi (solo partite giocate) ── */}
+            {/* ── Gol e Cartellini ── */}
             {form.status === 'ft' && form.home && form.away && (
               <div className="adm-form-group">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <label className="adm-label" style={{ margin: 0 }}>Gol e cartellini</label>
                   {!addingEvent && (
                     <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setAddingEvent(true)}>+ Aggiungi</button>
                   )}
                 </div>
 
-                {localEvents.length === 0 && !addingEvent && (
-                  <div style={{ fontSize: 12, color: 'var(--fg-3)', padding: '8px 0' }}>Nessun evento. Aggiungi gol e cartellini.</div>
-                )}
+                {/* Lista eventi */}
+                <div className="adm-card" style={{ padding: 0, overflow: 'hidden' }}>
+                  {localEvents.length === 0 && !addingEvent && (
+                    <div className="adm-empty" style={{ padding: '16px', fontSize: 13 }}>Nessun evento registrato.</div>
+                  )}
 
-                {localEvents.map((ev, i) => {
-                  const icon = ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : '🟥';
-                  const teamName = (ev._side === 'home' || ev.team === form.home?.short)
-                    ? form.home?.name : form.away?.name;
-                  return (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                      <span style={{ minWidth: 30, fontSize: 12, color: 'var(--fg-3)', fontFamily: 'var(--font-display)' }}>
-                        {ev.minute != null ? `${ev.minute}'` : '—'}
-                      </span>
-                      <span style={{ fontSize: 15 }}>{icon}</span>
-                      <span style={{ flex: 1, fontSize: 13, color: 'var(--fg-1)', fontWeight: 600 }}>{ev.player || '—'}</span>
-                      <span style={{ fontSize: 11, color: 'var(--fg-3)' }}>{teamName || ev.team || ''}</span>
-                      <button type="button" onClick={() => removeEvent(i)} style={{ background: 'transparent', border: 0, color: 'var(--fg-3)', cursor: 'pointer', fontSize: 13, padding: '0 4px' }}>✕</button>
-                    </div>
-                  );
-                })}
+                  {localEvents.map((ev, i) => {
+                    const icon = ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : '🟥';
+                    const isHome = ev._side === 'home' || ev.team === form.home?.short;
+                    const teamName = isHome ? form.home?.name : form.away?.name;
 
-                {addingEvent && (
-                  <div style={{ background: '#0f0f0f', border: '1px solid var(--border-1)', borderRadius: 8, padding: '12px', marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {EVENT_TYPES.map(t => (
-                        <button key={t.value} type="button"
-                          style={{ fontSize: 12, padding: '5px 10px', background: newEv.type === t.value ? 'var(--brand-green)' : 'transparent', border: `1px solid ${newEv.type === t.value ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.type === t.value ? '#000' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer', fontWeight: newEv.type === t.value ? 700 : 400 }}
-                          onClick={() => setNewEv(e => ({ ...e, type: t.value }))}>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <button type="button"
-                        style={{ flex: 1, fontSize: 12, padding: '6px 8px', background: newEv.side === 'home' ? 'rgba(0,230,118,0.15)' : 'transparent', border: `1px solid ${newEv.side === 'home' ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.side === 'home' ? 'var(--brand-green)' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer' }}
-                        onClick={() => setNewEv(e => ({ ...e, side: 'home' }))}>
-                        {form.home?.name || 'Casa'}
-                      </button>
-                      <button type="button"
-                        style={{ flex: 1, fontSize: 12, padding: '6px 8px', background: newEv.side === 'away' ? 'rgba(0,230,118,0.15)' : 'transparent', border: `1px solid ${newEv.side === 'away' ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.side === 'away' ? 'var(--brand-green)' : 'var(--fg-2)', borderRadius: 6, cursor: 'pointer' }}
-                        onClick={() => setNewEv(e => ({ ...e, side: 'away' }))}>
-                        {form.away?.name || 'Ospite'}
-                      </button>
-                    </div>
-                    {(() => {
-                      const sideTeam = newEv.side === 'home' ? form.home : form.away;
-                      const teamPlayers = sideTeam?.players || [];
-                      return teamPlayers.length > 0 ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                          {teamPlayers.map((p, i) => (
-                            <button key={p.id || i} type="button"
-                              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: newEv.player === p.name ? 'rgba(0,230,118,0.12)' : 'var(--bg-canvas)', border: `1px solid ${newEv.player === p.name ? 'var(--brand-green)' : 'var(--border-1)'}`, borderRadius: 8, cursor: 'pointer', color: newEv.player === p.name ? 'var(--brand-green)' : '#fff', textAlign: 'left', fontWeight: newEv.player === p.name ? 700 : 400 }}
-                              onClick={() => setNewEv(ev => ({ ...ev, player: newEv.player === p.name ? '' : p.name }))}>
-                              <span style={{ flex: 1, fontSize: 14 }}>{p.name}</span>
+                    if (deletingEventIdx === i) {
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'rgba(255,61,61,0.06)', borderTop: i > 0 ? '1px solid var(--border-1)' : 'none' }}>
+                          <span style={{ fontSize: 16 }}>{icon}</span>
+                          <span style={{ flex: 1, fontSize: 13, color: '#FF6B6B' }}>Eliminare <strong>{ev.player || '—'}</strong>?</span>
+                          <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setDeletingEventIdx(null)}>No</button>
+                          <button type="button" className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => { removeEvent(i); setDeletingEventIdx(null); }}>Sì</button>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={i} className="adm-item-row" style={{ borderTop: i > 0 ? '1px solid var(--border-1)' : 'none' }}>
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>{icon}</span>
+                        <div className="adm-item-row-body">
+                          <div className="adm-item-title" style={{ fontSize: 14 }}>{ev.player || '—'}</div>
+                          <div className="adm-item-meta">{teamName || ev.team || ''}</div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          <button type="button" className="adm-btn adm-btn-ghost adm-btn-icon" style={{ width: 36, height: 36, fontSize: 14 }} title="Modifica" onClick={() => {
+                            const side = (ev._side === 'home' || ev.team === form.home?.short) ? 'home' : 'away';
+                            setNewEv({ type: ev.type, player: ev.player || '', minute: ev.minute ?? '', side });
+                            setEditingEventIdx(i);
+                            setAddingEvent(true);
+                          }}>✏️</button>
+                          <button type="button" className="adm-btn adm-btn-danger adm-btn-icon" style={{ width: 36, height: 36, fontSize: 14 }} title="Elimina" onClick={() => setDeletingEventIdx(i)}>✕</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Pannello aggiungi/modifica evento */}
+                  {addingEvent && (
+                    <div style={{ padding: '14px', borderTop: localEvents.length > 0 ? '1px solid var(--border-brand)' : 'none', background: 'rgba(0,230,118,0.03)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {/* Tipo */}
+                      <div className="adm-form-group">
+                        <label className="adm-label">Tipo</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {EVENT_TYPES.map(t => (
+                            <button key={t.value} type="button" className="adm-btn adm-btn-sm"
+                              style={{ flex: 1, background: newEv.type === t.value ? 'var(--brand-green)' : 'transparent', border: `1px solid ${newEv.type === t.value ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.type === t.value ? '#000' : 'var(--fg-2)' }}
+                              onClick={() => setNewEv(e => ({ ...e, type: t.value }))}>
+                              {t.label}
                             </button>
                           ))}
                         </div>
-                      ) : null;
-                    })()}
-                    <input className="adm-input" placeholder="Altro giocatore..." value={newEv.player}
-                      onChange={e => setNewEv(ev => ({ ...ev, player: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && addEvent()} />
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => { setAddingEvent(false); setNewEv({ type: 'goal', player: '', minute: '', side: 'home' }); }}>Annulla</button>
-                      <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2 }} onClick={addEvent} disabled={!newEv.player.trim()}>Aggiungi</button>
+                      </div>
+                      {/* Squadra */}
+                      <div className="adm-form-group">
+                        <label className="adm-label">Squadra</label>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {['home', 'away'].map(side => (
+                            <button key={side} type="button" className="adm-btn adm-btn-sm"
+                              style={{ flex: 1, background: newEv.side === side ? 'rgba(0,230,118,0.12)' : 'transparent', border: `1px solid ${newEv.side === side ? 'var(--brand-green)' : 'var(--border-1)'}`, color: newEv.side === side ? 'var(--brand-green)' : 'var(--fg-2)', fontWeight: newEv.side === side ? 700 : 400 }}
+                              onClick={() => setNewEv(e => ({ ...e, side, player: '' }))}>
+                              {side === 'home' ? (form.home?.name || 'Casa') : (form.away?.name || 'Ospite')}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Calciatore */}
+                      <div className="adm-form-group">
+                        <label className="adm-label">Calciatore</label>
+                        <select className="adm-select" value={newEv.player}
+                          onChange={e => setNewEv(ev => ({ ...ev, player: e.target.value }))}>
+                          <option value="">— Seleziona —</option>
+                          {evPanelPlayers.map((p, idx) => (
+                            <option key={p.id || idx} value={p.displayName}>{p.displayName}</option>
+                          ))}
+                        </select>
+                        {evPanelPlayers.length === 0 && (
+                          <input className="adm-input" placeholder="Nome calciatore..." value={newEv.player}
+                            onChange={e => setNewEv(ev => ({ ...ev, player: e.target.value }))}
+                            onKeyDown={e => e.key === 'Enter' && addEvent()} />
+                        )}
+                      </div>
+                      {/* Azioni */}
+                      <div className="adm-form-actions" style={{ marginTop: 0 }}>
+                        <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={cancelAddEvent}>Annulla</button>
+                        <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2 }} onClick={addEvent} disabled={!newEv.player.trim()}>
+                          {editingEventIdx !== null ? 'Salva modifica' : 'Aggiungi'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             )}
 
             {/* ── Data e Orario ── */}
-            <div className="adm-form-group">
-              <label className="adm-label">Data</label>
-              <input type="date" className="adm-input adm-input-datetime"
-                value={form.isoDate || ''} onChange={e => set('isoDate', e.target.value)} />
-            </div>
-            <div className="adm-form-group">
-              <label className="adm-label">Orario</label>
-              <input type="time" className="adm-input adm-input-datetime"
-                value={form.time || ''} onChange={e => set('time', e.target.value)} />
+            <div className="adm-form-row">
+              <div className="adm-form-group">
+                <label className="adm-label">Data</label>
+                <input type="date" className="adm-input adm-input-datetime"
+                  value={form.isoDate || ''} onChange={e => set('isoDate', e.target.value)} />
+              </div>
+              <div className="adm-form-group">
+                <label className="adm-label">Orario</label>
+                <input type="time" className="adm-input adm-input-datetime"
+                  value={form.time || ''} onChange={e => set('time', e.target.value)} />
+              </div>
             </div>
 
-            <div className="adm-form-actions" style={{ marginTop: 24 }}>
+            <div className="adm-form-actions">
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-              <button className="adm-btn adm-btn-sm" onClick={submit} disabled={busy}>Salva Partita</button>
+              <button className="adm-btn adm-btn-sm" style={{ flex: 1 }} onClick={submit} disabled={busy}>Salva Partita</button>
             </div>
           </div>
         </div>

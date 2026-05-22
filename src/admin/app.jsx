@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions, rmNormalizeTournamentData } from '../data.js';
+import { rmLoadData, rmSaveData, rmGetAllData, rmMergeDefaults, rmAdminLogout, rmAdminMe, rmHasAdminSession, rmLoadDataFromBootstrap, rmGetAllEditions, rmNormalizeTournamentData, RM_STORAGE_KEY } from '../data.js';
 import { getSessionUser, isAdminSessionError, Toast, HomeIcon, ZapIcon, BellIcon, SettingsIcon } from './shared.jsx';
 import { LoginScreen } from './auth.jsx';
 import { DashboardSection } from './sections/dashboard.jsx';
@@ -13,6 +13,7 @@ import { StandingsSection } from './sections/standings.jsx';
 import { ScorersSection } from './sections/scorers.jsx';
 import { TeamsSection } from './sections/teams.jsx';
 import { EventsSection, HonorsSection, SponsorsSection } from './sections/content.jsx';
+import { DisciplineSection } from './sections/discipline.jsx';
 import { SettingsSection } from './sections/settings.jsx';
 import '../admin-styles.css';
 
@@ -23,7 +24,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','scorers','teams','events','honors','sponsors'];
+const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','scorers','teams','events','honors','sponsors','discipline'];
 
 function tabFromHash() {
   const h = window.location.hash.replace('#', '');
@@ -54,6 +55,8 @@ function AdminApp() {
       setTournamentCategories(bootstrapData.tournaments);
       setTournamentId(prev => prev || bootstrapData.tournaments[0].id);
       setBootstrapCache(bootstrapData);
+      // Persist to localStorage so initial state on next load includes events
+      try { localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(rmNormalizeTournamentData(bootstrapData))); } catch {}
     } else {
       setBootstrapCache(null);
       const fallback = await rmLoadData();
@@ -203,6 +206,7 @@ function AdminApp() {
         {tab === 'events'     && <EventsSection {...props} />}
         {tab === 'honors'     && <HonorsSection {...props} />}
         {tab === 'sponsors'   && <SponsorsSection {...props} />}
+        {tab === 'discipline' && <DisciplineSection {...props} />}
         {tab === 'settings'   && <SettingsSection {...props} />}
       </main>
 

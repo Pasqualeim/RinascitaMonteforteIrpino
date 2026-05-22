@@ -36,13 +36,23 @@ export async function buildBootstrap(editionId: string) {
     ]);
 
     const matchIds = (matchesRes.data || []).map((m: any) => m.id);
-    const allMatchEventsRes = matchIds.length > 0
-      ? await db.from("match_events")
-          .select("id, match_id, player_name, team_id, event_type, minute, teams!team_id(short, flag)")
+    let allMatchEvents: any[] = [];
+    if (matchIds.length > 0) {
+      const evRes = await db.from("match_events")
+        .select("id, match_id, player_name, team_id, event_type, minute, teams!match_events_team_id_fkey(short, flag)")
+        .in("match_id", matchIds)
+        .order("minute", { ascending: true });
+      if (evRes.error) {
+        // Fallback: fetch without join, team info resolved later via team_id
+        const evResFallback = await db.from("match_events")
+          .select("id, match_id, player_name, team_id, event_type, minute")
           .in("match_id", matchIds)
-          .order("minute", { ascending: true })
-      : { data: [] };
-    const allMatchEvents = allMatchEventsRes.data || [];
+          .order("minute", { ascending: true });
+        allMatchEvents = evResFallback.data || [];
+      } else {
+        allMatchEvents = evRes.data || [];
+      }
+    }
     const goalEventsRes = { data: allMatchEvents.filter((e: any) => e.event_type === "goal") };
 
     const groups      = groupsRes.data || [];

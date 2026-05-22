@@ -123,6 +123,15 @@ export async function competitionHandler(req: Request, base: string, id: string 
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
     }
+    if (method === "PUT" && id) {
+      const allowed = ["event_type", "player_name", "team_id", "minute"];
+      const upd: Record<string, unknown> = {};
+      for (const k of allowed) { if (k in body) upd[k] = body[k]; }
+      if (Object.keys(upd).length === 0) return ok(req, 400, { error: "Nessun campo da aggiornare" });
+      const { data, error } = await db.from("match_events").update(upd).eq("id", id).select().single();
+      if (error) throw error;
+      return ok(req, 200, { ok: true, data });
+    }
     if (method === "DELETE" && id) {
       const { error } = await db.from("match_events").delete().eq("id", id);
       if (error) throw error;

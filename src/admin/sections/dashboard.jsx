@@ -50,6 +50,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('discipline')}><span style={{ fontSize: 26 }}>🟨</span><span>Cartellini</span></button>
       </div>
 
       {/* Live attiva */}
