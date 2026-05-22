@@ -55,8 +55,13 @@ function AdminApp() {
       setTournamentCategories(bootstrapData.tournaments);
       setTournamentId(prev => prev || bootstrapData.tournaments[0].id);
       setBootstrapCache(bootstrapData);
-      // Persist to localStorage so initial state on next load includes events
-      try { localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(rmNormalizeTournamentData(bootstrapData))); } catch {}
+      // Persist to localStorage — preserve match_settings (not in relational DB)
+      try {
+        const prevLocal = rmGetAllData();
+        const normalized = rmNormalizeTournamentData(bootstrapData);
+        if (prevLocal?.match_settings) normalized.match_settings = prevLocal.match_settings;
+        localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
+      } catch {}
     } else {
       setBootstrapCache(null);
       const fallback = await rmLoadData();
