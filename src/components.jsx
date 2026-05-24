@@ -412,13 +412,28 @@ function TopScorers({ list }) {
 }
 
 // ── News card ─────────────────────────────────────────────────────────────
+const IT_MONTHS_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+function formatNewsDate(raw) {
+  if (!raw) return '';
+  const d = new Date(raw);
+  if (isNaN(d)) return raw;
+  const now = new Date();
+  const diffH = (now - d) / 3600000;
+  if (diffH < 24) return 'Oggi';
+  if (diffH < 48) return 'Ieri';
+  const day = d.getDate();
+  const mon = IT_MONTHS_SHORT[d.getMonth()];
+  const yr = d.getFullYear();
+  return yr === now.getFullYear() ? `${day} ${mon}` : `${day} ${mon} ${yr}`;
+}
+
 function NewsCard({ item, featured }) {
   return (
     <div className={`rm-news-card ${featured ? 'featured' : ''} ${item.pinned ? 'pinned' : ''}`}>
       {item.pinned && <span className="rm-news-pin">📌 In evidenza</span>}
       <div className="rm-news-top">
         <span className={`rm-news-cat ${item.tone || ''}`}>{item.category || item.cat}</span>
-        <span className="rm-news-date">{item.date}</span>
+        <span className="rm-news-date">{formatNewsDate(item.date || item.created_at || item.updated_at)}</span>
       </div>
       <h4 className="rm-news-title">{item.title}</h4>
       <p className="rm-news-body">{item.body}</p>
