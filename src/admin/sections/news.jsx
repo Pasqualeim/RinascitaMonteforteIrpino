@@ -117,7 +117,7 @@ export function NewsSection({ data, onSave, onRefresh, editionId }) {
 
 function NewsForm({ item, onSave, onClose, busy }) {
   const [form, setForm] = useState({
-    category: 'avviso', tone: '', pinned: false,
+    category: 'avviso', tone: '', pinned: false, title: '', body: '',
     ...item,
   });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -155,7 +155,7 @@ function NewsForm({ item, onSave, onClose, busy }) {
 
             <div className="adm-form-group">
               <label className="adm-label">Titolo</label>
-              <input className="adm-input" value={form.title} onChange={e => set('title', e.target.value)} placeholder="Titolo" required />
+              <input className="adm-input" value={form.title || ''} onChange={e => set('title', e.target.value)} placeholder="Titolo" required />
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Testo</label>
@@ -177,7 +177,7 @@ function NewsForm({ item, onSave, onClose, busy }) {
 
             <div className="adm-form-actions">
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
-              <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!form.title.trim() || busy}>Salva</button>
+              <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={!(form.title || '').trim() || busy}>Salva</button>
             </div>
           </div>
         </div>

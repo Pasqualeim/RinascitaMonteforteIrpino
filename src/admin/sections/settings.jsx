@@ -105,13 +105,15 @@ function CategoryEditForm({ category, onSubmit, onCancel }) {
 
 export function SettingsSection({ data, onSave, onRefresh, editionId }) {
   const [halfDuration, setHalfDuration] = useState(data.match_settings?.half_duration || 30);
+  const [halfDirty, setHalfDirty] = useState(false);
   const [matchSaved, setMatchSaved] = useState(false);
 
-  // Sync halfDuration when bootstrap data loads after component mount
+  // Sync halfDuration from bootstrap only when not mid-edit
   useEffect(() => {
+    if (halfDirty) return;
     const v = data.match_settings?.half_duration;
     if (typeof v === 'number' && v > 0) setHalfDuration(v);
-  }, [data.match_settings?.half_duration]);
+  }, [data.match_settings?.half_duration, halfDirty]);
   const [editions, setEditions] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -265,13 +267,13 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 {[20, 25, 30, 35, 45].map(v => (
                   <button key={v} type="button"
-                    onClick={() => setHalfDuration(v)}
+                    onClick={() => { setHalfDuration(v); setHalfDirty(true); }}
                     className={`adm-btn adm-btn-sm ${halfDuration === v ? '' : 'adm-btn-ghost'}`}>
                     {v}'
                   </button>
                 ))}
                 <input type="number" className="adm-input" min="1" max="90"
-                  value={halfDuration} onChange={e => setHalfDuration(parseInt(e.target.value) || 30)}
+                  value={halfDuration} onChange={e => { setHalfDuration(parseInt(e.target.value) || 30); setHalfDirty(true); }}
                   style={{ width: 64 }} />
               </div>
               <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '6px 0 0' }}>
@@ -281,6 +283,7 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
             {matchSaved && <div style={{ fontSize: 13, color: 'var(--brand-green)' }}>Salvato ✓</div>}
             <button className="adm-btn adm-btn-sm" type="button" onClick={() => {
               onSave({ ...data, match_settings: { ...(data.match_settings || {}), half_duration: halfDuration } }, 'Impostazioni partita salvate');
+              setHalfDirty(false);
               setMatchSaved(true);
               setTimeout(() => setMatchSaved(false), 2000);
             }}>Salva</button>

@@ -62,7 +62,9 @@ export async function rmLoadData() {
       if (bootstrapData && bootstrapData.edition?.id) {
         const prevLocal = rmLoadLocal();
         const normalized = rmNormalizeTournamentData(bootstrapData);
-        if (prevLocal?.match_settings) normalized.match_settings = prevLocal.match_settings;
+        if (prevLocal?.match_settings && prevLocal?.edition?.id === bootstrapData.edition.id) {
+          normalized.match_settings = prevLocal.match_settings;
+        }
         localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
       }
@@ -82,7 +84,9 @@ export async function rmLoadData() {
     if (data?.content && Object.keys(data.content).length > 0) {
       const prevLocal = rmLoadLocal();
       const normalized = rmNormalizeTournamentData(data.content);
-      if (prevLocal?.match_settings) normalized.match_settings = prevLocal.match_settings;
+      if (prevLocal?.match_settings && (!prevLocal?.edition?.id || prevLocal?.edition?.id === normalized?.edition?.id)) {
+        normalized.match_settings = prevLocal.match_settings;
+      }
       localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
       return normalized;
     }
