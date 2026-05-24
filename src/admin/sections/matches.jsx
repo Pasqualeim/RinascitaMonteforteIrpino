@@ -181,11 +181,20 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
     setBusy(true);
     setErrMsg('');
     try {
-      const allMatchIds = giornate.flatMap(d => (d.items || []).filter(m => m.id).map(m => m.id));
-      for (const id of allMatchIds) {
-        await rmAdminDomain.deleteMatch(id);
+      const allMatches = giornate.flatMap(d => (d.items || []).filter(m => m.id));
+      let deleted = 0, failed = 0;
+      for (const m of allMatches) {
+        try {
+          for (const ev of (m.events || [])) {
+            if (ev.id) await rmAdminDomain.deleteMatchEvent(ev.id).catch(() => {});
+          }
+          await rmAdminDomain.deleteMatch(m.id);
+          deleted++;
+        } catch {
+          failed++;
+        }
       }
-      await onRefresh('Tutte le partite eliminate');
+      await onRefresh(failed > 0 ? `${deleted} partite eliminate, ${failed} fallite` : 'Tutte le partite eliminate');
     } catch (err) {
       setErrMsg(err?.message || 'Errore eliminazione partite');
     } finally {

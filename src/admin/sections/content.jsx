@@ -3,7 +3,9 @@ import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 export function EventsSection({ data, onSave, onRefresh, editionId }) {
-  const existing = (data.events || []).find(e => e.event_type === 'regolamento') || null;
+  const existing = (data.events || []).find(e => e.event_type === 'regolamento')
+    || (data.events || []).find(e => (e.title || '').toLowerCase() === 'regolamento')
+    || null;
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,7 @@ export function EventsSection({ data, onSave, onRefresh, editionId }) {
     setErrMsg('');
     try {
       if (existing?.id) {
-        await rmAdminDomain.updateEvent(existing.id, { description: text, title: 'Regolamento', sort_order: 1 });
+        await rmAdminDomain.updateEvent(existing.id, { description: text, title: 'Regolamento', sort_order: 1, event_type: 'regolamento' });
       } else {
         await rmAdminDomain.createEvent({ edition_id: editionId, title: 'Regolamento', description: text, sort_order: 1, event_type: 'regolamento' });
       }

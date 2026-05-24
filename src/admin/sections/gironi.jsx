@@ -47,7 +47,8 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
   const [setupBusy, setSetupBusy] = useState(false);
   const [setupMsg, setSetupMsg] = useState('');
   const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
-  const [resetAllConfirm, setResetAllConfirm] = useState(false);
+  const [deleteAllGroupsConfirm, setDeleteAllGroupsConfirm] = useState(false);
+  const [deleteAllTeamsConfirm, setDeleteAllTeamsConfirm] = useState(false);
 
   // Partite di girone
   const [genMode, setGenMode] = useState('single');
@@ -101,22 +102,43 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
     }
   }
 
-  async function resetAllTeamsAndGroups() {
+  async function deleteAllGroups() {
     setBusy(true);
     setErrMsg('');
     try {
       for (const t of allTeams) {
-        const teamScorers = (data.scorers || []).filter(s => s.team === t.short);
-        await Promise.all(teamScorers.filter(s => s.id).map(s => rmAdminDomain.deleteScorer(s.id).catch(() => {})));
-        if (t.registration_id) await rmAdminDomain.deleteRegistration(t.registration_id).catch(() => {});
-        await rmAdminDomain.deleteTeam(t.id);
+        if (t.registration_id && t.group_id) {
+          await rmAdminDomain.updateRegistration(t.registration_id, { group_id: null }).catch(() => {});
+        }
       }
+      let failed = 0;
       for (const g of groups) {
-        await rmAdminDomain.deleteGroup(g.id);
+        try { await rmAdminDomain.deleteGroup(g.id); } catch { failed++; }
       }
-      await onRefresh('Squadre e gironi eliminati');
+      await onRefresh(failed > 0 ? `Gironi eliminati con ${failed} errori` : 'Tutti i gironi eliminati');
     } catch (err) {
-      setErrMsg(err?.message || 'Errore reset');
+      setErrMsg(err?.message || 'Errore eliminazione gironi');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAllTeams() {
+    setBusy(true);
+    setErrMsg('');
+    try {
+      let failed = 0;
+      for (const t of allTeams) {
+        try {
+          const teamScorers = (data.scorers || []).filter(s => s.team === t.short);
+          await Promise.all(teamScorers.filter(s => s.id).map(s => rmAdminDomain.deleteScorer(s.id).catch(() => {})));
+          if (t.registration_id) await rmAdminDomain.deleteRegistration(t.registration_id).catch(() => {});
+          await rmAdminDomain.deleteTeam(t.id);
+        } catch { failed++; }
+      }
+      await onRefresh(failed > 0 ? `Squadre eliminate con ${failed} errori` : 'Tutte le squadre eliminate');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore eliminazione squadre');
     } finally {
       setBusy(false);
     }
@@ -258,9 +280,14 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
           <p className="adm-section-sub" style={{ margin: 0 }}>{allTeams.length} squadre · {groups.length} gironi</p>
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {(allTeams.length > 0 || groups.length > 0) && (
-            <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setResetAllConfirm(true)} disabled={busy}>
-              🗑 Reset tutto
+          {groups.length > 0 && (
+            <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleteAllGroupsConfirm(true)} disabled={busy}>
+              🗑 Gironi
+            </button>
+          )}
+          {allTeams.length > 0 && (
+            <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleteAllTeamsConfirm(true)} disabled={busy}>
+              🗑 Squadre
             </button>
           )}
           <button
@@ -489,11 +516,18 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
           onCancel={() => setDeletingGroupId(null)}
         />
       )}
-      {resetAllConfirm && (
+      {deleteAllGroupsConfirm && (
         <Confirm
-          msg={`Eliminare tutte le ${allTeams.length} squadre e tutti i ${groups.length} gironi? Questa azione non è reversibile.`}
-          onOk={() => { setResetAllConfirm(false); resetAllTeamsAndGroups(); }}
-          onCancel={() => setResetAllConfirm(false)}
+          msg={`Eliminare tutti i ${groups.length} gironi? Le squadre rimangono ma verranno de-assegnate dai gironi.`}
+          onOk={() => { setDeleteAllGroupsConfirm(false); deleteAllGroups(); }}
+          onCancel={() => setDeleteAllGroupsConfirm(false)}
+        />
+      )}
+      {deleteAllTeamsConfirm && (
+        <Confirm
+          msg={`Eliminare tutte le ${allTeams.length} squadre? I gironi rimangono vuoti.`}
+          onOk={() => { setDeleteAllTeamsConfirm(false); deleteAllTeams(); }}
+          onCancel={() => setDeleteAllTeamsConfirm(false)}
         />
       )}
     </div>
