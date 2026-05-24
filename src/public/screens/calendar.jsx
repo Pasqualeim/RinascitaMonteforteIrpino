@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DEFAULT_MATCHES_GIORNATA } from '../../data.js';
 import { EmptyState, MatchRow, MatchDetailModal } from '../../components.jsx';
 
@@ -57,6 +57,8 @@ export function CalendarScreen({ data, tournament }) {
 
   const [selPhase, setSelPhase] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState(null);
+
+  useEffect(() => { setSelPhase('all'); }, [tournament?.id]);
 
   const showGroupPhases = selPhase === 'all'
     ? groupPhases

@@ -67,6 +67,9 @@ function RosterModal({ team, onClose }) {
 export function TeamsScreen({ data, tournament }) {
   const [selGroup, setSelGroup] = useState('all');
   const [selectedTeam, setSelectedTeam] = useState(null);
+
+  useEffect(() => { setSelGroup('all'); }, [tournament?.id]);
+
   const teams  = tournament?.teams  || data?.teams  || DEFAULT_TEAMS;
   const groups = tournament?.groups || data?.groups || DEFAULT_GROUPS || [];
 

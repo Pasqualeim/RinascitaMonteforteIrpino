@@ -125,6 +125,7 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
     setEditionsLoading(true);
     rmGetAllEditions()
       .then(eds => setEditions(eds))
+      .catch(() => setEditions([]))
       .finally(() => setEditionsLoading(false));
   }, []);
 

@@ -262,7 +262,7 @@ function LiveBoard({ match }) {
     function calcMinute() {
       const ref = match.timer_started_at;
       if (!ref) return match.minute || 0;
-      const elapsed = Math.floor((Date.now() - ref) / 60000);
+      const elapsed = Math.floor((Date.now() - new Date(ref).getTime()) / 60000);
       return match.phase === 'second_half' ? halfDuration + elapsed : elapsed;
     }
     setDisplayMinute(calcMinute());

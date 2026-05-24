@@ -18,7 +18,7 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
   for (const g of (data.groups || [])) {
     try {
       const res = await rmAdminDomain.createGroup({ tournament_id: tournamentId, name: g.name, color: g.color || '#00E676' });
-      groupIdMap[g.id] = res.data.id;
+      groupIdMap[g.id] = res?.data?.id || res?.id;
       results.groups++;
     } catch (e) { results.errors.push(`Girone ${g.name}: ${e.message}`); }
   }
@@ -26,7 +26,7 @@ export async function rmMigrateDataToRelational(data, editionId, tournamentId) {
   for (const t of (data.teams || [])) {
     try {
       const res = await rmAdminDomain.createTeam({ name: t.name, short: t.short, nation: t.nation, flag: t.flag, color: t.color });
-      const teamId = res.data.id;
+      const teamId = res?.data?.id || res?.id;
       teamIdMap[t.short] = teamId;
       results.teams++;
       const localGroupId = t.group_id || t.group || '';

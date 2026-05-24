@@ -3,7 +3,7 @@ import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 export function EventsSection({ data, onSave, onRefresh, editionId }) {
-  const existing = (data.events || []).find(e => e.event_type === 'regolamento') || (data.events || [])[0] || null;
+  const existing = (data.events || []).find(e => e.event_type === 'regolamento') || null;
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);

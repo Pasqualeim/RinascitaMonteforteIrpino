@@ -62,7 +62,7 @@ export async function rmLoadData() {
       if (bootstrapData && bootstrapData.edition?.id) {
         const prevLocal = rmLoadLocal();
         const normalized = rmNormalizeTournamentData(bootstrapData);
-        if (prevLocal?.match_settings && prevLocal?.edition?.id === bootstrapData.edition.id) {
+        if (prevLocal?.match_settings && (!prevLocal?.edition?.id || prevLocal?.edition?.id === bootstrapData.edition.id)) {
           normalized.match_settings = prevLocal.match_settings;
         }
         localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));

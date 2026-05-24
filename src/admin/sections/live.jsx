@@ -60,6 +60,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   const lmRef = useRef(lm);
   useEffect(() => { lmRef.current = lm; }, [lm]);
 
+  const scorersRef = useRef(data.scorers);
+  useEffect(() => { scorersRef.current = data.scorers; }, [data.scorers]);
+
   useEffect(() => {
     if (!lm.active || lm.phase === 'half_time') return;
     function calcMinute(s) {
@@ -280,7 +283,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
     // Sync all scorers: create new (no id), update existing
     if (tournamentId) {
-      for (const s of (data.scorers || [])) {
+      for (const s of (scorersRef.current || [])) {
         if (s.id) {
           promises.push(
             rmAdminDomain.updateScorer(s.id, { goals: s.goals })
@@ -359,8 +362,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       }
     }
 
-    const events = [...(lm.events || []), newEvent].sort((a, b) => a.min - b.min);
-    const updatedLm = { ...lm, [scoringSide]: (lm[scoringSide] || 0) + 1, events, minute: displayMinute };
+    const currentLm = lmRef.current;
+    const events = [...(currentLm.events || []), newEvent].sort((a, b) => a.min - b.min);
+    const updatedLm = { ...currentLm, [scoringSide]: (currentLm[scoringSide] || 0) + 1, events, minute: displayMinute };
 
     let updatedScorers = null;
     if (!autogolFromShort) {
@@ -406,8 +410,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         }
       }
     }
-    const events = [...(lm.events || []), ...newEvents].sort((a, b) => a.min - b.min);
-    persistLm({ ...lm, events, minute: displayMinute });
+    const currentLm = lmRef.current;
+    const events = [...(currentLm.events || []), ...newEvents].sort((a, b) => a.min - b.min);
+    persistLm({ ...currentLm, events, minute: displayMinute });
     setCardFlow(null);
   }
 
