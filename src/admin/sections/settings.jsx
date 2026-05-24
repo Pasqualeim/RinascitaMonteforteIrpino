@@ -106,6 +106,12 @@ function CategoryEditForm({ category, onSubmit, onCancel }) {
 export function SettingsSection({ data, onSave, onRefresh, editionId }) {
   const [halfDuration, setHalfDuration] = useState(data.match_settings?.half_duration || 30);
   const [matchSaved, setMatchSaved] = useState(false);
+
+  // Sync halfDuration when bootstrap data loads after component mount
+  useEffect(() => {
+    const v = data.match_settings?.half_duration;
+    if (typeof v === 'number' && v > 0) setHalfDuration(v);
+  }, [data.match_settings?.half_duration]);
   const [editions, setEditions] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');

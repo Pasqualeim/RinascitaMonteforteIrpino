@@ -60,7 +60,9 @@ export async function rmLoadData() {
     try {
       const bootstrapData = await rmLoadDataFromBootstrap();
       if (bootstrapData && bootstrapData.edition?.id) {
+        const prevLocal = rmLoadLocal();
         const normalized = rmNormalizeTournamentData(bootstrapData);
+        if (prevLocal?.match_settings) normalized.match_settings = prevLocal.match_settings;
         localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
         return normalized;
       }
@@ -78,7 +80,9 @@ export async function rmLoadData() {
       .single();
     if (error) throw error;
     if (data?.content && Object.keys(data.content).length > 0) {
+      const prevLocal = rmLoadLocal();
       const normalized = rmNormalizeTournamentData(data.content);
+      if (prevLocal?.match_settings) normalized.match_settings = prevLocal.match_settings;
       localStorage.setItem(RM_STORAGE_KEY, JSON.stringify(normalized));
       return normalized;
     }
