@@ -123,7 +123,7 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
   }
 
   async function assignTeam(groupId, team) {
-    if (!team.registration_id) return;
+    if (!team.registration_id) { setErrMsg('Squadra non iscritta alla categoria. Iscrivila prima dal tab Squadre.'); return; }
     setBusy(true);
     try {
       await rmAdminDomain.updateRegistration(team.registration_id, { group_id: groupId });

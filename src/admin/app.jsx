@@ -241,6 +241,7 @@ function AdminApp() {
 function Root() {
   const [authed, setAuthed] = useState(false);
   const [booting, setBooting] = useState(true);
+  const [bootError, setBootError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -255,7 +256,10 @@ function Root() {
         await rmAdminMe();
         if (active) setAuthed(true);
       } catch (error) {
-        await rmAdminLogout();
+        try { await rmAdminLogout(); } catch {}
+        if (active && (error?.message?.toLowerCase().includes('fetch') || error?.message?.toLowerCase().includes('network'))) {
+          setBootError('Errore di rete. Controlla la connessione e ricarica la pagina.');
+        }
       } finally {
         if (active) setBooting(false);
       }
@@ -276,7 +280,16 @@ function Root() {
     );
   }
 
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />;
+  if (!authed) return (
+    <>
+      {bootError && (
+        <div style={{ background: '#1a0000', color: '#FF3D3D', fontSize: 13, padding: '10px 16px', textAlign: 'center', borderBottom: '1px solid #3d0000' }}>
+          {bootError}
+        </div>
+      )}
+      <LoginScreen onLogin={() => setAuthed(true)} />
+    </>
+  );
   return <AdminApp />;
 }
 

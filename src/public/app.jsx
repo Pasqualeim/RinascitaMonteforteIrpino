@@ -40,10 +40,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (data?.tournaments?.length > 0 && !activeTournamentId) {
-      setActiveTournamentId(data.tournaments[0].id);
+    const ids = data?.tournaments?.map(t => t.id) || [];
+    if (ids.length === 0) return;
+    if (!activeTournamentId || !ids.includes(activeTournamentId)) {
+      setActiveTournamentId(ids[0]);
     }
-  }, [data]);
+  }, [data?.tournaments]);
 
   useEffect(() => {
     window.location.hash = screen;

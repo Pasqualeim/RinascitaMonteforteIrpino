@@ -197,6 +197,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
   function doStartLive() {
     if (!selectedMatchObj) return;
+    setConfirmStart(false);
     const updatedLm = {
       ...lm, active: true, phase: 'first_half',
       timer_started_at: Date.now(),
@@ -226,7 +227,6 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       }).catch(e => console.warn('Live start sync:', e));
     }
     setSelectedKey(null);
-    setConfirmStart(false);
   }
 
   async function doTerminate() {

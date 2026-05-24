@@ -196,7 +196,7 @@ export function DisciplineSection({ data, onRefresh, tournamentId }) {
 
   const totYellow = records.reduce((s, r) => s + r.cards.filter(c => c.type === 'yellow').length, 0);
   const totRed    = records.reduce((s, r) => s + r.cards.filter(c => c.type === 'red').length, 0);
-  const atRisk    = records.filter(r => alertLevel(r.cards) !== 'yellow' || r.cards.filter(c => c.type === 'yellow').length >= 2).length;
+  const atRisk    = records.filter(r => alertLevel(r.cards) !== 'yellow').length;
 
   async function deleteCard(card) {
     setBusy(true);

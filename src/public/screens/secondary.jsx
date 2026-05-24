@@ -57,7 +57,7 @@ export function HonorsScreen({ data }) {
   useEffect(() => {
     rmGetAllEditions().then(list => {
       setEditions(list);
-    });
+    }).catch(() => {});
   }, []);
 
   async function loadEdition(slug) {
@@ -68,6 +68,8 @@ export function HonorsScreen({ data }) {
     try {
       const d = await rmLoadDataFromBootstrap(slug);
       setEditionData(d);
+    } catch {
+      setEditionData(null);
     } finally {
       setLoading(false);
     }
