@@ -534,9 +534,9 @@ function Footer() {
         <div>
           <h4>Organizzatori</h4>
           <ul>
-            <li><a href="tel:+393711385016"><PhoneIcon size={13}/> Alessio Pugliese</a></li>
-            <li><a href="tel:+393460968037"><PhoneIcon size={13}/> Carmine Vecchione</a></li>
-            <li><a href="tel:+393207450628"><PhoneIcon size={13}/> Aldo Fiordellisi</a></li>
+            <li><a href="https://wa.me/393711385016" target="_blank" rel="noopener noreferrer"><PhoneIcon size={13}/> Alessio Pugliese</a></li>
+            <li><a href="https://wa.me/393460968037" target="_blank" rel="noopener noreferrer"><PhoneIcon size={13}/> Carmine Vecchione</a></li>
+            <li><a href="https://wa.me/393207450628" target="_blank" rel="noopener noreferrer"><PhoneIcon size={13}/> Aldo Fiordellisi</a></li>
           </ul>
         </div>
       </div>
