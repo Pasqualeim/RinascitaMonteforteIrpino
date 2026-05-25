@@ -2,6 +2,121 @@ import { useState, useEffect } from 'react';
 import { DEFAULT_EVENTS, DEFAULT_NEWS, DEFAULT_HONORS, rmGetAllEditions, rmLoadDataFromBootstrap } from '../../data.js';
 import { EmptyState, EventRow, NewsCard, HonorCard } from '../../components.jsx';
 
+function parseRulebook(text) {
+  const lines = text.split('\n');
+  const sections = [];
+  let cur = null;
+  let prevWasEmpty = true;
+
+  function isHeading(line) {
+    const t = line.trim();
+    if (!t || t.length < 2) return false;
+    if (/^ART(?:ICOLO)?\.?\s*\d+/i.test(t)) return true;
+    if (/^\d+\s*[.\-–]\s+[A-ZÀÈÉÌÍÒÓÙÚ(]/.test(t)) return true;
+    if (/^§\s*\d+/.test(t)) return true;
+    // Short all-caps line after empty line (section title)
+    if (prevWasEmpty && t.length <= 52 && !/[a-zàèéìíòóùú]/.test(t) && /[A-ZÀÈÉÌÍÒÓÙÚ]{3}/.test(t) && !/^[-•–▪*\d]/.test(t)) return true;
+    return false;
+  }
+
+  function parseHeading(line) {
+    const t = line.trim();
+    let m = t.match(/^(ART(?:ICOLO)?\.?\s*\d+(?:\.\d+)?)\s*[-–:.\s]+(.+)?/i);
+    if (m) return { num: m[1].replace(/\s+/g, ' ').toUpperCase(), title: (m[2] || '').trim() };
+    m = t.match(/^(\d+(?:\.\d+)?)\s*[.\-–]\s+(.+)/);
+    if (m) return { num: m[1], title: m[2].trim() };
+    m = t.match(/^(§\s*\d+)\s*[-–:.\s]+(.+)?/);
+    if (m) return { num: m[1], title: (m[2] || '').trim() };
+    return { num: null, title: t };
+  }
+
+  const ITEM_RE = /^(\s*)([-•–▪]\s+|[a-zA-Z]\)\s+|\d+[.)]\s+)/;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trimEnd();
+    if (!line.trim()) {
+      prevWasEmpty = true;
+      if (cur) cur.body.push({ type: 'gap' });
+      continue;
+    }
+    if (isHeading(line)) {
+      if (cur) sections.push(cur);
+      const { num, title } = parseHeading(line);
+      cur = { num, title, body: [] };
+    } else {
+      if (!cur) cur = { num: null, title: null, body: [] };
+      const im = line.match(ITEM_RE);
+      if (im) {
+        const indent = im[1].length > 0;
+        const marker = im[2].trimEnd();
+        const content = line.slice(im[0].length).trim();
+        cur.body.push({ type: 'item', indent, marker, content });
+      } else {
+        cur.body.push({ type: 'text', content: line.trimStart() });
+      }
+    }
+    prevWasEmpty = false;
+  }
+  if (cur) sections.push(cur);
+  sections.forEach(s => {
+    while (s.body.length && s.body[s.body.length - 1].type === 'gap') s.body.pop();
+  });
+  return sections;
+}
+
+function RulebookRenderer({ text }) {
+  const sections = parseRulebook(text);
+  if (!sections.length) return null;
+
+  function renderBody(body) {
+    const nodes = [];
+    let i = 0;
+    while (i < body.length) {
+      const b = body[i];
+      if (b.type === 'gap') { i++; continue; }
+      if (b.type === 'item') {
+        const items = [];
+        while (i < body.length && body[i].type === 'item') items.push(body[i++]);
+        nodes.push(
+          <ul key={`ul${i}`} className="rm-rule-list">
+            {items.map((it, j) => (
+              <li key={j} className={`rm-rule-item${it.indent ? ' rm-indent' : ''}`}>
+                <span className="rm-rule-marker">{it.marker}</span>
+                <span>{it.content}</span>
+              </li>
+            ))}
+          </ul>
+        );
+      } else {
+        nodes.push(<p key={`p${i}`} className="rm-rule-p">{b.content}</p>);
+        i++;
+      }
+    }
+    return nodes;
+  }
+
+  return (
+    <div className="rm-rulebook">
+      {sections.map((sec, i) => {
+        const hasHeader = sec.num || sec.title;
+        return (
+          <div key={i} className={`rm-rule-article${!hasHeader ? ' rm-rule-preamble' : ''}`}>
+            {hasHeader && (
+              <div className="rm-rule-header">
+                {sec.num && <span className="rm-rule-num">{sec.num}</span>}
+                {sec.title && <span className="rm-rule-title">{sec.title}</span>}
+              </div>
+            )}
+            {sec.body.length > 0 && (
+              <div className="rm-rule-body">{renderBody(sec.body)}</div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function EventsScreen({ data }) {
   const entry = (data?.events || DEFAULT_EVENTS).find(e => e && e.event_type === 'regolamento') || (data?.events || []).find(Boolean) || null;
   const text = entry?.description || '';
@@ -16,9 +131,7 @@ export function EventsScreen({ data }) {
         </div>
         {!text
           ? <EmptyState icon="📋" title="Regolamento non ancora disponibile" sub="Lo staff pubblicherà il regolamento ufficiale a breve."/>
-          : <div className="rm-rulebook">
-              <p style={{ fontSize: 14, lineHeight: 1.75, color: 'var(--fg-2)', whiteSpace: 'pre-wrap', margin: 0, padding: '4px 0' }}>{text}</p>
-            </div>
+          : <RulebookRenderer text={text} />
         }
       </section>
     </div>
