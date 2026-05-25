@@ -10,7 +10,7 @@ export function TableScreen({ data, tournament }) {
   const scorers         = tournament?.scorers          || data?.scorers          || DEFAULT_SCORERS;
   const matchesGiornata = tournament?.matches_giornata || data?.matches_giornata || [];
   const koPhases = KO_PHASES
-    .map(phase => ({ phase, items: (matchesGiornata.find(g => g.day === phase)?.items || []).filter(m => m.status === 'ft' || m.home) }))
+    .map(phase => ({ phase, items: (matchesGiornata.find(g => g.day === phase)?.items || []).filter(m => m && (m.status === 'ft' || m.home)) }))
     .filter(p => p.items.length > 0);
 
   return (

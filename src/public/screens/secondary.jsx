@@ -3,7 +3,7 @@ import { DEFAULT_EVENTS, DEFAULT_NEWS, DEFAULT_HONORS, rmGetAllEditions, rmLoadD
 import { EmptyState, EventRow, NewsCard, HonorCard } from '../../components.jsx';
 
 export function EventsScreen({ data }) {
-  const entry = (data?.events || DEFAULT_EVENTS).find(e => e.event_type === 'regolamento') || (data?.events || [])[0] || null;
+  const entry = (data?.events || DEFAULT_EVENTS).find(e => e && e.event_type === 'regolamento') || (data?.events || []).find(Boolean) || null;
   const text = entry?.description || '';
   return (
     <div data-screen-label="events">

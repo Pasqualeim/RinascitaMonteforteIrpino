@@ -49,7 +49,7 @@ export function HomeScreen({ onNav, data, tournament }) {
           <h2 className="rm-hero-sub">{editionName}</h2>
           <p className="rm-hero-meta">
             <span><CalIcon size={15}/> {editionPeriod}</span>
-            <span><PinIcon size={15}/> Campo Sportivo, Monteforte Irpino</span>
+            <a href="https://maps.app.goo.gl/J3ktHpMgRxqWJ34eA" target="_blank" rel="noopener noreferrer" className="rm-hero-location-link"><PinIcon size={15}/> Campo Sportivo, Monteforte Irpino</a>
             <span><UsersIcon size={15}/> {teams.length > 0 ? `${teams.length} squadre · ${groups.length} gironi` : 'Iscrizioni aperte'}</span>
           </p>
           <div className="rm-hero-ctas">
@@ -92,17 +92,19 @@ export function HomeScreen({ onNav, data, tournament }) {
       </section>
 
       <section className="rm-section">
-        <div className="rm-two-col">
-          <div>
-            <div className="rm-section-head">
-              <div>
-                <span className="rm-eyebrow">{standingsGroups[0]?.name || 'Girone A'}</span>
-                <h3 className="rm-section-title">Classifica</h3>
+        <div className={standingsA.length > 0 ? 'rm-two-col' : ''}>
+          {standingsA.length > 0 && (
+            <div>
+              <div className="rm-section-head">
+                <div>
+                  <span className="rm-eyebrow">{standingsGroups[0]?.name || 'Girone A'}</span>
+                  <h3 className="rm-section-title">Classifica</h3>
+                </div>
+                <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
               </div>
-              <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
+              <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso"/>
             </div>
-            <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso"/>
-          </div>
+          )}
           <div>
             <div className="rm-section-head">
               <div>
@@ -123,9 +125,10 @@ export function HomeScreen({ onNav, data, tournament }) {
           </div>
           <button className="rm-section-link" onClick={() => onNav('news')}>Tutti gli avvisi <ArrowIcon size={13}/></button>
         </div>
-        <div className="rm-news-grid">
-          {news.slice(0, 4).map((n, i) => <NewsCard key={n.id || i} item={n} featured={i === 0}/>)}
-        </div>
+        {news.length === 0
+          ? <EmptyState icon="📢" title="Nessun avviso" sub="Gli avvisi del torneo verranno pubblicati qui."/>
+          : <div className="rm-news-grid">{news.slice(0, 4).map((n, i) => <NewsCard key={n.id || i} item={n} featured={i === 0}/>)}</div>
+        }
       </section>
 
       <section className="rm-section">
@@ -135,32 +138,44 @@ export function HomeScreen({ onNav, data, tournament }) {
             <h3 className="rm-section-title">Premi & quote</h3>
           </div>
         </div>
-        {(data?.tournaments || []).map(t => {
-          const prizes = Array.isArray(t.prizes) && t.prizes.length > 0
-            ? t.prizes
-            : [
-                t.prize_first  > 0 ? { label: '1° Posto', amount: t.prize_first  } : null,
-                t.prize_second > 0 ? { label: '2° Posto', amount: t.prize_second } : null,
-                t.prize_third  > 0 ? { label: '3° Posto', amount: t.prize_third  } : null,
-              ].filter(Boolean);
-          if (!prizes.length) return null;
-          return (
-          <div key={t.id} style={{ marginBottom: 20 }}>
-            {(data?.tournaments?.length > 1) && (
-              <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
-            )}
-            <div className="rm-prize-row">
-              {prizes.map((p, i) => (
-                <div key={i} className={`rm-prize${i === 0 ? ' gold' : i >= 2 ? ' alt' : ''}`}>
-                  {i < 2 && <TrophyIcon size={i === 0 ? 36 : 28}/>}
-                  {p.label && <div className="rm-prize-place">{p.label}</div>}
-                  <div className="rm-prize-amt">{Number(p.amount).toLocaleString('it-IT')}€</div>
-                </div>
-              ))}
-            </div>
-          </div>
+        {(() => {
+          const tournaments = (data?.tournaments || []).filter(Boolean);
+          const anyPrize = tournaments.some(t => {
+            const prizes = Array.isArray(t.prizes) && t.prizes.length > 0
+              ? t.prizes
+              : [t.prize_first, t.prize_second, t.prize_third].filter(v => v > 0);
+            return prizes.length > 0;
+          });
+          if (!anyPrize) return (
+            <EmptyState icon="🏆" title="Montepremi in definizione" sub="Lo staff pubblicherà a breve i premi per ogni categoria."/>
           );
-        })}
+          return tournaments.map(t => {
+            const prizes = Array.isArray(t.prizes) && t.prizes.length > 0
+              ? t.prizes
+              : [
+                  t.prize_first  > 0 ? { label: '1° Posto', amount: t.prize_first  } : null,
+                  t.prize_second > 0 ? { label: '2° Posto', amount: t.prize_second } : null,
+                  t.prize_third  > 0 ? { label: '3° Posto', amount: t.prize_third  } : null,
+                ].filter(Boolean);
+            if (!prizes.length) return null;
+            return (
+              <div key={t.id} style={{ marginBottom: 20 }}>
+                {(tournaments.length > 1) && (
+                  <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
+                )}
+                <div className="rm-prize-row">
+                  {prizes.map((p, i) => (
+                    <div key={i} className={`rm-prize${i === 0 ? ' gold' : i >= 2 ? ' alt' : ''}`}>
+                      {i < 2 && <TrophyIcon size={i === 0 ? 36 : 28}/>}
+                      {p.label && <div className="rm-prize-place">{p.label}</div>}
+                      <div className="rm-prize-amt">{Number(p.amount).toLocaleString('it-IT')}€</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          });
+        })()}
       </section>
 
     </div>

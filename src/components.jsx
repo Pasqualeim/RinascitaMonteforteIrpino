@@ -15,6 +15,7 @@ const ArrowIcon   = (p) => <Icon {...p}><path d="M5 12h14"/><path d="m12 5 7 7-7
 const ClockIcon   = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
 const BellIcon    = (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></Icon>;
 const InstaIcon   = (p) => <Icon {...p}><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></Icon>;
+const FbIcon      = (p) => <Icon {...p}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></Icon>;
 const MailIcon    = (p) => <Icon {...p}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></Icon>;
 const HomeIcon    = (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
 const ZapIcon     = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
@@ -337,6 +338,16 @@ function LiveBoard({ match }) {
 
 // ── Standings ─────────────────────────────────────────────────────────────
 function StandingsTable({ rows, group, updatedLabel }) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (safeRows.length === 0) return (
+    <div className="rm-table-wrap">
+      <div className="rm-table-head">
+        <h3 className="rm-table-title">{group && group.toLowerCase().startsWith('girone') ? group : `Girone ${group || '?'}`}</h3>
+        <span className="rm-eyebrow muted">{updatedLabel}</span>
+      </div>
+      <EmptyState icon="📊" title="Classifica non ancora disponibile" sub="Le squadre verranno inserite dallo staff."/>
+    </div>
+  );
   return (
     <div className="rm-table-wrap">
       <div className="rm-table-head">
@@ -348,7 +359,7 @@ function StandingsTable({ rows, group, updatedLabel }) {
           <tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>Pt</th></tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
+          {safeRows.map((r, i) => (
             <tr key={r.short + i} className={i < 2 ? 'top' : ''}>
               <td className="pos">{i + 1}</td>
               <td><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1 }}>{r.flag || '🏳️'}</span>{r.name}</div></td>
@@ -418,9 +429,11 @@ function formatNewsDate(raw) {
   const d = new Date(raw);
   if (isNaN(d)) return raw;
   const now = new Date();
-  const diffH = (now - d) / 3600000;
-  if (diffH < 24) return 'Oggi';
-  if (diffH < 48) return 'Ieri';
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const newsDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((today - newsDay) / 86400000);
+  if (diffDays === 0) return 'Oggi';
+  if (diffDays === 1) return 'Ieri';
   const day = d.getDate();
   const mon = IT_MONTHS_SHORT[d.getMonth()];
   const yr = d.getFullYear();
@@ -500,43 +513,25 @@ function HonorCard({ honor, current }) {
 }
 
 // ── Footer ────────────────────────────────────────────────────────────────
-function Footer({ onNav }) {
+function Footer() {
   return (
     <footer className="rm-footer">
       <div className="rm-footer-grid">
         <div className="rm-footer-brand">
           <div className="rm-logo-title" style={{ fontSize: 22 }}>Associazione Rinascita</div>
           <div className="rm-footer-tagline">Per la passione,<br/>per il paese,<br/>per il calcio.</div>
-          <p className="rm-footer-text">Monteforte Irpino (AV) · Volontariato sportivo dal 2024. Il Rinascita Monteforte Cup è un torneo amatoriale aperto a Senior, Over 40 e Junior.</p>
-        </div>
-        <div>
-          <h4>Torneo</h4>
-          <ul>
-            <li><a onClick={() => onNav('live')} style={{ cursor: 'pointer' }}>Risultati live</a></li>
-            <li><a onClick={() => onNav('calendar')} style={{ cursor: 'pointer' }}>Calendario</a></li>
-            <li><a onClick={() => onNav('table')} style={{ cursor: 'pointer' }}>Classifica</a></li>
-            <li><a onClick={() => onNav('teams')} style={{ cursor: 'pointer' }}>Squadre</a></li>
-          </ul>
-        </div>
-        <div>
-          <h4>Informazioni</h4>
-          <ul>
-            <li><a onClick={() => onNav('events')} style={{ cursor: 'pointer' }}>Regolamento</a></li>
-            <li><a onClick={() => onNav('news')} style={{ cursor: 'pointer' }}>Avvisi</a></li>
-          </ul>
+          <p className="rm-footer-text">Monteforte Irpino (AV) · Volontariato sportivo dal 2024. Il Rinascita Monteforte Cup è un torneo di calcio amatoriale aperto a più categorie.</p>
         </div>
         <div>
           <h4>Contatti</h4>
           <ul>
-            <li><a href="mailto:info@rinascitamonteforte.it"><MailIcon size={13}/> info@rinascitamonteforte.it</a></li>
-            <li><a href="https://www.instagram.com/associazionerinascita_" target="_blank" rel="noreferrer"><InstaIcon size={13}/> @associazionerinascita_</a></li>
-            <li><span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PinIcon size={13}/> Campo Sportivo, Monteforte Irpino</span></li>
+            <li><a href="https://www.facebook.com/rinascita.monteforte.irpino" target="_blank" rel="noopener noreferrer"><FbIcon size={13}/> Rinascita Monteforte</a></li>
+            <li><a href="https://maps.app.goo.gl/J3ktHpMgRxqWJ34eA" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PinIcon size={13}/> Campo Sportivo, Monteforte Irpino</a></li>
           </ul>
         </div>
       </div>
       <div className="rm-footer-bot">
         <span>© 2026 Associazione Rinascita · Monteforte Irpino (AV)</span>
-        <span>Sito non ufficiale · FIFA non c'entra niente, davvero.</span>
       </div>
       <div style={{ textAlign: 'center', marginTop: 20 }}>
         <a href="admin.html" className="rm-footer-admin-btn">🔐 Area Staff — Accesso riservato</a>
@@ -634,6 +629,6 @@ export {
   Header, BottomNav, StatusStrip, Countdown, SponsorWink, MatchRow, MatchDetailModal, LiveBoard,
   StandingsTable, TeamCard, TopScorers, NewsCard, EventRow, HonorCard, Footer,
   TrophyIcon, BallIcon, CalIcon, PinIcon, UsersIcon, ArrowIcon, ClockIcon,
-  BellIcon, InstaIcon, MailIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
+  BellIcon, InstaIcon, FbIcon, MailIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
   StarIcon, NewspaperIcon,
 };

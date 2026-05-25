@@ -95,17 +95,20 @@ export function CalendarScreen({ data, tournament }) {
           <EmptyState icon="📅" title="Calendario non ancora disponibile" sub="Lo staff pubblicherà il calendario delle partite a breve." />
         ) : (
           <>
-            {showGroupPhases.map(g => (
-              <div className="rm-match-day" key={g.day}>
-                <div className="rm-match-day-head">
-                  <div className="rm-match-day-num">{g.day}</div>
-                  <div className="rm-match-day-date">{g.items.length} {g.items.length === 1 ? 'partita' : 'partite'}</div>
+            {showGroupPhases.map(g => {
+              const items = g.items || [];
+              return (
+                <div className="rm-match-day" key={g.day}>
+                  <div className="rm-match-day-head">
+                    <div className="rm-match-day-num">{g.day}</div>
+                    <div className="rm-match-day-date">{items.length} {items.length === 1 ? 'partita' : 'partite'}</div>
+                  </div>
+                  <div className="rm-match-list">
+                    {items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
+                  </div>
                 </div>
-                <div className="rm-match-list">
-                  {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
 
             {showKnockoutPhases.length > 0 && selPhase === 'all' && groupPhases.length > 0 && (
               <div className="rm-ko-divider">
@@ -114,12 +117,13 @@ export function CalendarScreen({ data, tournament }) {
             )}
 
             {showKnockoutPhases.map(g => {
-              const allTbd = g.items.length > 0 && g.items.every(m => !m.home && !m.away && !m.date && !m.time);
+              const items = g.items || [];
+              const allTbd = items.length > 0 && items.every(m => m && !m.home && !m.away && !m.date && !m.time);
               return (
                 <div className="rm-match-day" key={g.day}>
                   <div className="rm-match-day-head">
                     <div className="rm-match-day-num rm-ko-phase">{g.day}</div>
-                    <div className="rm-match-day-date">{g.items.length} {g.items.length === 1 ? 'partita' : 'partite'}</div>
+                    <div className="rm-match-day-date">{items.length} {items.length === 1 ? 'partita' : 'partite'}</div>
                   </div>
                   {allTbd ? (
                     <div className="rm-ko-notice">
@@ -128,7 +132,7 @@ export function CalendarScreen({ data, tournament }) {
                     </div>
                   ) : (
                     <div className="rm-match-list">
-                      {g.items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
+                      {items.map((m, j) => <MatchRow key={m.id || j} {...m} onClick={() => setSelectedMatch(m)} />)}
                     </div>
                   )}
                 </div>

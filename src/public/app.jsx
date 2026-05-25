@@ -83,7 +83,7 @@ function App() {
       {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
       {screen === 'events'   && <EventsScreen                     data={data}/>}
       {screen === 'news'     && <NewsScreen                       data={data}/>}
-      <Footer onNav={setScreen}/>
+      <Footer/>
       <BottomNav current={screen} onNav={setScreen} hasLive={hasLive}/>
     </div>
   );
