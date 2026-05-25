@@ -6,7 +6,7 @@ export async function editionsHandler(req: Request, base: string, id: string | n
   const method = req.method;
 
   if (method === "GET" && base === "/editions") {
-    const { data, error } = await db.from("editions").select("*, tournaments(id,name,slug,sort_order)").order("year", { ascending: false });
+    const { data, error } = await db.from("editions").select("*, tournaments(id,name,slug,sort_order,prize_first,prize_second,prize_third,prizes)").order("year", { ascending: false });
     if (error) throw error;
     return ok(req, 200, { ok: true, data });
   }

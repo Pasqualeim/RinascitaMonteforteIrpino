@@ -8,9 +8,10 @@ import { CalendarScreen } from './screens/calendar.jsx';
 import { TableScreen } from './screens/table.jsx';
 import { TeamsScreen } from './screens/teams.jsx';
 import { EventsScreen, NewsScreen } from './screens/secondary.jsx';
+import { RegistrationsScreen } from './screens/registrations.jsx';
 import '../styles.css';
 
-const VALID_SCREENS = ['home','live','calendar','table','teams','events','news'];
+const VALID_SCREENS = ['home','live','calendar','table','teams','registrations','events','news'];
 
 function App() {
   const [screen, setScreen] = useState(() => {
@@ -81,6 +82,7 @@ function App() {
       {screen === 'calendar' && <CalendarScreen                   data={data} tournament={activeTournament}/>}
       {screen === 'table'    && <TableScreen                      data={data} tournament={activeTournament}/>}
       {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
+      {screen === 'registrations' && <RegistrationsScreen          data={data}/>}
       {screen === 'events'   && <EventsScreen                     data={data}/>}
       {screen === 'news'     && <NewsScreen                       data={data}/>}
       <Footer/>

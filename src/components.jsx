@@ -24,6 +24,7 @@ const GridIcon    = (p) => <Icon {...p}><rect x="3" y="3" width="7" height="7"/>
 const MoreHorizIcon = (p) => <Icon {...p}><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></Icon>;
 const StarIcon    = (p) => <Icon {...p}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></Icon>;
 const NewspaperIcon = (p) => <Icon {...p}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></Icon>;
+const ClipboardIcon = (p) => <Icon {...p}><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2"/><path d="M9 12h6"/><path d="M9 16h4"/></Icon>;
 
 // ── Empty state ───────────────────────────────────────────────────────────
 function EmptyState({ icon, title, sub }) {
@@ -44,6 +45,7 @@ function Header({ current, onNav, hasLive }) {
     { id: 'calendar', label: 'Calendario' },
     { id: 'table',    label: 'Classifica' },
     { id: 'teams',    label: 'Squadre' },
+    { id: 'registrations', label: 'Iscrizioni' },
     { id: 'events',   label: 'Regolamento' },
     { id: 'news',     label: 'Avvisi' },
   ];
@@ -86,13 +88,14 @@ function BottomNav({ current, onNav, hasLive }) {
   ];
 
   const more = [
-    { id: 'teams',  label: 'Squadre',   icon: UsersIcon },
-    { id: 'events', label: 'Regolamento', icon: NewspaperIcon },
-    { id: 'news',   label: 'Avvisi',    icon: BellIcon },
+    { id: 'teams',         label: 'Squadre',      icon: UsersIcon },
+    { id: 'registrations', label: 'Iscrizioni',   icon: ClipboardIcon },
+    { id: 'events',        label: 'Regolamento',  icon: NewspaperIcon },
+    { id: 'news',          label: 'Avvisi',       icon: BellIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
-  const isMoreActive = drawerOpen || ['teams','events','news'].includes(current);
+  const isMoreActive = drawerOpen || ['teams','registrations','events','news'].includes(current);
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }

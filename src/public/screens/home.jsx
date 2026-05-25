@@ -50,7 +50,10 @@ export function HomeScreen({ onNav, data, tournament }) {
           <p className="rm-hero-meta">
             <span><CalIcon size={15}/> {editionPeriod}</span>
             <a href="https://maps.app.goo.gl/J3ktHpMgRxqWJ34eA" target="_blank" rel="noopener noreferrer" className="rm-hero-location-link"><PinIcon size={15}/> Campo Sportivo, Monteforte Irpino</a>
-            <span><UsersIcon size={15}/> {teams.length > 0 ? `${teams.length} squadre · ${groups.length} gironi` : 'Iscrizioni aperte'}</span>
+            {teams.length > 0
+              ? <span><UsersIcon size={15}/> {teams.length} squadre · {groups.length} gironi</span>
+              : <button className="rm-hero-meta-link" onClick={() => onNav('registrations')}><UsersIcon size={15}/> Iscrizioni aperte →</button>
+            }
           </p>
           <div className="rm-hero-ctas">
             <button className="rm-btn rm-btn-primary rm-btn-lg" onClick={() => onNav('live')}>
