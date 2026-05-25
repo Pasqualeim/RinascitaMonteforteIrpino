@@ -16,6 +16,7 @@ const ClockIcon   = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polylin
 const BellIcon    = (p) => <Icon {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></Icon>;
 const InstaIcon   = (p) => <Icon {...p}><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></Icon>;
 const FbIcon      = (p) => <Icon {...p}><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></Icon>;
+const PhoneIcon   = (p) => <Icon {...p}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.21h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.8a16 16 0 0 0 6.29 6.29l.96-.96a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></Icon>;
 const MailIcon    = (p) => <Icon {...p}><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></Icon>;
 const HomeIcon    = (p) => <Icon {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></Icon>;
 const ZapIcon     = (p) => <Icon {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></Icon>;
@@ -525,8 +526,17 @@ function Footer() {
         <div>
           <h4>Contatti</h4>
           <ul>
+            <li><a href="mailto:rinascitamonteforte@gmail.com"><MailIcon size={13}/> rinascitamonteforte@gmail.com</a></li>
             <li><a href="https://www.facebook.com/rinascita.monteforte.irpino" target="_blank" rel="noopener noreferrer"><FbIcon size={13}/> Rinascita Monteforte</a></li>
             <li><a href="https://maps.app.goo.gl/J3ktHpMgRxqWJ34eA" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PinIcon size={13}/> Campo Sportivo, Monteforte Irpino</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Organizzatori</h4>
+          <ul>
+            <li><a href="tel:+393711385016"><PhoneIcon size={13}/> Alessio Pugliese</a></li>
+            <li><a href="tel:+393460968037"><PhoneIcon size={13}/> Carmine Vecchione</a></li>
+            <li><a href="tel:+393207450628"><PhoneIcon size={13}/> Aldo Fiordellisi</a></li>
           </ul>
         </div>
       </div>
@@ -629,6 +639,6 @@ export {
   Header, BottomNav, StatusStrip, Countdown, SponsorWink, MatchRow, MatchDetailModal, LiveBoard,
   StandingsTable, TeamCard, TopScorers, NewsCard, EventRow, HonorCard, Footer,
   TrophyIcon, BallIcon, CalIcon, PinIcon, UsersIcon, ArrowIcon, ClockIcon,
-  BellIcon, InstaIcon, FbIcon, MailIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
+  BellIcon, InstaIcon, FbIcon, MailIcon, PhoneIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
   StarIcon, NewspaperIcon,
 };
