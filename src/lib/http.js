@@ -21,8 +21,8 @@ export async function rmAdminApi(path, options = {}) {
       signal: controller.signal,
     });
   } catch (err) {
-    if (err.name === 'AbortError') throw new Error('Richiesta scaduta. Controlla la connessione e riprova.');
-    throw new Error('Errore di rete. Controlla la connessione e riprova.');
+    if (err.name === 'AbortError') throw new Error('Richiesta scaduta. Controlla la connessione e riprova.', { cause: err });
+    throw new Error('Errore di rete. Controlla la connessione e riprova.', { cause: err });
   } finally {
     clearTimeout(timer);
   }
