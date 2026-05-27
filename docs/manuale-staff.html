@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manuale Staff — Rinascita Monteforte Cup</title>
+<style>
+  /* ---- RESET & BASE ---- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fff;
+  }
+
+  /* ---- LAYOUT ---- */
+  .page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 0 2cm;
+  }
+
+  /* ---- COVER ---- */
+  .cover {
+    page-break-after: always;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: #0a0a0a;
+    color: #fff;
+    padding: 3cm 2cm;
+    margin: 0 -2cm;
+  }
+  .cover-badge {
+    background: #00E676;
+    color: #000;
+    font-weight: 800;
+    font-size: 10pt;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 6px 18px;
+    border-radius: 4px;
+    margin-bottom: 32px;
+    display: inline-block;
+  }
+  .cover h1 {
+    font-size: 36pt;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 1.1;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+  .cover h1 span { color: #00E676; }
+  .cover-subtitle {
+    font-size: 16pt;
+    color: #aaa;
+    margin-bottom: 48px;
+  }
+  .cover-meta {
+    font-size: 10pt;
+    color: #555;
+    margin-top: 48px;
+    border-top: 1px solid #222;
+    padding-top: 24px;
+    width: 100%;
+  }
+  .cover-meta strong { color: #00E676; }
+
+  /* ---- TOC ---- */
+  .toc {
+    page-break-after: always;
+    padding: 1.5cm 0;
+  }
+  .toc-title {
+    font-size: 22pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #0a0a0a;
+    margin-bottom: 24px;
+    padding-bottom: 8px;
+    border-bottom: 3px solid #00E676;
+  }
+  .toc ol {
+    list-style: none;
+    padding: 0;
+  }
+  .toc li {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px dotted #ddd;
+    font-size: 11pt;
+  }
+  .toc li.toc-section {
+    font-weight: 700;
+    font-size: 12pt;
+    margin-top: 12px;
+    border-bottom: 1px solid #ccc;
+  }
+  .toc li.toc-sub {
+    padding-left: 20px;
+    color: #444;
+  }
+  .toc .page-num {
+    color: #888;
+    font-size: 10pt;
+    white-space: nowrap;
+  }
+
+  /* ---- SECTIONS ---- */
+  .section {
+    padding: 1cm 0;
+    page-break-inside: avoid;
+  }
+  .section-break { page-break-before: always; }
+
+  h2 {
+    font-size: 20pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #0a0a0a;
+    margin-bottom: 6px;
+    padding-bottom: 6px;
+    border-bottom: 3px solid #00E676;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2 .num {
+    background: #00E676;
+    color: #000;
+    font-size: 11pt;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 3px;
+  }
+
+  h3 {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #111;
+    margin: 20px 0 8px;
+    padding-left: 10px;
+    border-left: 3px solid #00E676;
+  }
+
+  h4 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #333;
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  p { margin-bottom: 10px; }
+
+  /* ---- STEPS ---- */
+  .steps {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0;
+  }
+  .steps li {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+    page-break-inside: avoid;
+  }
+  .step-num {
+    background: #0a0a0a;
+    color: #00E676;
+    font-weight: 800;
+    font-size: 10pt;
+    min-width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .steps li > div { flex: 1; }
+
+  /* ---- CALLOUT BOXES ---- */
+  .callout {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin: 14px 0;
+    page-break-inside: avoid;
+    border-left: 4px solid;
+  }
+  .callout.info {
+    background: #f0f9ff;
+    border-color: #0ea5e9;
+  }
+  .callout.warning {
+    background: #fffbeb;
+    border-color: #f59e0b;
+  }
+  .callout.danger {
+    background: #fef2f2;
+    border-color: #ef4444;
+  }
+  .callout.tip {
+    background: #f0fdf4;
+    border-color: #22c55e;
+  }
+  .callout strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 10pt;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .callout.info strong { color: #0369a1; }
+  .callout.warning strong { color: #b45309; }
+  .callout.danger strong { color: #b91c1c; }
+  .callout.tip strong { color: #15803d; }
+
+  /* ---- TABLE ---- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #0a0a0a;
+    color: #00E676;
+    font-weight: 700;
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 9.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f8f8f8; }
+
+  /* ---- BADGE ---- */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 9pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.green { background: #dcfce7; color: #15803d; }
+  .badge.yellow { background: #fef9c3; color: #a16207; }
+  .badge.red { background: #fee2e2; color: #b91c1c; }
+  .badge.gray { background: #f1f5f9; color: #475569; }
+  .badge.gold { background: #fef3c7; color: #92400e; }
+
+  /* ---- CODE / KEY ---- */
+  code {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-family: 'Courier New', monospace;
+    font-size: 10pt;
+  }
+  .kbd {
+    background: #e2e8f0;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10pt;
+    font-family: 'Courier New', monospace;
+    box-shadow: 0 1px 0 #94a3b8;
+  }
+
+  /* ---- ICON LABELS ---- */
+  .icon-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+  }
+  .icon-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f8f8;
+    border-radius: 6px;
+    font-size: 10pt;
+    border: 1px solid #e5e5e5;
+  }
+  .icon-item .ico { font-size: 16pt; }
+
+  /* ---- FLOW DIAGRAM ---- */
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 14px 0;
+    padding: 14px;
+    background: #f8f8f8;
+    border-radius: 8px;
+  }
+  .flow-step {
+    background: #0a0a0a;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 10pt;
+    font-weight: 600;
+  }
+  .flow-step.active {
+    background: #00E676;
+    color: #000;
+  }
+  .flow-arrow {
+    color: #94a3b8;
+    font-size: 14pt;
+    font-weight: 300;
+  }
+
+  /* ---- QUICK REFERENCE CARD ---- */
+  .ref-card {
+    border: 2px solid #0a0a0a;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+    page-break-inside: avoid;
+  }
+  .ref-card-header {
+    background: #0a0a0a;
+    color: #fff;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 11pt;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ref-card-body {
+    padding: 14px 16px;
+  }
+
+  /* ---- SEPARATOR ---- */
+  hr {
+    border: none;
+    border-top: 1px solid #e5e5e5;
+    margin: 20px 0;
+  }
+
+  /* ---- FOOTER ---- */
+  .doc-footer {
+    margin-top: 1cm;
+    padding-top: 14px;
+    border-top: 2px solid #0a0a0a;
+    font-size: 9pt;
+    color: #888;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  /* ---- PRINT ---- */
+  @media print {
+    body { font-size: 10pt; }
+    .cover {
+      background: #0a0a0a !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .cover h1, .cover .cover-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    h2, .step-num, th, .ref-card-header, .badge, .callout {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .section { page-break-inside: auto; }
+    h2, h3 { page-break-after: avoid; }
+    .section-break { page-break-before: always; }
+  }
+
+  @page {
+    size: A4;
+    margin: 2cm 2.5cm;
+  }
+  @page :first {
+    margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     COPERTINA
+════════════════════════════════════════════════ -->
+<div class="cover">
+  <span class="cover-badge">⚽ Documento Riservato Staff</span>
+  <h1>Rinascita<br><span>Monteforte</span><br>Cup</h1>
+  <div class="cover-subtitle">Manuale Operativo Staff</div>
+  <p style="color:#888;font-size:12pt;max-width:500px;">
+    Guida completa alla gestione del torneo tramite il pannello admin:<br>
+    partite, live, squadre, classifiche e molto altro.
+  </p>
+  <div class="cover-meta">
+    <strong>Versione 1.0</strong> — Edizione 2026 &nbsp;|&nbsp;
+    Rinascita Monteforte Cup, Monteforte Irpino (AV)<br>
+    <span style="color:#444;">Documento ad uso esclusivo dello staff organizzativo</span>
+  </div>
+</div>
+
+<div class="page">
+
+<!-- ══════════════════════════════════════════════
+     INDICE
+════════════════════════════════════════════════ -->
+<div class="toc">
+  <div class="toc-title">Indice</div>
+  <ol>
+    <li class="toc-section"><span>1. Come accedere al pannello admin</span><span class="page-num">3</span></li>
+    <li class="toc-sub"><span>1.1 Link di accesso</span></li>
+    <li class="toc-sub"><span>1.2 Login e sessione</span></li>
+    <li class="toc-sub"><span>1.3 Cambio password</span></li>
+
+    <li class="toc-section"><span>2. Panoramica pannello</span><span class="page-num">4</span></li>
+    <li class="toc-sub"><span>2.1 Selettore categoria</span></li>
+    <li class="toc-sub"><span>2.2 Tab disponibili</span></li>
+
+    <li class="toc-section"><span>3. Workflow completo torneo</span><span class="page-num">5</span></li>
+    <li class="toc-sub"><span>3.1 Schema flusso operativo</span></li>
+    <li class="toc-sub"><span>3.2 Gironi</span></li>
+    <li class="toc-sub"><span>3.3 Squadre</span></li>
+    <li class="toc-sub"><span>3.4 Partite</span></li>
+    <li class="toc-sub"><span>3.5 Classifica</span></li>
+    <li class="toc-sub"><span>3.6 Marcatori</span></li>
+
+    <li class="toc-section"><span>4. Gestione live partite</span><span class="page-num">8</span></li>
+    <li class="toc-sub"><span>4.1 Avvio diretta</span></li>
+    <li class="toc-sub"><span>4.2 Timer e fasi</span></li>
+    <li class="toc-sub"><span>4.3 Punteggio</span></li>
+    <li class="toc-sub"><span>4.4 Inserire eventi (gol, cartellini)</span></li>
+    <li class="toc-sub"><span>4.5 Undo evento</span></li>
+    <li class="toc-sub"><span>4.6 Fine partita</span></li>
+    <li class="toc-sub"><span>4.7 Regole cartellini</span></li>
+
+    <li class="toc-section"><span>5. Avvisi e comunicazioni</span><span class="page-num">11</span></li>
+    <li class="toc-section"><span>6. Contenuti (eventi, albo, sponsor, striscia)</span><span class="page-num">12</span></li>
+    <li class="toc-section"><span>7. Scheda rapida — Problemi comuni</span><span class="page-num">13</span></li>
+    <li class="toc-section"><span>8. Riferimenti rapidi</span><span class="page-num">14</span></li>
+  </ol>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     1. ACCESSO
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">1</span> Come accedere al pannello admin</h2>
+
+  <h3>1.1 Link di accesso</h3>
+  <p>Il pannello staff è raggiungibile aprendo il sito e scorrendo fino al footer, dove trovi il link discreto <strong>"⚙ Accesso staff"</strong>. In alternativa, naviga direttamente all'indirizzo del sito con <code>/admin.html</code> alla fine.</p>
+
+  <div class="callout info">
+    <strong>Dove trovarlo</strong>
+    Footer del sito pubblico → link "⚙ Accesso staff" (piccolo, metà opacità)
+  </div>
+
+  <h3>1.2 Login e sessione</h3>
+  <ul class="steps">
+    <li>
+      <div class="step-num">1</div>
+      <div>Inserisci <strong>username</strong> e <strong>password</strong> forniti dall'organizzatore nel form di login.</div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div>Clicca <strong>"Accedi"</strong>. Vieni reindirizzato al pannello admin.</div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div>La sessione è valida finché la <strong>tab del browser rimane aperta</strong>. Se chiudi la tab o il browser, al rientro dovrai fare nuovamente login.</div>
+    </li>
+  </ul>
+
+  <div class="callout warning">
+    <strong>Attenzione</strong>
+    Non aprire il pannello admin in più tab contemporaneamente. Operazioni live simultanee possono creare conflitti di dati.
+  </div>
+
+  <h3>1.3 Cambio password</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Vai nel tab <strong>"Settings"</strong> (ingranaggio, ultimo tab a destra).</div></li>
+    <li><div class="step-num">2</div><div>Sezione <strong>"Credenziali Staff"</strong> → inserisci nuovo username e/o nuova password.</div></li>
+    <li><div class="step-num">3</div><div>Clicca <strong>"Salva credenziali"</strong>. Verrai disconnesso e dovrai rientrare con le nuove credenziali.</div></li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     2. PANORAMICA
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">2</span> Panoramica pannello</h2>
+
+  <h3>2.1 Selettore categoria</h3>
+  <p>In cima al pannello trovi un <strong>menu a tendina</strong> per scegliere la <strong>categoria attiva</strong> (es. Senior, Over 40). Tutti i tab operano sulla categoria selezionata: gironi, partite, squadre, classifica e live si riferiscono sempre alla categoria scelta.</p>
+
+  <div class="callout tip">
+    <strong>Regola d'oro</strong>
+    Prima di fare qualsiasi operazione, controlla sempre quale categoria è selezionata nel menu in alto.
+  </div>
+
+  <h3>2.2 Tab disponibili</h3>
+  <table>
+    <thead>
+      <tr><th>Icona / Tab</th><th>Funzione</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Dashboard</strong></td><td>Panoramica torneo, checklist stato, accesso rapido</td></tr>
+      <tr><td><strong>Gironi</strong></td><td>Crea e modifica gironi (nome, colore)</td></tr>
+      <tr><td><strong>Live 🔴</strong></td><td>Gestisci partite in diretta in tempo reale</td></tr>
+      <tr><td><strong>Avvisi</strong></td><td>Pubblica comunicati e avvisi per i tifosi</td></tr>
+      <tr><td><strong>Partite</strong></td><td>Inserisci e modifica risultati, orari, campi</td></tr>
+      <tr><td><strong>Classifica</strong></td><td>Visualizza e correggi manualmente la classifica</td></tr>
+      <tr><td><strong>Marcatori</strong></td><td>Gestisci la classifica marcatori (gol)</td></tr>
+      <tr><td><strong>Squadre</strong></td><td>Modifica info squadre: nazione, capitano, girone</td></tr>
+      <tr><td><strong>Contenuti</strong></td><td>Eventi timeline, albo d'oro, sponsor</td></tr>
+      <tr><td><strong>Striscia</strong></td><td>Messaggi ticker verde in cima al sito pubblico</td></tr>
+      <tr><td><strong>Settings ⚙</strong></td><td>Credenziali, reset dati, gestione edizioni</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     3. WORKFLOW TORNEO
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">3</span> Workflow completo torneo</h2>
+
+  <h3>3.1 Schema flusso operativo</h3>
+  <p>Segui sempre questo ordine quando configuri un nuovo torneo o una nuova categoria:</p>
+
+  <div class="flow">
+    <span class="flow-step active">1. Seleziona categoria</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">2. Crea gironi</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">3. Aggiungi squadre</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">4. Inserisci partite</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">5. Aggiorna risultati</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">6. Classifica automatica</span>
+  </div>
+
+  <div class="callout info">
+    <strong>Classifica automatica</strong>
+    Non devi inserire punti manualmente: la classifica viene calcolata automaticamente dal sistema ogni volta che aggiorni un risultato di partita.
+  </div>
+</div>
+
+<div class="section">
+  <h3>3.2 Gironi</h3>
+
+  <h4>Creare un nuovo girone</h4>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Seleziona la categoria corretta nel menu in alto.</div></li>
+    <li><div class="step-num">2</div><div>Vai nel tab <strong>"Gironi"</strong>.</div></li>
+    <li><div class="step-num">3</div><div>Clicca <strong>"+ Nuovo Girone"</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Inserisci il nome (es. "Girone A") e scegli un colore identificativo.</div></li>
+    <li><div class="step-num">5</div><div>Clicca <strong>"Salva"</strong>.</div></li>
+  </ul>
+
+  <h4>Modificare o eliminare un girone</h4>
+  <p>In ogni riga del girone trovi i tasti <strong>Modifica (✏)</strong> ed <strong>Elimina (🗑)</strong>. Prima di eliminare un girone assicurati che non abbia squadre o partite associate.</p>
+
+  <div class="callout danger">
+    <strong>Attenzione — Eliminazione girone</strong>
+    Eliminare un girone rimuove anche tutte le squadre iscritte a quel girone e le relative partite. L'operazione non è reversibile.
+  </div>
+</div>
+
+<div class="section">
+  <h3>3.3 Squadre</h3>
+
+  <h4>Aggiungere o modificare una squadra</h4>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Vai nel tab <strong>"Squadre"</strong>.</div></li>
+    <li><div class="step-num">2</div><div>Clicca <strong>"+ Nuova Squadra"</strong> oppure clicca il nome di una squadra esistente per modificarla.</div></li>
+    <li><div class="step-num">3</div><div>Compila: <strong>Nome</strong>, <strong>Nazione</strong> (picker con bandiera FIFA 2026), <strong>Girone</strong> di appartenenza, <strong>Capitano</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Clicca <strong>"Salva"</strong>.</div></li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>Bandiera nazione</strong>
+    La bandiera appare automaticamente sul sito pubblico nel profilo squadra. Selezionala cliccando sul picker con tutte le nazioni FIFA 2026.
+  </div>
+</div>
+
+<div class="section">
+  <h3>3.4 Partite</h3>
+
+  <h4>Inserire una nuova partita</h4>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Vai nel tab <strong>"Partite"</strong>.</div></li>
+    <li><div class="step-num">2</div><div>Clicca <strong>"+ Nuova Partita"</strong>.</div></li>
+    <li><div class="step-num">3</div><div>Compila: <strong>Squadra Casa</strong>, <strong>Squadra Ospite</strong>, <strong>Fase</strong> (girone / quarti / semifinale / finale), <strong>Girone</strong>, <strong>Data e ora</strong>, <strong>Campo</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Clicca <strong>"Salva"</strong>.</div></li>
+  </ul>
+
+  <h4>Aggiornare il risultato a fine partita (senza live)</h4>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Trova la partita nella lista del tab "Partite".</div></li>
+    <li><div class="step-num">2</div><div>Clicca <strong>Modifica (✏)</strong>.</div></li>
+    <li><div class="step-num">3</div><div>Inserisci il punteggio nei campi <strong>Gol Casa</strong> / <strong>Gol Ospite</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Cambia lo stato in <strong>FT</strong> (Fine Tempo — Full Time).</div></li>
+    <li><div class="step-num">5</div><div>Clicca <strong>"Salva"</strong>. La classifica si aggiorna automaticamente.</div></li>
+  </ul>
+
+  <h4>Stati partita</h4>
+  <table>
+    <thead><tr><th>Stato</th><th>Significato</th><th>Visibile sul sito come</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge gray">SCH</span></td><td>Schedulata / in programma</td><td>Data e ora</td></tr>
+      <tr><td><span class="badge red">LIVE</span></td><td>In corso (gestita dal tab Live)</td><td>Punteggio in tempo reale 🔴</td></tr>
+      <tr><td><span class="badge green">FT</span></td><td>Terminata (Full Time)</td><td>Risultato finale</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section">
+  <h3>3.5 Classifica</h3>
+  <p>La classifica viene <strong>calcolata automaticamente</strong> dal database in base ai risultati delle partite (stato FT). Non è necessario inserire punti manualmente.</p>
+
+  <h4>Valori calcolati automaticamente per ogni squadra:</h4>
+  <div class="icon-row">
+    <div class="icon-item"><span class="ico">🎮</span> Partite giocate (G)</div>
+    <div class="icon-item"><span class="ico">✅</span> Vittorie (V)</div>
+    <div class="icon-item"><span class="ico">🟰</span> Pareggi (N)</div>
+    <div class="icon-item"><span class="ico">❌</span> Sconfitte (P)</div>
+    <div class="icon-item"><span class="ico">⚽</span> Gol fatti (GF)</div>
+    <div class="icon-item"><span class="ico">🥅</span> Gol subiti (GS)</div>
+    <div class="icon-item"><span class="ico">🏆</span> Punti (Pt)</div>
+  </div>
+
+  <div class="callout tip">
+    <strong>Correzione manuale</strong>
+    Nel tab "Classifica" puoi modificare manualmente G/V/N/P/GF/GS/Pt di una squadra se necessiti correggere penalità o errori di sistema.
+  </div>
+</div>
+
+<div class="section">
+  <h3>3.6 Marcatori</h3>
+
+  <h4>Aggiungere o aggiornare un marcatore</h4>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Vai nel tab <strong>"Marcatori"</strong>.</div></li>
+    <li><div class="step-num">2</div><div>Clicca <strong>"+ Nuovo Marcatore"</strong> oppure modifica uno esistente.</div></li>
+    <li><div class="step-num">3</div><div>Inserisci: <strong>Nome giocatore</strong>, <strong>Squadra</strong>, <strong>Numero di gol</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Salva. La classifica marcatori si aggiorna sul sito pubblico.</div></li>
+  </ul>
+
+  <div class="callout info">
+    <strong>Gol dal live</strong>
+    Quando inserisci un gol tramite il tab Live (⚽), il sistema aggiorna automaticamente il conteggio gol del marcatore se il giocatore è già presente nella lista. In caso contrario, aggiungilo manualmente dopo la partita.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     4. LIVE
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">4</span> Gestione live partite</h2>
+
+  <p>Il tab <strong>Live 🔴</strong> è il cuore del sistema durante le partite. Permette di trasmettere in tempo reale punteggio, eventi e minuto di gioco ai tifosi che seguono il sito.</p>
+
+  <h3>4.1 Avvio diretta</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Seleziona la <strong>categoria corretta</strong> nel menu in alto (es. Senior).</div></li>
+    <li><div class="step-num">2</div><div>Vai nel tab <strong>Live 🔴</strong>.</div></li>
+    <li><div class="step-num">3</div><div>Seleziona la partita da avviare nel <strong>menu a tendina</strong> (mostra le partite programmate per oggi).</div></li>
+    <li><div class="step-num">4</div><div>Clicca <strong>"Avvia Diretta"</strong>. Comparirà una finestra di conferma — clicca di nuovo per confermare.</div></li>
+    <li><div class="step-num">5</div><div>La partita passa allo stato <span class="badge red">LIVE</span> e il timer si avvia automaticamente.</div></li>
+  </ul>
+
+  <div class="callout danger">
+    <strong>Conferma richiesta</strong>
+    L'avvio della diretta richiede una conferma esplicita perché pubblica immediatamente la partita come "in corso" sul sito pubblico. Assicurati di aver selezionato la partita corretta prima di confermare.
+  </div>
+
+  <h3>4.2 Timer e fasi di gioco</h3>
+  <p>Il timer parte automaticamente all'avvio. Puoi cambiare la fase di gioco in qualsiasi momento:</p>
+
+  <table>
+    <thead><tr><th>Fase</th><th>Quando usarla</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1° Tempo</strong></td><td>Inizio partita → fine primo tempo</td></tr>
+      <tr><td><strong>Intervallo</strong></td><td>Pausa tra i due tempi — il timer si ferma</td></tr>
+      <tr><td><strong>2° Tempo</strong></td><td>Ripresa del gioco fino al fischio finale</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <strong>Consigli pratici</strong>
+    Cambia fase premendo il tasto corrispondente. Il cambio da "1° Tempo" a "Intervallo" ferma il timer: ricordati di premere "2° Tempo" quando riprende il gioco per fare ripartire il conteggio dal minuto corretto.
+  </div>
+
+  <h3>4.3 Punteggio</h3>
+  <p>Puoi modificare il punteggio in due modi:</p>
+  <div class="icon-row">
+    <div class="icon-item"><span class="ico">➕</span> +1 gol squadra casa</div>
+    <div class="icon-item"><span class="ico">➖</span> −1 gol squadra casa (errore)</div>
+    <div class="icon-item"><span class="ico">➕</span> +1 gol squadra ospite</div>
+    <div class="icon-item"><span class="ico">➖</span> −1 gol squadra ospite (errore)</div>
+  </div>
+  <p>Il punteggio appare in tempo reale sul sito pubblico entro pochi secondi.</p>
+</div>
+
+<div class="section">
+  <h3>4.4 Inserire eventi (gol, cartellini)</h3>
+  <p>Per ogni evento inserisci: <strong>tipo evento</strong>, <strong>squadra</strong>, <strong>nome giocatore</strong>, <strong>minuto</strong>.</p>
+
+  <table>
+    <thead><tr><th>Tasto</th><th>Tipo evento</th><th>Effetto automatico</th></tr></thead>
+    <tbody>
+      <tr><td>⚽</td><td>Gol</td><td>+1 al punteggio, aggiorna marcatori</td></tr>
+      <tr><td>🟨</td><td>Cartellino giallo</td><td>Registra ammonizione. Se è il 2° giallo stesso giocatore → espulsione automatica</td></tr>
+      <tr><td>🟥</td><td>Cartellino rosso</td><td>Registra espulsione diretta</td></tr>
+    </tbody>
+  </table>
+
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Clicca il bottone evento (⚽ / 🟨 / 🟥).</div></li>
+    <li><div class="step-num">2</div><div>Seleziona la <strong>squadra</strong> dal menu.</div></li>
+    <li><div class="step-num">3</div><div>Scrivi il <strong>nome del giocatore</strong>.</div></li>
+    <li><div class="step-num">4</div><div>Verifica il <strong>minuto</strong> (si compila automaticamente dal timer, modificabile).</div></li>
+    <li><div class="step-num">5</div><div>Clicca <strong>"Conferma"</strong>.</div></li>
+  </ul>
+
+  <h3>4.5 Undo evento</h3>
+  <p>Se hai inserito un evento per errore, usa il tasto <strong>"Undo"</strong> (↩) accanto all'evento nella lista degli eventi della partita. L'undo rimuove l'evento e, se era un gol, sottrae automaticamente il punto al punteggio.</p>
+
+  <div class="callout warning">
+    <strong>Limite undo</strong>
+    L'undo è disponibile solo per l'ultimo evento inserito. Non è possibile annullare eventi precedenti: in quel caso modifica manualmente il punteggio con il tasto −1.
+  </div>
+
+  <h3>4.6 Fine partita</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Al fischio finale clicca <strong>"Termina Partita"</strong>.</div></li>
+    <li><div class="step-num">2</div><div>Comparirà una conferma — clicca per confermare.</div></li>
+    <li><div class="step-num">3</div><div>La partita passa allo stato <span class="badge green">FT</span>, il timer si ferma, il risultato viene salvato.</div></li>
+    <li><div class="step-num">4</div><div>La classifica girone si aggiorna automaticamente con i punti della partita appena conclusa.</div></li>
+  </ul>
+
+  <div class="callout tip">
+    <strong>Dopo la partita</strong>
+    Vai nel tab "Marcatori" e verifica che i gol segnati in diretta siano correttamente attribuiti. Se un giocatore non era presente nella lista marcatori, aggiungilo manualmente con il totale gol aggiornato.
+  </div>
+</div>
+
+<div class="section">
+  <h3>4.7 Regole cartellini</h3>
+
+  <div class="ref-card">
+    <div class="ref-card-header">📋 Regolamento cartellini — come gestirlo nel sistema</div>
+    <div class="ref-card-body">
+      <table style="margin:0;">
+        <thead><tr><th>Situazione</th><th>Cosa fa il sistema</th><th>Cosa deve fare lo staff</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Giocatore riceve <strong>2° giallo</strong> nella stessa partita</td>
+            <td>Aggiunge automaticamente evento rosso con nota "doppio giallo"</td>
+            <td>Nulla — automatico</td>
+          </tr>
+          <tr>
+            <td>Giocatore riceve <strong>rosso diretto</strong></td>
+            <td>Registra espulsione</td>
+            <td>Inserire evento 🟥 manualmente</td>
+          </tr>
+          <tr>
+            <td><strong>Gialli accumulati</strong> tra più partite (es. 3 gialli = 1 turno stop)</td>
+            <td>Non gestito automaticamente</td>
+            <td>Gestire manualmente: segnare il giocatore come squalificato nelle note o non schierarlo in calendario</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <strong>Nota sul regolamento</strong>
+    La soglia di gialli che comporta una giornata di squalifica (es. 3 gialli = 1 turno) dipende dal regolamento dell'edizione corrente. Lo staff decide quando applicarla — il sistema non la gestisce automaticamente tra partite diverse.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     5. AVVISI
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">5</span> Avvisi e comunicazioni</h2>
+  <p>Gli avvisi sono visibili sul sito pubblico nella sezione <strong>"Bacheca"</strong> e nel tab <strong>"Avvisi"</strong>. Usali per comunicare spostamenti, cancellazioni, premi o qualsiasi comunicato ai partecipanti.</p>
+
+  <h3>Creare un avviso</h3>
+  <ul class="steps">
+    <li><div class="step-num">1</div><div>Vai nel tab <strong>"Avvisi"</strong>.</div></li>
+    <li><div class="step-num">2</div><div>Clicca <strong>"+ Nuovo Avviso"</strong>.</div></li>
+    <li><div class="step-num">3</div><div>Compila:<br>
+      &nbsp;• <strong>Titolo</strong> — breve e chiaro (es. "Rinviata partita Girone A")<br>
+      &nbsp;• <strong>Testo</strong> — corpo del messaggio<br>
+      &nbsp;• <strong>Tono</strong> — scegli il colore/importanza: Info, Avviso, Urgente, Successo<br>
+      &nbsp;• <strong>Pin</strong> — spunta per tenere l'avviso sempre in cima alla bacheca
+    </div></li>
+    <li><div class="step-num">4</div><div>Clicca <strong>"Pubblica"</strong>. Visibile immediatamente sul sito.</div></li>
+  </ul>
+
+  <h4>Toni disponibili:</h4>
+  <div class="icon-row">
+    <div class="icon-item"><span class="badge green">Info</span> Informazione generale</div>
+    <div class="icon-item"><span class="badge yellow">Avviso</span> Attenzione richiesta</div>
+    <div class="icon-item"><span class="badge red">Urgente</span> Comunicazione critica</div>
+    <div class="icon-item"><span class="badge gold">Successo</span> Notizia positiva</div>
+  </div>
+
+  <h3>Striscia messaggi</h3>
+  <p>Tab <strong>"Striscia"</strong>: messaggio ticker verde che scorre in cima al sito. Ideale per comunicazioni brevi e urgenti visibili a tutti senza aprire la bacheca (es. "⚽ Finale oggi ore 19:00 — Campo Principale").</p>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     6. CONTENUTI
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">6</span> Contenuti — eventi, albo, sponsor</h2>
+
+  <h3>6.1 Timeline eventi</h3>
+  <p>Tab <strong>"Contenuti"</strong> → sezione <strong>Eventi</strong>. Aggiungi eventi al programma del torneo (partite di apertura, cerimonie, feste) che vengono mostrati in ordine cronologico sul sito.</p>
+  <p>Per ogni evento: <strong>titolo</strong>, <strong>data/ora</strong>, <strong>luogo</strong>, <strong>tipo</strong> (partita / cerimonia / festa).</p>
+
+  <h3>6.2 Albo d'oro</h3>
+  <p>Tab <strong>"Contenuti"</strong> → sezione <strong>Albo d'oro</strong>. Registra le edizioni passate con: anno, categoria, squadra vincitrice, capocannoniere, MVP. Visibile sul sito nella sezione "Albo d'oro".</p>
+
+  <h3>6.3 Sponsor</h3>
+  <p>Tab <strong>"Contenuti"</strong> → sezione <strong>Sponsor</strong>. Aggiungi sponsor con nome e tag (es. "Main Sponsor", "Partner Tecnico"). Appaiono nel footer del sito pubblico.</p>
+
+  <div class="callout info">
+    <strong>Condivisione tra categorie</strong>
+    Avvisi, eventi, albo d'oro, sponsor e striscia sono condivisi tra tutte le categorie dell'edizione (Senior, Over 40, ecc.). Non dipendono dalla categoria selezionata nel menu in alto.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     7. PROBLEMI COMUNI
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">7</span> Scheda rapida — Problemi comuni</h2>
+
+  <table>
+    <thead>
+      <tr><th>Problema</th><th>Causa probabile</th><th>Soluzione</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Il punteggio sul sito non si aggiorna</td>
+        <td>Ritardo refresh (aggiorna ogni 30 sec)</td>
+        <td>Aspetta 30 secondi o ricarica la pagina pubblica</td>
+      </tr>
+      <tr>
+        <td>La classifica non cambia dopo aver salvato un risultato</td>
+        <td>Partita non impostata su FT</td>
+        <td>Modifica partita → stato = <span class="badge green">FT</span> → Salva</td>
+      </tr>
+      <tr>
+        <td>Errore di sessione scaduta / disconnesso</td>
+        <td>Tab chiusa e riaperta</td>
+        <td>Torna al link admin e fai nuovamente login</td>
+      </tr>
+      <tr>
+        <td>Non trovo la partita nel tab Live</td>
+        <td>Partita non schedulata oggi o categoria sbagliata</td>
+        <td>Verifica categoria selezionata + data partita nel tab Partite</td>
+      </tr>
+      <tr>
+        <td>Gol inseriti nel live non appaiono nei marcatori</td>
+        <td>Giocatore non presente nella lista marcatori</td>
+        <td>Aggiungilo manualmente nel tab Marcatori dopo la partita</td>
+      </tr>
+      <tr>
+        <td>Ho inserito un evento sbagliato (gol/cartellino)</td>
+        <td>—</td>
+        <td>Usa Undo (↩) se è l'ultimo evento, altrimenti correggi il punteggio con −1</td>
+      </tr>
+      <tr>
+        <td>Squadra non appare nella classifica</td>
+        <td>Non assegnata a un girone</td>
+        <td>Tab Squadre → modifica squadra → assegna il girone corretto</td>
+      </tr>
+      <tr>
+        <td>Messaggio "Errore di rete"</td>
+        <td>Connessione internet assente o instabile</td>
+        <td>Controlla connessione e riprova. Dati non salvati: ricompila il form</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     8. RIFERIMENTI RAPIDI
+════════════════════════════════════════════════ -->
+<div class="section section-break">
+  <h2><span class="num">8</span> Riferimenti rapidi</h2>
+
+  <div class="ref-card">
+    <div class="ref-card-header">⚡ Checklist partita — Prima del fischio d'inizio</div>
+    <div class="ref-card-body">
+      <ul style="list-style:none;padding:0;">
+        <li style="padding:4px 0;">☐ Seleziona la categoria corretta nel menu in alto</li>
+        <li style="padding:4px 0;">☐ Verifica che la partita esista nel tab "Partite" con data e squadre corrette</li>
+        <li style="padding:4px 0;">☐ Vai nel tab Live → seleziona la partita</li>
+        <li style="padding:4px 0;">☐ Clicca "Avvia Diretta" → conferma</li>
+        <li style="padding:4px 0;">☐ Verifica che il sito pubblico mostri la partita come LIVE</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="ref-card" style="margin-top:16px;">
+    <div class="ref-card-header">⚡ Checklist partita — Dopo il fischio finale</div>
+    <div class="ref-card-body">
+      <ul style="list-style:none;padding:0;">
+        <li style="padding:4px 0;">☐ Clicca "Termina Partita" nel tab Live → conferma</li>
+        <li style="padding:4px 0;">☐ Verifica il punteggio finale nel tab Partite (stato FT)</li>
+        <li style="padding:4px 0;">☐ Controlla classifica aggiornata nel tab Classifica</li>
+        <li style="padding:4px 0;">☐ Aggiorna / aggiungi marcatori nel tab Marcatori</li>
+        <li style="padding:4px 0;">☐ Se ci sono giocatori con 3+ gialli accumulati → gestisci squalifica manualmente</li>
+      </ul>
+    </div>
+  </div>
+
+  <hr>
+
+  <h3>Contatti tecnici</h3>
+  <table>
+    <thead><tr><th>Ruolo</th><th>Contatto</th></tr></thead>
+    <tbody>
+      <tr><td>Problemi tecnici sistema</td><td>Pasquale Ercolino — <a href="mailto:pasquale.ercolino98@gmail.com">pasquale.ercolino98@gmail.com</a></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout tip">
+    <strong>In caso di emergenza tecnica durante una partita</strong>
+    Se il pannello admin non risponde, inserisci i risultati manualmente dopo la partita nel tab "Partite" impostando lo stato FT. Il punteggio verrà salvato correttamente e la classifica si aggiornerà.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     FOOTER DOCUMENTO
+════════════════════════════════════════════════ -->
+<div class="doc-footer">
+  <strong>Rinascita Monteforte Cup — Manuale Operativo Staff v1.0</strong><br>
+  Documento riservato ad uso esclusivo dello staff organizzativo &bull; Edizione 2026<br>
+  Monteforte Irpino (AV) &bull; Aggiornato: Maggio 2026
+</div>
+
+</div><!-- /page -->
+</body>
+</html>
