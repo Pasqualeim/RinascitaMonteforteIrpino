@@ -72,6 +72,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Portale</h3>
       <div className="adm-grid-menu">
         <button type="button" className="adm-grid-btn" onClick={() => setTab('events')}><CalIcon size={28}/><span>Regolamento</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('iscrizioni')}><StarIcon size={28}/><span>Iscrizioni</span></button>
       </div>
     </div>
   );

@@ -147,6 +147,8 @@ export async function buildBootstrap(editionId: string) {
     return {
       id: t.id, name: t.name, slug: t.slug, sort_order: t.sort_order,
       prize_first: t.prize_first, prize_second: t.prize_second, prize_third: t.prize_third, prizes: t.prizes || [],
+      registration_fee: t.registration_fee ?? null, min_teams: t.min_teams ?? null, max_teams: t.max_teams ?? null,
+      registration_open: t.registration_open ?? null, registration_notes: t.registration_notes ?? null,
       groups, teams,
       standings_groups: Object.values(standingsMap),
       live_match: liveMatch,

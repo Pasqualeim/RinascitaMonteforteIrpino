@@ -13,6 +13,7 @@ import { StandingsSection } from './sections/standings.jsx';
 import { ScorersSection } from './sections/scorers.jsx';
 import { TeamsSection } from './sections/teams.jsx';
 import { EventsSection, HonorsSection } from './sections/content.jsx';
+import { IscrizioniSection } from './sections/iscrizioni.jsx';
 import { DisciplineSection } from './sections/discipline.jsx';
 import { SettingsSection } from './sections/settings.jsx';
 import '../admin-styles.css';
@@ -24,7 +25,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','scorers','teams','events','honors','discipline'];
+const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','scorers','teams','events','iscrizioni','honors','discipline'];
 
 function tabFromHash() {
   const h = window.location.hash.replace('#', '');
@@ -209,6 +210,7 @@ function AdminApp() {
         {tab === 'scorers'    && <ScorersSection {...props} />}
         {tab === 'teams'      && <TeamsSection {...props} />}
         {tab === 'events'     && <EventsSection {...props} />}
+        {tab === 'iscrizioni' && <IscrizioniSection {...props} />}
         {tab === 'honors'     && <HonorsSection {...props} />}
         {tab === 'discipline' && <DisciplineSection {...props} />}
         {tab === 'settings'   && <SettingsSection {...props} />}
