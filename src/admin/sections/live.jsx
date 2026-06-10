@@ -225,6 +225,13 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         timer_started_at: updatedLm.timer_started_at,
         pitch: updatedLm.pitch || '', events: [],
       }).catch(e => console.warn('Live start sync:', e));
+      // Mark the match itself as live in the DB so the public calendar reflects it
+      // (live_match_state alone drives the live board, but the match tile stays 'sch'
+      // without this). doTerminate later flips it to 'ft'.
+      if (updatedLm.match_id) {
+        rmAdminDomain.updateMatch(updatedLm.match_id, { status: 'live' })
+          .catch(e => console.warn('Match live status sync:', e));
+      }
     }
     setSelectedKey(null);
   }
