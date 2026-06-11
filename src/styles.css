@@ -578,6 +578,19 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   font-size: 13px;
   color: var(--fg-3);
 }
+.rm-credit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--brand-green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  transition: color 140ms, opacity 140ms;
+}
+.rm-credit-link:hover { opacity: 0.75; }
+.rm-credit-link svg { vertical-align: middle; }
 /* Staff access buttons */
 .rm-footer-admin-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
