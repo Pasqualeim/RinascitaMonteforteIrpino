@@ -14,9 +14,9 @@ export async function competitionHandler(req: Request, base: string, id: string 
   // Groups
   if (base === "/groups") {
     if (method === "POST") {
-      const { tournament_id, name, color, sort_order } = body;
+      const { tournament_id, name, color, sort_order, qualify_count } = body;
       if (!tournament_id || !name) return ok(req, 400, { error: "tournament_id e name obbligatori" });
-      const { data, error } = await db.from("groups").insert({ tournament_id, name: String(name).trim(), color: color || "#00E676", sort_order: sort_order ?? 0 }).select().single();
+      const { data, error } = await db.from("groups").insert({ tournament_id, name: String(name).trim(), color: color || "#00E676", sort_order: sort_order ?? 0, qualify_count: qualify_count ?? 2 }).select().single();
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
     }
@@ -25,6 +25,7 @@ export async function competitionHandler(req: Request, base: string, id: string 
       if (body.name !== undefined) upd.name = String(body.name).trim();
       if (body.color !== undefined) upd.color = body.color;
       if (body.sort_order !== undefined) upd.sort_order = body.sort_order;
+      if (body.qualify_count !== undefined) upd.qualify_count = body.qualify_count;
       const { data, error } = await db.from("groups").update(upd).eq("id", id).select().single();
       if (error) throw error;
       return ok(req, 200, { ok: true, data });

@@ -11,7 +11,6 @@ const FORM_STYLE = {
 export function StandingsSection({ data, teamsPerGroupAdvance }) {
   const standings_groups = data.standings_groups || [];
   const [selIdx, setSelIdx] = useState(0);
-  const advance = teamsPerGroupAdvance || 2;
 
   if (standings_groups.length === 0) {
     return (
@@ -25,6 +24,7 @@ export function StandingsSection({ data, teamsPerGroupAdvance }) {
   }
 
   const current = standings_groups[selIdx] || standings_groups[0];
+  const advance = current?.qualify_count ?? teamsPerGroupAdvance ?? 2;
 
   return (
     <div>

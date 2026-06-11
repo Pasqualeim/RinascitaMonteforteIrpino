@@ -48,7 +48,6 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
   const [setupMsg, setSetupMsg] = useState('');
   const [reshuffleConfirm, setReshuffleConfirm] = useState(false);
   const [deleteAllGroupsConfirm, setDeleteAllGroupsConfirm] = useState(false);
-  const [deleteAllTeamsConfirm, setDeleteAllTeamsConfirm] = useState(false);
 
   // Partite di girone
   const [genMode, setGenMode] = useState('single');
@@ -75,10 +74,11 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
     setBusy(true);
     setErrMsg('');
     try {
+      const qualify = Math.max(1, parseInt(g.qualify_count, 10) || 2);
       if (g._isNew) {
-        await rmAdminDomain.createGroup({ tournament_id: tournamentId, name: g.name, color: '#00E676', sort_order: groups.length });
+        await rmAdminDomain.createGroup({ tournament_id: tournamentId, name: g.name, color: '#00E676', sort_order: groups.length, qualify_count: qualify });
       } else {
-        await rmAdminDomain.updateGroup(g.id, { name: g.name });
+        await rmAdminDomain.updateGroup(g.id, { name: g.name, qualify_count: qualify });
       }
       setEditing(null);
       await onRefresh('Girone salvato');
@@ -118,27 +118,6 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
       await onRefresh(failed > 0 ? `Gironi eliminati con ${failed} errori` : 'Tutti i gironi eliminati');
     } catch (err) {
       setErrMsg(err?.message || 'Errore eliminazione gironi');
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function deleteAllTeams() {
-    setBusy(true);
-    setErrMsg('');
-    try {
-      let failed = 0;
-      for (const t of allTeams) {
-        try {
-          const teamScorers = (data.scorers || []).filter(s => s.team === t.short);
-          await Promise.all(teamScorers.filter(s => s.id).map(s => rmAdminDomain.deleteScorer(s.id).catch(() => {})));
-          if (t.registration_id) await rmAdminDomain.deleteRegistration(t.registration_id).catch(() => {});
-          await rmAdminDomain.deleteTeam(t.id);
-        } catch { failed++; }
-      }
-      await onRefresh(failed > 0 ? `Squadre eliminate con ${failed} errori` : 'Tutte le squadre eliminate');
-    } catch (err) {
-      setErrMsg(err?.message || 'Errore eliminazione squadre');
     } finally {
       setBusy(false);
     }
@@ -285,17 +264,12 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
               🗑 Gironi
             </button>
           )}
-          {allTeams.length > 0 && (
-            <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => setDeleteAllTeamsConfirm(true)} disabled={busy}>
-              🗑 Squadre
-            </button>
-          )}
           <button
             className={`adm-btn adm-btn-sm ${groups.length === 0 && allTeams.length > 0 ? '' : 'adm-btn-ghost'}`}
             onClick={() => setSetupOpen(o => !o)} disabled={setupBusy}>
             ⚡ Setup auto
           </button>
-          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: nextGroupName(groups) })} disabled={busy}>+ Girone</button>
+          <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, name: nextGroupName(groups), qualify_count: 2 })} disabled={busy}>+ Girone</button>
         </div>
       </div>
 
@@ -435,6 +409,9 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
                   <div>
                     <span className="adm-card-title">{g.name}</span>
                     <span style={{ fontSize: 12, color: 'var(--fg-3)', marginLeft: 8 }}>{groupTeams.length} squadre</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--brand-green)', background: 'rgba(0,230,118,0.1)', borderRadius: 4, padding: '2px 6px', marginLeft: 8 }}>
+                      Passano {g.qualify_count ?? 2}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className={`adm-btn adm-btn-sm ${isOpen ? '' : 'adm-btn-ghost'}`} onClick={() => setOpenGroup(isOpen ? null : g.id)}>
@@ -500,6 +477,26 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
                   <label className="adm-label">Nome Girone</label>
                   <input className="adm-input" value={editing.name} onChange={e => setEditing(f => ({ ...f, name: e.target.value }))} placeholder="es. Girone A" autoFocus />
                 </div>
+                <div className="adm-form-group">
+                  <label className="adm-label">Squadre che passano il turno</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                    {[1, 2, 3, 4].map(n => (
+                      <button key={n} type="button"
+                        onClick={() => setEditing(f => ({ ...f, qualify_count: n }))}
+                        className={`adm-btn adm-btn-sm ${(editing.qualify_count ?? 2) === n ? '' : 'adm-btn-ghost'}`}
+                        style={{ minWidth: 44 }}>
+                        {n}
+                      </button>
+                    ))}
+                    <input type="number" className="adm-input" min="1" max="8"
+                      value={editing.qualify_count ?? 2}
+                      onChange={e => setEditing(f => ({ ...f, qualify_count: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+                      style={{ width: 64 }} />
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '6px 0 0' }}>
+                    Le prime {editing.qualify_count ?? 2} in classifica si qualificano alla fase successiva.
+                  </p>
+                </div>
                 <div className="adm-form-actions" style={{ marginTop: 24 }}>
                   <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing(null)}>Annulla</button>
                   <button className="adm-btn adm-btn-sm" onClick={() => saveGroup(editing)} disabled={!editing.name?.trim() || busy}>Salva</button>
@@ -521,13 +518,6 @@ export function GironiSection({ data, onRefresh, tournamentId }) {
           msg={`Eliminare tutti i ${groups.length} gironi? Le squadre rimangono ma verranno de-assegnate dai gironi.`}
           onOk={() => { setDeleteAllGroupsConfirm(false); deleteAllGroups(); }}
           onCancel={() => setDeleteAllGroupsConfirm(false)}
-        />
-      )}
-      {deleteAllTeamsConfirm && (
-        <Confirm
-          msg={`Eliminare tutte le ${allTeams.length} squadre? I gironi rimangono vuoti.`}
-          onOk={() => { setDeleteAllTeamsConfirm(false); deleteAllTeams(); }}
-          onCancel={() => setDeleteAllTeamsConfirm(false)}
         />
       )}
     </div>

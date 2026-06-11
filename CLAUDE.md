@@ -96,7 +96,7 @@ dist/                   → Output build (non committare)
 
 | Tab | Cosa gestisce |
 |-----|---------------|
-| Gironi | CRUD gironi con colore, auto-calcolo standings per girone |
+| Gironi | CRUD gironi con colore + n° squadre qualificate al turno (`qualify_count`), auto-calcolo standings per girone |
 | Live 🔴 | Avvia/termina diretta (con confirm), selezione partita da calendario, timer real-time, fasi (1°T/Intervallo/2°T), punteggio +/−, eventi (⚽🟨🟥), undo |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
 | Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
@@ -107,7 +107,7 @@ dist/                   → Output build (non committare)
 | Albo d'oro | CRUD edizioni passate |
 | Sponsor | CRUD sponsor con tag |
 | Striscia | Messaggi ticker verde in cima al sito |
-| Settings | Cambio username/password, reset dati, gestione edizioni+categorie, migrazione DB |
+| Settings | Cambio username/password, reset dati, gestione edizioni+categorie, date edizione (kickoff/inizio/fine), migrazione DB |
 
 ## Flusso dati (Supabase relazionale + localStorage fallback)
 
@@ -144,7 +144,7 @@ Migrazione dati (una-tantum, da Settings admin):
 |---------|---------------|-------|
 | `editions` | — | Container annuale (es. "Rinascita Cup 2026") |
 | `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…) |
-| `groups` | `tournament_id` | Gironi dentro una categoria |
+| `groups` | `tournament_id` | Gironi dentro una categoria (col. `qualify_count` smallint default 2 = squadre che passano il turno) |
 | `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
 | `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria |
 | `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |

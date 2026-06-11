@@ -105,7 +105,7 @@ export function HomeScreen({ onNav, data, tournament }) {
                 </div>
                 <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
               </div>
-              <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso"/>
+              <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso" qualifyCount={standingsGroups[0]?.qualify_count ?? 2}/>
             </div>
           )}
           <div>

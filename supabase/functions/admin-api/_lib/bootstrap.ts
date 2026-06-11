@@ -104,10 +104,13 @@ export async function buildBootstrap(editionId: string) {
       registration_id: r.id,
     }));
 
+    const groupQualify: Record<string, number> = {};
+    for (const g of groups) groupQualify[g.id] = (g as any).qualify_count ?? 2;
+
     const standingsMap: Record<string, any> = {};
     for (const row of standingsRaw) {
       if (!standingsMap[row.group_id])
-        standingsMap[row.group_id] = { id: row.group_id, name: row.group_name, color: row.group_color, rows: [] };
+        standingsMap[row.group_id] = { id: row.group_id, name: row.group_name, color: row.group_color, qualify_count: groupQualify[row.group_id] ?? 2, rows: [] };
       standingsMap[row.group_id].rows.push({
         short: row.team_short, name: row.team_name, flag: row.team_flag, color: row.team_color,
         g: row.g, v: row.v, n: row.n, p: row.p, gf: row.gf, gs: row.gs, gd: row.gd, pt: row.pt, form: [],

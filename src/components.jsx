@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 
 // ── Icons ─────────────────────────────────────────────────────────────────
 const Icon = ({ children, size = 20 }) => (
@@ -341,8 +341,9 @@ function LiveBoard({ match }) {
 }
 
 // ── Standings ─────────────────────────────────────────────────────────────
-function StandingsTable({ rows, group, updatedLabel }) {
+function StandingsTable({ rows, group, updatedLabel, qualifyCount = 2 }) {
   const safeRows = Array.isArray(rows) ? rows : [];
+  const qc = Math.max(0, Number(qualifyCount) || 0);
   if (safeRows.length === 0) return (
     <div className="rm-table-wrap">
       <div className="rm-table-head">
@@ -364,12 +365,19 @@ function StandingsTable({ rows, group, updatedLabel }) {
         </thead>
         <tbody>
           {safeRows.map((r, i) => (
-            <tr key={r.short + i} className={i < 2 ? 'top' : ''}>
-              <td className="pos">{i + 1}</td>
-              <td><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1 }}>{r.flag || '🏳️'}</span>{r.name}</div></td>
-              <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
-              <td><span className="rm-pts">{r.pt}</span></td>
-            </tr>
+            <Fragment key={r.short + i}>
+              {qc > 0 && qc < safeRows.length && i === qc && (
+                <tr className="rm-qual-sep" aria-hidden="true">
+                  <td colSpan={7}><span>Qualificate ↑</span></td>
+                </tr>
+              )}
+              <tr className={i < qc ? 'top' : ''}>
+                <td className="pos">{i + 1}</td>
+                <td><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1 }}>{r.flag || '🏳️'}</span>{r.name}</div></td>
+                <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
+                <td><span className="rm-pts">{r.pt}</span></td>
+              </tr>
+            </Fragment>
           ))}
         </tbody>
       </table>

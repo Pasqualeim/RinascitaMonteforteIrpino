@@ -27,7 +27,7 @@ export function TableScreen({ data, tournament }) {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {standingsGroups.map((g) => (
-              <StandingsTable key={g.id} rows={g.rows} group={g.name} updatedLabel="In corso"/>
+              <StandingsTable key={g.id} rows={g.rows} group={g.name} updatedLabel="In corso" qualifyCount={g.qualify_count ?? 2}/>
             ))}
           </div>
         )}

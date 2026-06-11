@@ -1,9 +1,78 @@
 import { useState, useEffect } from 'react';
-import { rmGetAllEditions, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
+import { rmGetAllEditions, rmAdminUpdateEdition, rmAdminCreateTournamentCategory, rmAdminUpdateTournamentCategory, rmAdminDeleteTournamentCategory } from '../../data.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
 function ordinal(n) {
   return `${n}° Posto`;
+}
+
+// ── Date edizione: conversioni input ──────────────────────────────
+function toDateInput(v) {
+  if (!v) return '';
+  const s = String(v);
+  return s.length >= 10 ? s.slice(0, 10) : '';
+}
+function toDateTimeLocal(v) {
+  if (!v) return '';
+  const d = new Date(v);
+  if (isNaN(d)) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fromDateTimeLocal(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d.toISOString();
+}
+
+function EditionDatesForm({ edition, onSave }) {
+  const [start, setStart] = useState(toDateInput(edition.start_date));
+  const [end, setEnd] = useState(toDateInput(edition.end_date));
+  const [kickoff, setKickoff] = useState(toDateTimeLocal(edition.kickoff_date));
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function submit() {
+    setBusy(true);
+    setSaved(false);
+    try {
+      await onSave(edition.id, {
+        start_date: start || null,
+        end_date: end || null,
+        kickoff_date: fromDateTimeLocal(kickoff),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch { /* status gestito dal parent */ } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ padding: '4px 16px 14px' }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--fg-1)', marginBottom: 10 }}>{edition.name}</div>
+      <div className="adm-form-group">
+        <label className="adm-label">Calcio d'inizio (countdown sito)</label>
+        <input type="datetime-local" className="adm-input" value={kickoff} onChange={e => setKickoff(e.target.value)} />
+      </div>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div className="adm-form-group" style={{ flex: 1, minWidth: 140 }}>
+          <label className="adm-label">Data inizio torneo</label>
+          <input type="date" className="adm-input" value={start} onChange={e => setStart(e.target.value)} />
+        </div>
+        <div className="adm-form-group" style={{ flex: 1, minWidth: 140 }}>
+          <label className="adm-label">Data fine torneo</label>
+          <input type="date" className="adm-input" value={end} onChange={e => setEnd(e.target.value)} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+        <button type="button" className="adm-btn adm-btn-sm" onClick={submit} disabled={busy}>
+          {busy ? 'Salvataggio…' : 'Salva date'}
+        </button>
+        {saved && <span style={{ fontSize: 13, color: 'var(--brand-green)' }}>Salvato ✓</span>}
+      </div>
+    </div>
+  );
 }
 
 function PrizesEditor({ prizes, onChange }) {
@@ -172,6 +241,18 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
     setConfirmDeleteCategory(null);
   }
 
+  async function saveEditionDates(edId, payload) {
+    try {
+      await rmAdminUpdateEdition(edId, payload);
+      setEditions(prev => prev.map(ed => ed.id === edId ? { ...ed, ...payload } : ed));
+      if (onRefresh) await onRefresh('Date edizione aggiornate');
+      else showStatus('Date edizione aggiornate');
+    } catch (e) {
+      showStatus('Errore: ' + (e?.message || ''));
+      throw e;
+    }
+  }
+
   return (
     <div>
       <h2 className="adm-section-title">Impostazioni</h2>
@@ -255,6 +336,20 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Date edizione ──────────────────────────────── */}
+      <div className="adm-card" style={{ marginBottom: 16 }}>
+        <div className="adm-card-header"><span className="adm-card-title">Date Edizione</span></div>
+        <div style={{ padding: '4px 0 8px' }}>
+          {editionsLoading && <div className="adm-empty" style={{ fontSize: 13 }}>Caricamento…</div>}
+          {!editionsLoading && editions.length === 0 && (
+            <div className="adm-empty" style={{ fontSize: 13 }}>Nessuna edizione trovata.</div>
+          )}
+          {editions.map(e => (
+            <EditionDatesForm key={e.id} edition={e} onSave={saveEditionDates} />
+          ))}
         </div>
       </div>
 

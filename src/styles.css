@@ -417,6 +417,9 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-team-cell { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; color: #fff; text-transform: uppercase; }
 .rm-pts { font-family: var(--font-display); font-size: 16px; color: var(--brand-green); font-variant-numeric: tabular-nums; }
 .rm-table tr.top .rm-pts { font-size: 20px; }
+.rm-table tr.rm-qual-sep td { padding: 0; border-bottom: 0; }
+.rm-table tr.rm-qual-sep:hover td { background: transparent; }
+.rm-table tr.rm-qual-sep span { display: block; font-family: var(--font-display); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--brand-green); text-align: right; padding: 3px 12px; border-top: 1px solid rgba(0,230,118,0.35); background: rgba(0,230,118,0.05); }
 .rm-form-pills { display: inline-flex; gap: 2px; }
 .rm-form-pill { width: 18px; height: 18px; border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 10px; color: #000; }
 .rm-form-pill.W { background: var(--brand-green); }
