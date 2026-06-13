@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
-import { EmptyState, Countdown, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
+import { EmptyState, Countdown, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon, StarIcon } from '../../components.jsx';
 import { rmDeriveMatchesToday } from '../../domain.js';
 
 // Swipeable standings: one girone per slide, native horizontal scroll-snap + tab shortcuts
@@ -210,13 +210,28 @@ export function HomeScreen({ onNav, data, tournament }) {
                   <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
                 )}
                 <div className="rm-prize-row">
-                  {prizes.map((p, i) => (
-                    <div key={i} className={`rm-prize${i === 0 ? ' gold' : i >= 2 ? ' alt' : ''}`}>
-                      {i < 2 && <TrophyIcon size={i === 0 ? 36 : 28}/>}
-                      {p.label && <div className="rm-prize-place">{p.label}</div>}
-                      <div className="rm-prize-amt">{Number(p.amount).toLocaleString('it-IT')}€</div>
-                    </div>
-                  ))}
+                  {prizes.map((p, i) => {
+                    const amount = Number(p.amount) || 0;
+                    const isMoney = amount > 0;
+                    const cls = isMoney ? `rm-prize${i === 0 ? ' gold' : ''}` : 'rm-prize rm-prize--honor';
+                    return (
+                      <div key={i} className={cls}>
+                        {isMoney ? (
+                          <>
+                            <TrophyIcon size={i === 0 ? 36 : 28}/>
+                            {p.label && <div className="rm-prize-place">{p.label}</div>}
+                            <div className="rm-prize-amt">{amount.toLocaleString('it-IT')}€</div>
+                          </>
+                        ) : (
+                          <>
+                            <StarIcon size={24}/>
+                            <div className="rm-prize-place">Premio d'onore</div>
+                            <div className="rm-prize-honor-name">{p.label}</div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
