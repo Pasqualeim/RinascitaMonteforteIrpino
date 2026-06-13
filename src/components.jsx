@@ -205,8 +205,47 @@ function SponsorWink() {
   );
 }
 
+// ── Date helpers (Italian) ─────────────────────────────────────────────────
+const IT_WEEKDAYS       = ['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const IT_WEEKDAYS_SHORT = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+const IT_MONTHS_LONG    = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+// Parse "2026-06-15" → Date at noon (TZ-safe). Returns null for non-ISO / "Oggi".
+function parseIsoDate(raw) {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const d = new Date(raw + 'T12:00:00');
+  return isNaN(d) ? null : d;
+}
+
+// Structured Italian date parts. Resolves "Oggi"/"Domani" relative to today.
+function rmDateParts(raw) {
+  if (!raw) return null;
+  const d = parseIsoDate(raw);
+  if (!d) return raw === 'Oggi' ? { rel: 'Oggi', weekday: '', wkShort: '', day: '', monthShort: '', monthLong: '' } : null;
+  const now = new Date();
+  const startOf = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOf(d) - startOf(now)) / 86400000);
+  return {
+    rel: diffDays === 0 ? 'Oggi' : diffDays === 1 ? 'Domani' : '',
+    weekday: IT_WEEKDAYS[d.getDay()],
+    wkShort: IT_WEEKDAYS_SHORT[d.getDay()],
+    day: d.getDate(),
+    monthShort: IT_MONTHS_SHORT[d.getMonth()],
+    monthLong: IT_MONTHS_LONG[d.getMonth()],
+  };
+}
+
+// Short inline label, e.g. "Sab 15 Giu" — or "Oggi"/"Domani" when relevant.
+function fmtMatchDate(raw) {
+  const p = rmDateParts(raw);
+  if (!p) return raw || '';
+  if (p.rel) return p.rel;
+  if (!p.day) return raw || '';
+  return `${p.wkShort} ${p.day} ${p.monthShort}`;
+}
+
 // ── Match row ─────────────────────────────────────────────────────────────
-function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick }) {
+function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick, hideDate }) {
   const isTbd = !home || !away;
   if (isTbd && !date && !time) return null;
   const live = status === 'live';
@@ -226,12 +265,12 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, 
           <span className="rm-live-tag"><span className="dot"></span>LIVE · {minute}'</span>
         ) : done ? (
           <>
-            <span className="date">{date}</span>
+            {!hideDate && <span className="date">{fmtMatchDate(date)}</span>}
             <span className="rm-ft">FT</span>
           </>
         ) : (
           <>
-            <span className="date">{date}</span>
+            {!hideDate && <span className="date">{fmtMatchDate(date)}</span>}
             <span className="time">{time || (isTbd ? 'Orario TBD' : '')}</span>
           </>
         )}
@@ -659,4 +698,5 @@ export {
   TrophyIcon, BallIcon, CalIcon, PinIcon, UsersIcon, ArrowIcon, ClockIcon,
   BellIcon, InstaIcon, FbIcon, MailIcon, PhoneIcon, HomeIcon, ZapIcon, GridIcon, MoreHorizIcon,
   StarIcon, NewspaperIcon,
+  fmtMatchDate, rmDateParts,
 };

@@ -12,9 +12,12 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   const teams = data.teams || [];
   const [selectedKey, setSelectedKey] = useState(null);
   const [confirmStart, setConfirmStart] = useState(false);
+  const [startError, setStartError] = useState(null);
   const [confirmTerminate, setConfirmTerminate] = useState(false);
   const [confirmRemoveEvent, setConfirmRemoveEvent] = useState(null); // origIdx | null
   const [displayMinute, setDisplayMinute] = useState(lm.minute || 0);
+  const [dateToggles, setDateToggles] = useState({}); // dateKey -> bool (override default-open)
+  const [showFt, setShowFt] = useState(false);
 
   // Goal flow state
   const [goalFlow, setGoalFlow] = useState(null);
@@ -55,6 +58,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setGoalFlow(null);
     setCardFlow(null);
     setPending(null);
+    setStartError(null);
+    setDateToggles({});
+    setShowFt(false);
   }, [tournamentId]);
 
   const lmRef = useRef(lm);
@@ -105,6 +111,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     return best;
   })();
   const smartDefaultKey = smartDefault ? matchKey(smartDefault) : null;
+  const smartDefaultDateKey = smartDefault ? (smartDefault.date === 'Oggi' ? today : smartDefault.date) || '__tbd__' : null;
   const activeKey = selectedKey || smartDefaultKey;
   const selectedMatchObj = scheduledMatches.find(m => matchKey(m) === activeKey) || null;
 
@@ -197,6 +204,20 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
   function doStartLive() {
     if (!selectedMatchObj) return;
+    // Safety net: in relational mode the live board needs resolvable team UUIDs.
+    // If a short code can't map to a team id, live_match_state would store null and the
+    // public board would render blank while staff sees a normal match. Block early.
+    if (tournamentId) {
+      const homeId = getTeamId(selectedMatchObj.home?.short);
+      const awayId = getTeamId(selectedMatchObj.away?.short);
+      if (!homeId || !awayId) {
+        const missing = [!homeId && selectedMatchObj.home?.short, !awayId && selectedMatchObj.away?.short]
+          .filter(Boolean).join(' e ');
+        setStartError(`Impossibile avviare: ${missing} non collegata al database. Il pubblico vedrebbe la diretta vuota. Controlla la squadra in tab Squadre.`);
+        return;
+      }
+    }
+    setStartError(null);
     setConfirmStart(false);
     const updatedLm = {
       ...lm, active: true, phase: 'first_half',
@@ -274,6 +295,9 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
       // Persist all events not yet in match_events (cards have no _match_event_id pre-fix)
       for (const ev of (lm.events || [])) {
+        // Skip autogol: must NOT become a match_events 'goal' (those feed the capocannonieri
+        // list). The own-goal still counts in the score, saved separately on the match row.
+        if (ev._autogol) continue;
         if (!ev._match_event_id) {
           promises.push(
             rmAdminDomain.createMatchEvent({
@@ -479,71 +503,108 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
               {allMatches.length === 0 ? (
                 <p style={{ fontSize: 13, color: 'var(--fg-3)', margin: '8px 0 0' }}>Nessuna partita da giocare.</p>
               ) : (() => {
-                // Group by _group preserving order
-                const grouped = [];
-                const seen = new Map();
-                for (const m of allMatches) {
-                  const g = m._group || '';
-                  if (!seen.has(g)) { seen.set(g, []); grouped.push({ label: g, items: seen.get(g) }); }
-                  seen.get(g).push(m);
+                // Group SCHEDULED matches by date (already sorted chronologically)
+                const order = [];
+                const byDate = new Map();
+                for (const m of scheduledMatches) {
+                  const key = (m.date === 'Oggi' ? today : m.date) || '__tbd__';
+                  if (!byDate.has(key)) { byDate.set(key, []); order.push(key); }
+                  byDate.get(key).push(m);
                 }
-                return grouped.map(({ label, items }) => (
-                  <div key={label || '_'}>
-                    {label && (
-                      <div style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: 'var(--fg-3)', letterSpacing: '0.1em', padding: '8px 0 4px', borderBottom: '1px solid var(--border-1)', marginBottom: 8 }}>
-                        {label} · {items.length} {items.length === 1 ? 'partita' : 'partite'}
-                      </div>
-                    )}
-                    {items.map((m) => {
-                const k = matchKey(m);
-                const isFt = m.status === 'ft';
-                const isSelected = !isFt && k === activeKey;
-                const isToday = m.date === today || m.date === 'Oggi';
-                const dateLabel = m.date ? (isToday ? 'Oggi' : formatDateLabel(m.date.includes('-') ? m.date : m.date)) : null;
-                return (
-                  <button key={k} onClick={() => !isFt && setSelectedKey(k)} disabled={isFt} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
-                    background: isSelected ? 'rgba(0,230,118,0.08)' : 'transparent',
-                    border: `1px solid ${isSelected ? 'var(--brand-green)' : 'var(--border-1)'}`,
-                    borderRadius: 8, cursor: isFt ? 'default' : 'pointer',
-                    color: isFt ? 'var(--fg-3)' : '#fff', width: '100%',
-                    textAlign: 'left', marginBottom: 8, opacity: isFt ? 0.55 : 1,
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', minWidth: 54, flexShrink: 0 }}>
-                      {dateLabel && (
-                        <span style={{ fontSize: 10, fontFamily: 'var(--font-display)', color: isToday && !isFt ? 'var(--brand-green)' : 'var(--fg-3)', letterSpacing: '0.08em' }}>
-                          {dateLabel}
-                        </span>
-                      )}
-                      <span style={{ fontSize: 13, fontFamily: 'var(--font-display)', color: isSelected ? 'var(--brand-green)' : 'var(--fg-2)' }}>
+                const ftMatches = allMatches.filter(m => m.status === 'ft');
+
+                const renderRow = (m) => {
+                  const k = matchKey(m);
+                  const isSelected = k === activeKey;
+                  const isNext = k === smartDefaultKey;
+                  return (
+                    <button key={k} onClick={() => setSelectedKey(k)} style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+                      padding: '12px 14px', marginBottom: 8, borderRadius: 10, cursor: 'pointer', color: '#fff',
+                      background: isSelected ? 'rgba(0,230,118,0.1)' : '#0a0a0a',
+                      border: `1.5px solid ${isSelected ? 'var(--brand-green)' : 'var(--border-1)'}`,
+                    }}>
+                      <span style={{ minWidth: 44, fontFamily: 'var(--font-display)', fontSize: 16, color: isSelected ? 'var(--brand-green)' : 'var(--fg-2)' }}>
                         {m.time || '--:--'}
                       </span>
-                    </div>
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 16 }}>{getFlag(m.home)}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.home?.short}</span>
-                      {isFt
-                        ? <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--fg-2)', margin: '0 2px' }}>{m.hs ?? 0}–{m.as ?? 0}</span>
-                        : <span style={{ color: 'var(--fg-3)', fontSize: 11, margin: '0 2px' }}>vs</span>
-                      }
-                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.away?.short}</span>
-                      <span style={{ fontSize: 16 }}>{getFlag(m.away)}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      {isFt && <span style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--fg-3)', letterSpacing: '0.08em', border: '1px solid var(--border-1)', borderRadius: 4, padding: '2px 5px' }}>FT</span>}
-                      {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 14 }}>✓</span>}
-                    </div>
-                  </button>
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+                        <span style={{ fontSize: 17 }}>{getFlag(m.home)}</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.home?.short}</span>
+                        <span style={{ color: 'var(--fg-3)', fontSize: 11, margin: '0 1px' }}>vs</span>
+                        <span style={{ fontFamily: 'var(--font-display)', fontSize: 15 }}>{m.away?.short}</span>
+                        <span style={{ fontSize: 17 }}>{getFlag(m.away)}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        {isNext && !isSelected && (
+                          <span style={{ fontSize: 8.5, fontFamily: 'var(--font-display)', letterSpacing: '0.1em', color: 'var(--brand-green)', border: '1px solid rgba(0,230,118,0.4)', borderRadius: 4, padding: '2px 5px' }}>PROSSIMA</span>
+                        )}
+                        {m._group && <span style={{ fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.06em', color: 'var(--fg-3)' }}>{m._group}</span>}
+                        {isSelected && <span style={{ color: 'var(--brand-green)', fontSize: 16 }}>✓</span>}
+                      </div>
+                    </button>
+                  );
+                };
+
+                const headerStyle = {
+                  display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                  background: 'transparent', border: 0, cursor: 'pointer', padding: '8px 2px',
+                  borderBottom: '1px solid var(--border-1)', color: 'inherit',
+                };
+
+                return (
+                  <>
+                    {order.map(key => {
+                      const items = byDate.get(key);
+                      const isOpen = dateToggles[key] ?? (key === smartDefaultDateKey);
+                      const label = key === '__tbd__' ? 'Data da definire' : (key === today ? 'Oggi' : formatDateLabel(key));
+                      const hasSelected = items.some(m => matchKey(m) === activeKey);
+                      return (
+                        <div key={key} style={{ marginBottom: 6 }}>
+                          <button onClick={() => setDateToggles(t => ({ ...t, [key]: !isOpen }))} style={headerStyle}>
+                            <span style={{ fontSize: 11, color: 'var(--fg-3)', width: 12 }}>{isOpen ? '▾' : '▸'}</span>
+                            <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', color: key === today ? 'var(--brand-green)' : '#fff', textTransform: 'uppercase' }}>{label}</span>
+                            <span style={{ fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.06em' }}>{items.length} {items.length === 1 ? 'partita' : 'partite'}</span>
+                            {!isOpen && hasSelected && <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--brand-green)', marginLeft: 'auto' }} />}
+                          </button>
+                          {isOpen && <div style={{ marginTop: 8 }}>{items.map(renderRow)}</div>}
+                        </div>
+                      );
+                    })}
+
+                    {ftMatches.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <button onClick={() => setShowFt(s => !s)} style={headerStyle}>
+                          <span style={{ fontSize: 11, color: 'var(--fg-3)', width: 12 }}>{showFt ? '▾' : '▸'}</span>
+                          <span style={{ fontSize: 12, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', color: 'var(--fg-2)', textTransform: 'uppercase' }}>Già giocate</span>
+                          <span style={{ fontSize: 10, color: 'var(--fg-3)' }}>{ftMatches.length}</span>
+                        </button>
+                        {showFt && (
+                          <div style={{ marginTop: 8 }}>
+                            {ftMatches.map(m => (
+                              <div key={matchKey(m)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 8, borderRadius: 10, background: 'transparent', border: '1px solid var(--border-1)', opacity: 0.6 }}>
+                                <span style={{ minWidth: 30, fontSize: 9, fontFamily: 'var(--font-display)', letterSpacing: '0.08em', color: 'var(--fg-3)', border: '1px solid var(--border-1)', borderRadius: 4, padding: '2px 5px', textAlign: 'center' }}>FT</span>
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7 }}>
+                                  <span style={{ fontSize: 16 }}>{getFlag(m.home)}</span>
+                                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{m.home?.short}</span>
+                                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14, color: 'var(--fg-2)', margin: '0 2px' }}>{m.hs ?? 0}–{m.as ?? 0}</span>
+                                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 14 }}>{m.away?.short}</span>
+                                  <span style={{ fontSize: 16 }}>{getFlag(m.away)}</span>
+                                </div>
+                                {m._group && <span style={{ fontSize: 9, fontFamily: 'var(--font-display)', color: 'var(--fg-3)', flexShrink: 0 }}>{m._group}</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 );
-              })}
-                  </div>
-                ))}
-              )()}
+              })()}
             </div>
           </div>
           <button
             className="adm-btn adm-btn-primary"
-            onClick={() => selectedMatchObj && setConfirmStart(true)}
+            onClick={() => selectedMatchObj && (setStartError(null), setConfirmStart(true))}
             disabled={!selectedMatchObj}
             style={{ width: '100%', marginBottom: 16, fontSize: 15, padding: '13px 0' }}>
             Avvia diretta
@@ -754,9 +815,15 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
                   {halfDuration}' + {halfDuration}' · TIMER PARTE SUBITO · 0–0
                 </div>
               </div>
+              {startError && (
+                <div style={{ width: '100%', marginBottom: 16, padding: '12px 14px', background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.35)', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <span style={{ fontSize: 15, flexShrink: 0 }}>⚠️</span>
+                  <span style={{ fontSize: 12.5, color: '#FF8A8A', lineHeight: 1.5 }}>{startError}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, width: '100%' }}>
                 <button
-                  onClick={() => setConfirmStart(false)}
+                  onClick={() => { setStartError(null); setConfirmStart(false); }}
                   style={{ flex: 1, padding: '14px 0', background: 'transparent', border: '1px solid var(--border-1)', borderRadius: 10, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', fontSize: 15, letterSpacing: '0.08em', cursor: 'pointer' }}>
                   ANNULLA
                 </button>
