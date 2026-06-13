@@ -415,6 +415,15 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-cal-date--tbd { border-left-color: var(--fg-3); background: rgba(255,255,255,0.025); }
 .rm-cal-date--tbd .rm-cal-date-main { color: var(--fg-3); font-size: 14px; }
 
+/* Home standings carousel — swipe between gironi */
+.rm-stand-tabs { margin-bottom: 12px; }
+.rm-stand-carousel {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.rm-stand-carousel::-webkit-scrollbar { display: none; }
+.rm-stand-slide { flex: 0 0 100%; scroll-snap-align: start; min-width: 0; }
+
 /* Calendar team search */
 .rm-cal-search {
   display: flex; align-items: center; gap: 10px;

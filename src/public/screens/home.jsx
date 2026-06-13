@@ -1,6 +1,58 @@
+import { useRef, useState, useEffect } from 'react';
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
 import { EmptyState, Countdown, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon } from '../../components.jsx';
 import { rmDeriveMatchesToday } from '../../domain.js';
+
+// Swipeable standings: one girone per slide, native horizontal scroll-snap + tab shortcuts
+function StandingsCarousel({ groups, onNav }) {
+  const scroller = useRef(null);
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    setActive(0);
+    if (scroller.current) scroller.current.scrollLeft = 0;
+  }, [groups.length]);
+
+  function onScroll() {
+    const el = scroller.current;
+    if (!el || !el.clientWidth) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== active) setActive(i);
+  }
+  function goTo(i) {
+    const el = scroller.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  }
+
+  return (
+    <div>
+      <div className="rm-section-head">
+        <div>
+          <span className="rm-eyebrow">Classifica per girone</span>
+          <h3 className="rm-section-title">Classifica</h3>
+        </div>
+        <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
+      </div>
+      {groups.length > 1 && (
+        <div className="rm-tabs rm-stand-tabs">
+          {groups.map((g, i) => (
+            <button key={g.id || i} className={`rm-tab ${i === active ? 'on' : ''}`} onClick={() => goTo(i)}>
+              {g.name || `Girone ${i + 1}`}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="rm-stand-carousel" ref={scroller} onScroll={onScroll}>
+        {groups.map((g, i) => (
+          <div className="rm-stand-slide" key={g.id || i}>
+            <StandingsTable rows={g.rows || []} group={g.name || 'A'} updatedLabel="In corso" qualifyCount={g.qualify_count ?? 2}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function fmtDateIt(iso) {
   if (!iso) return '';
@@ -18,7 +70,7 @@ export function HomeScreen({ onNav, data, tournament }) {
     ? rmDeriveMatchesToday(matchesGiornata)
     : (d.matches_today || DEFAULT_MATCHES_TODAY);
   const standingsGroups = tournament?.standings_groups || d.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
-  const standingsA      = standingsGroups[0]?.rows || [];
+  const standGroups     = standingsGroups.filter(g => (g?.rows?.length || 0) > 0);
   const scorers         = tournament?.scorers          || d.scorers          || DEFAULT_SCORERS;
   const news            = d.news             || DEFAULT_NEWS;
   const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
@@ -95,18 +147,9 @@ export function HomeScreen({ onNav, data, tournament }) {
       </section>
 
       <section className="rm-section">
-        <div className={standingsA.length > 0 ? 'rm-two-col' : ''}>
-          {standingsA.length > 0 && (
-            <div>
-              <div className="rm-section-head">
-                <div>
-                  <span className="rm-eyebrow">{standingsGroups[0]?.name || 'Girone A'}</span>
-                  <h3 className="rm-section-title">Classifica</h3>
-                </div>
-                <button className="rm-section-link" onClick={() => onNav('table')}>Tutti i gironi <ArrowIcon size={13}/></button>
-              </div>
-              <StandingsTable rows={standingsA} group={standingsGroups[0]?.name || 'A'} updatedLabel="In corso" qualifyCount={standingsGroups[0]?.qualify_count ?? 2}/>
-            </div>
+        <div className={standGroups.length > 0 ? 'rm-two-col' : ''}>
+          {standGroups.length > 0 && (
+            <StandingsCarousel groups={standGroups} onNav={onNav}/>
           )}
           <div>
             <div className="rm-section-head">
