@@ -83,12 +83,26 @@ export async function buildBootstrap(editionId: string) {
       ...autoOnlyScorers.map(a => ({ id: null, name: a.name, team: a.team, flag: a.flag, goals: a.goals })),
     ].sort((a, b) => b.goals - a.goals);
 
-    const teams = regs.map((r: any) => ({
-      id: r.teams.id, name: r.teams.name, short: r.teams.short,
-      nation: r.teams.nation, flag: r.teams.flag, color: r.teams.color,
-      group_id: r.group_id, captain: r.captain, players: r.players || [],
-      registration_id: r.id,
-    }));
+    // Per-team aggregate stats from standings_view (counts only status='ft' matches).
+    const statsByTeam: Record<string, any> = {};
+    for (const row of standingsRaw) {
+      statsByTeam[row.team_id] = {
+        played: row.g, won: row.v, drawn: row.n, lost: row.p,
+        goals: row.gf, goalsAgainst: row.gs, points: row.pt,
+      };
+    }
+
+    const teams = regs.map((r: any) => {
+      const s = statsByTeam[r.teams.id] || {};
+      return {
+        id: r.teams.id, name: r.teams.name, short: r.teams.short,
+        nation: r.teams.nation, flag: r.teams.flag, color: r.teams.color,
+        group_id: r.group_id, captain: r.captain, players: r.players || [],
+        registration_id: r.id,
+        played: s.played ?? 0, won: s.won ?? 0, drawn: s.drawn ?? 0, lost: s.lost ?? 0,
+        goals: s.goals ?? 0, goalsAgainst: s.goalsAgainst ?? 0, points: s.points ?? 0,
+      };
+    });
 
     const groupQualify: Record<string, number> = {};
     for (const g of groups) groupQualify[g.id] = (g as any).qualify_count ?? 2;
