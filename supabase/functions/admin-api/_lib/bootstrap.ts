@@ -63,31 +63,17 @@ export async function buildBootstrap(editionId: string) {
     const goalEvents  = goalEventsRes.data || [];
     const standingsRaw = standingsRes.data || [];
 
-    // Build auto-scorers from match_events goals
+    // Build auto-scorers from match_events goals.
+    // NOTE: goalEvents already excludes own goals (event_type === "goal" only), so
+    // an autogol never counts as a scorer. match_events for a match are written only
+    // when the match ends (see admin live.jsx doTerminate), so the marcatori list
+    // does NOT change while a match is live — this is intentional.
     const autoMap: Record<string, { name: string; team: string; flag: string; goals: number }> = {};
     for (const ev of goalEvents) {
       if (!ev.player_name) continue;
       const key = `${ev.player_name}__${(ev as any).teams?.short || ev.team_id}`;
       if (!autoMap[key]) autoMap[key] = { name: ev.player_name, team: (ev as any).teams?.short || "", flag: (ev as any).teams?.flag || "", goals: 0 };
       autoMap[key].goals++;
-    }
-    // Also count goals from the live match — but ONLY when they are not already
-    // persisted as match_events. During a normal relational live match each goal is
-    // written to match_events in real time AND kept in live.events, so counting both
-    // would double the live match's scorers. Fall back to live.events only when the
-    // live match has no persisted goal events (legacy match with no match_id, or a
-    // failed event sync).
-    const liveMatchId = live?.match_id || null;
-    const liveMatchHasPersistedGoals = !!liveMatchId &&
-      goalEvents.some((e: any) => e.match_id === liveMatchId);
-    if (live?.active && Array.isArray(live.events) && !liveMatchHasPersistedGoals) {
-      for (const ev of live.events) {
-        if (ev.type !== 'goal' || !ev.player) continue;
-        const teamShort = ev._ts || "";
-        const key = `${ev.player}__${teamShort}`;
-        if (!autoMap[key]) autoMap[key] = { name: ev.player, team: teamShort, flag: "", goals: 0 };
-        autoMap[key].goals++;
-      }
     }
     // Merge: manual overrides auto (staff correction), auto fills new players
     const manualKeys = new Set(manualScorers.map((s: any) => s.player_name));

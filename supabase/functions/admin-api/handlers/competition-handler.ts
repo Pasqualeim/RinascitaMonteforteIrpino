@@ -101,9 +101,32 @@ export async function competitionHandler(req: Request, base: string, id: string 
       return ok(req, 201, { ok: true, data });
     }
     if (method === "PUT" && id) {
+      // Optional: replace the whole cronaca for this match in one shot. Used when a
+      // live match ends — delete existing events, then insert the final list.
+      // Idempotent, so the admin can safely retry on a flaky connection.
+      if (Array.isArray(body.events)) {
+        const { error: delErr } = await db.from("match_events").delete().eq("match_id", id);
+        if (delErr) throw delErr;
+        if (body.events.length > 0) {
+          const rows = body.events.map((e: any) => ({
+            match_id: id,
+            team_id: e.team_id || null,
+            event_type: e.event_type,
+            player_name: e.player_name ?? null,
+            minute: e.minute ?? null,
+          }));
+          const { error: insErr } = await db.from("match_events").insert(rows);
+          if (insErr) throw insErr;
+        }
+      }
       const allowed = ["group_id","home_team_id","away_team_id","home_score","away_score","status","phase","match_date","match_time","pitch","sort_order"];
       const upd: Record<string, unknown> = {};
       for (const k of allowed) { if (k in body) upd[k] = body[k]; }
+      if (Object.keys(upd).length === 0) {
+        const { data, error } = await db.from("matches").select().eq("id", id).single();
+        if (error) throw error;
+        return ok(req, 200, { ok: true, data });
+      }
       const { data, error } = await db.from("matches").update(upd).eq("id", id).select().single();
       if (error) throw error;
       return ok(req, 200, { ok: true, data });

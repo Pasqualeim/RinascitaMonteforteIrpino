@@ -5,6 +5,20 @@ function matchKey(m) {
   return `${m.home?.short || ''}-${m.away?.short || ''}-${m.date || ''}-${m.time || ''}`;
 }
 
+// Retry a flaky network call a few times before giving up. The field staff are
+// on mobile data, so a single transient failure must not lose match data.
+async function withRetry(fn, tries = 3) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await new Promise(r => setTimeout(r, 400 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }) {
   const halfDuration = data.match_settings?.half_duration || 30;
 
@@ -18,6 +32,8 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   const [displayMinute, setDisplayMinute] = useState(lm.minute || 0);
   const [dateToggles, setDateToggles] = useState({}); // dateKey -> bool (override default-open)
   const [showFt, setShowFt] = useState(false);
+  const [terminating, setTerminating] = useState(false);
+  const [terminateError, setTerminateError] = useState(null);
 
   // Goal flow state
   const [goalFlow, setGoalFlow] = useState(null);
@@ -61,13 +77,12 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setStartError(null);
     setDateToggles({});
     setShowFt(false);
+    setTerminating(false);
+    setTerminateError(null);
   }, [tournamentId]);
 
   const lmRef = useRef(lm);
   useEffect(() => { lmRef.current = lm; }, [lm]);
-
-  const scorersRef = useRef(data.scorers);
-  useEffect(() => { scorersRef.current = data.scorers; }, [data.scorers]);
 
   useEffect(() => {
     if (!lm.active || lm.phase === 'half_time') return;
@@ -152,10 +167,12 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     return (lm.events || []).filter(e => e.type === 'yellow' && e.player === playerName && e._ts === teamShort).length;
   }
 
-  function persistLm(newLm, updatedScorers) {
-    const newData = { ...data, live_match: newLm };
-    if (updatedScorers) newData.scorers = updatedScorers;
-    onSave(newData, updatedScorers ? 'Partita e marcatori aggiornati' : 'Live aggiornato');
+  // Live updates only touch the live board (live_match_state) + local cache.
+  // Marcatori are intentionally NOT written here: capocannonieri are computed
+  // from match_events, which are persisted once, at the end of the match
+  // (see doTerminate). This prevents the public scorer list from changing mid-game.
+  function persistLm(newLm) {
+    onSave({ ...data, live_match: newLm }, 'Live aggiornato');
     setLm({ ...newLm });
     if (tournamentId) {
       rmAdminDomain.updateLive({
@@ -173,26 +190,6 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         events: newLm.events || [],
       }).catch(e => console.warn('Live sync:', e));
     }
-    if (updatedScorers && tournamentId) {
-      updatedScorers.forEach(s => {
-        if (s.id) {
-          rmAdminDomain.updateScorer(s.id, { goals: s.goals }).catch(e => console.warn('Scorer sync:', e));
-        }
-      });
-    }
-  }
-
-  function updateScorer(playerName, teamShort, delta) {
-    let scorers = [...(data.scorers || [])];
-    // Bootstrap returns s.short (not s.team) for the short code
-    const idx = scorers.findIndex(s => s.name === playerName && (s.short === teamShort || s.team === teamShort));
-    if (idx >= 0) {
-      scorers[idx] = { ...scorers[idx], goals: Math.max(0, (scorers[idx].goals || 0) + delta) };
-    } else if (delta > 0) {
-      const t = teams.find(x => x.short === teamShort);
-      scorers.push({ name: playerName, short: teamShort, team: t?.name || teamShort, flag: t?.flag || '', color: t?.color || '#00E676', goals: delta });
-    }
-    return scorers.sort((a, b) => (b.goals || 0) - (a.goals || 0));
   }
 
   function updateGiornataMatch(giornata, predicate, patch) {
@@ -235,7 +232,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     onSave({ ...data, live_match: updatedLm, matches_giornata: updatedGiornata }, 'Diretta avviata');
     setLm({ ...updatedLm });
     if (tournamentId) {
-      rmAdminDomain.updateLive({
+      withRetry(() => rmAdminDomain.updateLive({
         tournament_id: tournamentId,
         match_id: updatedLm.match_id,
         active: true,
@@ -245,12 +242,12 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         phase: 'first_half',
         timer_started_at: updatedLm.timer_started_at,
         pitch: updatedLm.pitch || '', events: [],
-      }).catch(e => console.warn('Live start sync:', e));
+      })).catch(e => console.warn('Live start sync:', e));
       // Mark the match itself as live in the DB so the public calendar reflects it
       // (live_match_state alone drives the live board, but the match tile stays 'sch'
       // without this). doTerminate later flips it to 'ft'.
       if (updatedLm.match_id) {
-        rmAdminDomain.updateMatch(updatedLm.match_id, { status: 'live' })
+        withRetry(() => rmAdminDomain.updateMatch(updatedLm.match_id, { status: 'live' }))
           .catch(e => console.warn('Match live status sync:', e));
       }
     }
@@ -259,6 +256,44 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
 
   async function doTerminate() {
     setConfirmTerminate(false);
+    setTerminateError(null);
+    setTerminating(true);
+
+    const finalHs = lm.hs ?? 0;
+    const finalAs = lm.as ?? 0;
+    const events = lm.events || [];
+
+    // 1) CRITICAL: persist the result + full cronaca in a single idempotent call.
+    //    The whole event list (autogol mapped to 'own_goal' so it shows in the
+    //    cronaca but never counts as a scorer) replaces this match's events
+    //    server-side, so retrying after a network blip is safe (no duplicates).
+    //    Marcatori are derived from match_events on the server — nothing is
+    //    written to the scorers table here, which is what fixes the live updates
+    //    and the duplicate-scorer bug.
+    if (tournamentId && lm.match_id) {
+      const evPayload = events.map(ev => ({
+        event_type: ev.type === 'goal' && ev._autogol ? 'own_goal' : ev.type,
+        team_id: getTeamId(ev._ts) || null,
+        player_name: ev.player || null,
+        minute: ev.min ?? null,
+      }));
+      try {
+        await withRetry(() => rmAdminDomain.updateMatch(lm.match_id, {
+          status: 'ft',
+          home_score: finalHs,
+          away_score: finalAs,
+          events: evPayload,
+        }));
+      } catch (e) {
+        console.warn('Terminate save failed:', e);
+        setTerminating(false);
+        // Keep the live match open so nothing is lost — staff can press TERMINA again.
+        setTerminateError('Salvataggio non riuscito (connessione?). I dati della partita sono ancora qui: premi di nuovo TERMINA per riprovare.');
+        return;
+      }
+    }
+
+    // 2) Result is safely stored → close the live board.
     const terminatedLm = { ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute };
     const isThisMatch = m =>
       (lm.match_id && m.id === lm.match_id) ||
@@ -266,76 +301,23 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     const updatedGiornata = updateGiornataMatch(
       data.matches_giornata,
       isThisMatch,
-      { status: 'ft', hs: lm.hs ?? 0, as: lm.as ?? 0 }
+      { status: 'ft', hs: finalHs, as: finalAs }
     );
     onSave({ ...data, live_match: terminatedLm, matches_giornata: updatedGiornata }, 'Partita terminata');
     setLm({ ...terminatedLm });
 
-    const promises = [];
-
+    // 3) Clear the live board state (retry so the public "LIVE" badge reliably
+    //    disappears even on a flaky connection).
     if (tournamentId) {
-      promises.push(
-        rmAdminDomain.updateLive({
-          tournament_id: tournamentId, match_id: null, active: false,
-          home_team_id: null, away_team_id: null,
-          home_score: 0, away_score: 0, minute: 0,
-          phase: null, timer_started_at: null, pitch: '', events: [],
-        }).catch(e => console.warn('Live reset sync:', e))
-      );
+      withRetry(() => rmAdminDomain.updateLive({
+        tournament_id: tournamentId, match_id: null, active: false,
+        home_team_id: null, away_team_id: null,
+        home_score: 0, away_score: 0, minute: 0,
+        phase: null, timer_started_at: null, pitch: '', events: [],
+      })).catch(e => console.warn('Live reset sync:', e));
     }
 
-    if (lm.match_id) {
-      promises.push(
-        rmAdminDomain.updateMatch(lm.match_id, {
-          status: 'ft',
-          home_score: lm.hs ?? 0,
-          away_score: lm.as ?? 0,
-        }).catch(e => console.warn('Match finish sync:', e))
-      );
-
-      // Persist all events not yet in match_events (cards have no _match_event_id pre-fix)
-      for (const ev of (lm.events || [])) {
-        // Skip autogol: must NOT become a match_events 'goal' (those feed the capocannonieri
-        // list). The own-goal still counts in the score, saved separately on the match row.
-        if (ev._autogol) continue;
-        if (!ev._match_event_id) {
-          promises.push(
-            rmAdminDomain.createMatchEvent({
-              match_id: lm.match_id,
-              team_id: getTeamId(ev._ts) || null,
-              event_type: ev.type,
-              player_name: ev.player || null,
-              minute: ev.min ?? null,
-            }).catch(e => console.warn('Event persist on terminate:', e))
-          );
-        }
-      }
-    }
-
-    // Sync all scorers: create new (no id), update existing
-    if (tournamentId) {
-      for (const s of (scorersRef.current || [])) {
-        if (s.id) {
-          promises.push(
-            rmAdminDomain.updateScorer(s.id, { goals: s.goals })
-              .catch(e => console.warn('Scorer update sync:', e))
-          );
-        } else {
-          const teamId = getTeamId(s.short || s.team);
-          promises.push(
-            rmAdminDomain.createScorer({
-              tournament_id: tournamentId,
-              team_id: teamId || null,
-              player_name: s.name,
-              goals: s.goals,
-              sort_order: 0,
-            }).catch(e => console.warn('Scorer create sync:', e))
-          );
-        }
-      }
-    }
-
-    await Promise.allSettled(promises);
+    setTerminating(false);
     onRefresh?.();
   }
 
@@ -359,7 +341,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setGoalFlow({ scoringSide, scoringShort, step: 'pick' });
   }
 
-  async function pickGoalPlayer(playerName, isAutogolStep) {
+  function pickGoalPlayer(playerName, isAutogolStep) {
     const { scoringSide, scoringShort } = goalFlow;
     const autogolFromShort = isAutogolStep ? goalFlow.autogolFromShort : null;
 
@@ -377,32 +359,14 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       ...(autogolFromShort ? { _autogol: true, _player_ts: autogolFromShort } : {}),
     };
 
-    // Create match_event in DB (persists even after match ends — bootstrap uses it for scorers)
-    if (!autogolFromShort && lm.match_id) {
-      try {
-        const res = await rmAdminDomain.createMatchEvent({
-          match_id: lm.match_id,
-          team_id: getTeamId(playerTeamShort) || null,
-          event_type: 'goal',
-          player_name: playerName,
-          minute: displayMinute,
-        });
-        if (res?.data?.id) newEvent._match_event_id = res.data.id;
-      } catch(e) {
-        console.warn('Match event create:', e);
-      }
-    }
-
+    // No DB write during the match: the goal lives only in the live board until
+    // the match ends. match_events (and therefore the marcatori) are written once,
+    // in doTerminate. The score still updates live below.
     const currentLm = lmRef.current;
     const events = [...(currentLm.events || []), newEvent].sort((a, b) => a.min - b.min);
     const updatedLm = { ...currentLm, [scoringSide]: (currentLm[scoringSide] || 0) + 1, events, minute: displayMinute };
 
-    let updatedScorers = null;
-    if (!autogolFromShort) {
-      updatedScorers = updateScorer(playerName, scoringShort, 1);
-    }
-
-    persistLm(updatedLm, updatedScorers);
+    persistLm(updatedLm);
     setGoalFlow(null);
   }
 
@@ -417,7 +381,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setCardFlow({ type, teamShort });
   }
 
-  async function pickCardPlayer(playerName) {
+  function pickCardPlayer(playerName) {
     const { type, teamShort } = cardFlow;
     const teamObj = teams.find(t => t.short === teamShort)
       || (lm.home?.short === teamShort ? lm.home : lm.away);
@@ -425,22 +389,8 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     if (type === 'yellow' && getYellowCount(playerName, teamShort) >= 1) {
       newEvents.push({ min: displayMinute, type: 'red', player: playerName, team: teamObj?.name || '', _ts: teamShort, _reason: 'doppio_giallo' });
     }
-    if (lm.match_id) {
-      for (const ev of newEvents) {
-        try {
-          const res = await rmAdminDomain.createMatchEvent({
-            match_id: lm.match_id,
-            team_id: getTeamId(teamShort) || null,
-            event_type: ev.type,
-            player_name: playerName,
-            minute: displayMinute,
-          });
-          if (res?.data?.id) ev._match_event_id = res.data.id;
-        } catch(e) {
-          console.warn('Match event card create:', e);
-        }
-      }
-    }
+    // Cards stay in the live board only; they are persisted with the rest of the
+    // cronaca in doTerminate.
     const currentLm = lmRef.current;
     const events = [...(currentLm.events || []), ...newEvents].sort((a, b) => a.min - b.min);
     persistLm({ ...currentLm, events, minute: displayMinute });
@@ -451,18 +401,11 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     const ev = lm.events[origIdx];
     const events = lm.events.filter((_, i) => i !== origIdx);
     const updatedLm = { ...lm, events };
-    let updatedScorers = null;
-    if (ev._match_event_id) {
-      rmAdminDomain.deleteMatchEvent(ev._match_event_id).catch(e => console.warn('Match event delete:', e));
-    }
     if (ev.type === 'goal') {
       const side = ev._ts === lm.home?.short ? 'hs' : 'as';
       updatedLm[side] = Math.max(0, (lm[side] || 0) - 1);
-      if (!ev._autogol) {
-        updatedScorers = updateScorer(ev.player, ev._ts || '', -1);
-      }
     }
-    persistLm(updatedLm, updatedScorers);
+    persistLm(updatedLm);
   }
 
   const phaseLabel = lm.phase === 'first_half' ? '1° Tempo' : lm.phase === 'half_time' ? 'Intervallo' : lm.phase === 'second_half' ? '2° Tempo' : null;
@@ -776,8 +719,14 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         )}
 
         {/* Termina — bottom */}
-        <button onClick={() => setConfirmTerminate(true)} style={{ width: '100%', marginTop: 20, padding: '12px 0', background: 'transparent', border: '1px solid rgba(255,61,61,0.35)', borderRadius: 8, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 14, cursor: 'pointer', letterSpacing: '0.06em' }}>
-          TERMINA PARTITA
+        {terminateError && (
+          <div style={{ marginTop: 16, padding: '12px 14px', background: 'rgba(255,61,61,0.08)', border: '1px solid rgba(255,61,61,0.4)', borderRadius: 10, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <span style={{ fontSize: 15, flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: 12.5, color: '#FF8A8A', lineHeight: 1.5 }}>{terminateError}</span>
+          </div>
+        )}
+        <button onClick={() => setConfirmTerminate(true)} disabled={terminating} style={{ width: '100%', marginTop: terminateError ? 10 : 20, padding: '12px 0', background: 'transparent', border: '1px solid rgba(255,61,61,0.35)', borderRadius: 8, color: '#FF3D3D', fontFamily: 'var(--font-display)', fontSize: 14, cursor: terminating ? 'wait' : 'pointer', letterSpacing: '0.06em', opacity: terminating ? 0.6 : 1 }}>
+          {terminating ? 'SALVATAGGIO…' : 'TERMINA PARTITA'}
         </button>
       </div>}
 

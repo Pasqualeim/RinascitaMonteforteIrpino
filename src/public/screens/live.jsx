@@ -1,11 +1,13 @@
+import { useState } from 'react';
 import { DEFAULT_LIVE_MATCH } from '../../data.js';
-import { EmptyState, LiveBoard, MatchRow } from '../../components.jsx';
+import { EmptyState, LiveBoard, MatchRow, MatchDetailModal } from '../../components.jsx';
 import { rmDeriveMatchesToday } from '../../domain.js';
 
 export function LiveScreen({ data, tournament }) {
   const liveMatch = tournament?.live_match || data?.live_match || DEFAULT_LIVE_MATCH;
   const matchesGiornata = tournament?.matches_giornata || data?.matches_giornata || [];
   const matchesToday = rmDeriveMatchesToday(matchesGiornata).slice(0, 10);
+  const [selectedMatch, setSelectedMatch] = useState(null);
   return (
     <div data-screen-label="live">
       <section className="rm-section">
@@ -27,9 +29,10 @@ export function LiveScreen({ data, tournament }) {
         </div>
         {matchesToday.length === 0
           ? <EmptyState icon="⚡" title="Nessuna partita oggi" sub="Non ci sono partite programmate per oggi."/>
-          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}</div>
+          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m} onClick={() => setSelectedMatch(m)}/>)}</div>
         }
       </section>
+      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)}/>}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { DEFAULT_LIVE_MATCH, DEFAULT_MATCHES_TODAY, DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS, DEFAULT_NEWS, DEFAULT_SPONSORS } from '../../data.js';
-import { EmptyState, Countdown, LiveBoard, MatchRow, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon, StarIcon } from '../../components.jsx';
+import { EmptyState, Countdown, LiveBoard, MatchRow, MatchDetailModal, StandingsTable, TopScorers, NewsCard, CalIcon, PinIcon, UsersIcon, ArrowIcon, ZapIcon, TrophyIcon, StarIcon } from '../../components.jsx';
 import { rmDeriveMatchesToday } from '../../domain.js';
 
 // Swipeable standings: one girone per slide, native horizontal scroll-snap + tab shortcuts
@@ -63,6 +63,7 @@ function fmtDateIt(iso) {
 }
 
 export function HomeScreen({ onNav, data, tournament }) {
+  const [selectedMatch, setSelectedMatch] = useState(null);
   const d = data || {};
   const liveMatch       = tournament?.live_match       || d.live_match       || DEFAULT_LIVE_MATCH;
   const matchesGiornata = tournament?.matches_giornata || [];
@@ -94,6 +95,7 @@ export function HomeScreen({ onNav, data, tournament }) {
 
   return (
     <div data-screen-label="home">
+      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />}
       <section className="rm-hero">
         <div className="rm-hero-glow"></div>
         <div className="rm-hero-inner">
@@ -142,7 +144,7 @@ export function HomeScreen({ onNav, data, tournament }) {
         </div>
         {matchesToday.length === 0
           ? <EmptyState icon="📅" title="Nessuna partita oggi" sub="Le partite verranno pubblicate dallo staff."/>
-          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m}/>)}</div>
+          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m} onClick={() => setSelectedMatch(m)}/>)}</div>
         }
       </section>
 
@@ -158,7 +160,11 @@ export function HomeScreen({ onNav, data, tournament }) {
                 <h3 className="rm-section-title" style={{ fontSize: 'clamp(26px,6vw,44px)' }}>Marcatori</h3>
               </div>
             </div>
+            {/* Marcatori nascosti temporaneamente: in aggiornamento dopo le partite di oggi.
+                Ripristinare <TopScorers list={scorers}/> quando i dati sono pronti.
             <TopScorers list={scorers}/>
+            */}
+            <EmptyState icon="⚽" title="Classifica marcatori in aggiornamento" sub="Sarà disponibile al termine delle partite di oggi."/>
           </div>
         </div>
       </section>

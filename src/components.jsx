@@ -616,7 +616,7 @@ function MatchDetailModal({ match, onClose }) {
   const live = status === 'live';
   const hasScore = hs != null;
 
-  const EVENT_ICON = { goal: '⚽', yellow: '🟨', red: '🟥', yellow_red: '🟨🟥' };
+  const EVENT_ICON = { goal: '⚽', own_goal: '⚽', yellow: '🟨', red: '🟥', yellow_red: '🟨🟥' };
 
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) onClose();
@@ -670,14 +670,15 @@ function MatchDetailModal({ match, onClose }) {
                   .map((ev, i) => {
                     const isHome = ev.team === home?.short;
                     const icon = EVENT_ICON[ev.type] || '•';
+                    const name = (ev.player || '—') + (ev.type === 'own_goal' ? ' (aut.)' : '');
                     return (
                       <div key={i} className="rm-live-event-row">
                         <div className="rm-lev-home">
-                          {isHome && <><span className="rm-lev-name">{ev.player || '—'}</span><span className="rm-lev-icon">{icon}</span></>}
+                          {isHome && <><span className="rm-lev-name">{name}</span><span className="rm-lev-icon">{icon}</span></>}
                         </div>
                         <div className="rm-lev-min">{ev.minute != null ? `${ev.minute}'` : '—'}</div>
                         <div className="rm-lev-away">
-                          {!isHome && <><span className="rm-lev-icon">{icon}</span><span className="rm-lev-name">{ev.player || '—'}</span></>}
+                          {!isHome && <><span className="rm-lev-icon">{icon}</span><span className="rm-lev-name">{name}</span></>}
                         </div>
                       </div>
                     );
