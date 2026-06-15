@@ -375,6 +375,13 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   color: var(--fg-2); background: var(--bg-surface); border: 1px solid var(--border-1);
   border-radius: 999px; padding: 2px 9px; white-space: nowrap; font-family: var(--font-display);
 }
+/* Top-3 teaser: show a 4th scorer fading out so the list reads as "continues" —
+   the bottom half-fade hints there are more, tap goes to the full Marcatori screen. */
+.rm-scorers-peek {
+  position: relative; cursor: pointer;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
 .rm-live-tag { display: inline-flex; align-items: center; gap: 5px; color: #FF3D3D; font-size: 12px; }
 .rm-live-tag .dot { width: 6px; height: 6px; background: #FF3D3D; border-radius: 999px; animation: pulse 1.2s infinite; }
 .rm-ft { color: var(--brand-green); }

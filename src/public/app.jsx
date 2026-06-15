@@ -81,7 +81,7 @@ function App() {
       {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}
       {screen === 'live'     && <LiveScreen                       data={data} tournament={activeTournament}/>}
       {screen === 'calendar' && <CalendarScreen                   data={data} tournament={activeTournament}/>}
-      {screen === 'table'    && <TableScreen                      data={data} tournament={activeTournament}/>}
+      {screen === 'table'    && <TableScreen        onNav={setScreen} data={data} tournament={activeTournament}/>}
       {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
       {screen === 'scorers'  && <ScorersScreen                    data={data} tournament={activeTournament}/>}
       {screen === 'registrations' && <RegistrationsScreen          data={data}/>}

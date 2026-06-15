@@ -463,7 +463,7 @@ function TopScorers({ list }) {
     <div className="rm-scorers">
       {list.map((s, i) => (
         <div key={s.id || i} className="rm-scorer">
-          <div className="rm-scorer-pos">{i + 1}</div>
+          <div className="rm-scorer-pos">{s._pos ?? i + 1}</div>
           <div style={{ flex: 1 }}>
             <div className="rm-scorer-name">{s.name}</div>
             <div className="rm-scorer-team">{s.flag || ''} {s.team || s.short}</div>

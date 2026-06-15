@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { DEFAULT_STANDINGS_GROUPS, DEFAULT_SCORERS } from '../../data.js';
-import { StandingsTable, TopScorers } from '../../components.jsx';
+import { StandingsTable, TopScorers, ArrowIcon } from '../../components.jsx';
 
 const KO_PHASES = ['Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
 const KO_SET = new Set(KO_PHASES);
 
-export function TableScreen({ data, tournament }) {
+export function TableScreen({ data, tournament, onNav }) {
   const standingsGroups = tournament?.standings_groups || data?.standings_groups || DEFAULT_STANDINGS_GROUPS || [];
   const scorers         = tournament?.scorers          || data?.scorers          || DEFAULT_SCORERS;
   const matchesGiornata = tournament?.matches_giornata || data?.matches_giornata || [];
@@ -77,15 +77,26 @@ export function TableScreen({ data, tournament }) {
         </section>
       )}
 
-      <section className="rm-section">
-        <div className="rm-section-head">
-          <div>
-            <span className="rm-eyebrow">Capocannonieri</span>
-            <h3 className="rm-section-title">Marcatori</h3>
+      {scorers.length > 0 && (
+        <section className="rm-section">
+          <div className="rm-section-head">
+            <div>
+              <span className="rm-eyebrow">{scorers.length > 3 ? 'Top 3 Capocannonieri' : 'Capocannonieri'}</span>
+              <h3 className="rm-section-title">Marcatori</h3>
+            </div>
+            {onNav && (
+              <button className="rm-section-link" onClick={() => onNav('scorers')}>Tutti i marcatori <ArrowIcon size={13}/></button>
+            )}
           </div>
-        </div>
-        <TopScorers list={scorers}/>
-      </section>
+          {scorers.length > 3 ? (
+            <div className="rm-scorers-peek" onClick={onNav ? () => onNav('scorers') : undefined} title="Vedi tutti i marcatori">
+              <TopScorers list={scorers.slice(0, 4)}/>
+            </div>
+          ) : (
+            <TopScorers list={scorers}/>
+          )}
+        </section>
+      )}
     </div>
   );
 }
