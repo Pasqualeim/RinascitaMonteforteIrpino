@@ -105,7 +105,13 @@ export async function buildBootstrap(editionId: string) {
     });
 
     const groupQualify: Record<string, number> = {};
-    for (const g of groups) groupQualify[g.id] = (g as any).qualify_count ?? 2;
+    const groupOrder: Record<string, number> = {};
+    groups.forEach((g: any, i: number) => {
+      groupQualify[g.id] = g.qualify_count ?? 2;
+      // Deterministic girone order for standings (A, B, C…). standings_view has no
+      // ORDER BY, so without this the public table order is incidental and can flip.
+      groupOrder[g.id] = g.sort_order ?? i;
+    });
 
     const standingsMap: Record<string, any> = {};
     for (const row of standingsRaw) {
@@ -165,7 +171,9 @@ export async function buildBootstrap(editionId: string) {
       registration_fee: t.registration_fee ?? null, min_teams: t.min_teams ?? null, max_teams: t.max_teams ?? null,
       registration_open: t.registration_open ?? null, registration_notes: t.registration_notes ?? null,
       groups, teams,
-      standings_groups: Object.values(standingsMap),
+      standings_groups: Object.values(standingsMap).sort(
+        (a: any, b: any) => (groupOrder[a.id] ?? 99) - (groupOrder[b.id] ?? 99)
+      ),
       live_match: liveMatch,
       matches,
       matches_giornata: Object.values(phaseMap),
