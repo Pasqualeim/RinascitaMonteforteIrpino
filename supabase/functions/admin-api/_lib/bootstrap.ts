@@ -119,10 +119,14 @@ export async function buildBootstrap(editionId: string) {
 
     const liveMatch = live ? {
       active: live.active,
+      // Expose match_id so the admin live board keeps the link after a page reload.
+      // Without it, lm.match_id becomes null on rehydrate → terminate skips persisting
+      // match_events AND the public calendar can't attach live events to the match tile.
+      match_id: live.match_id || null,
       home: live.home_team ? { short: live.home_team.short, flag: live.home_team.flag, name: live.home_team.name, color: live.home_team.color } : null,
       away: live.away_team ? { short: live.away_team.short, flag: live.away_team.flag, name: live.away_team.name, color: live.away_team.color } : null,
       hs: live.home_score, as: live.away_score, minute: live.minute, phase: live.phase || null, timer_started_at: live.timer_started_at || null, pitch: live.pitch || "", events: Array.isArray(live.events) ? live.events : [],
-    } : { active: false, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
+    } : { active: false, match_id: null, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
 
     const eventsPerMatch: Record<string, any[]> = {};
     for (const ev of allMatchEvents) {
