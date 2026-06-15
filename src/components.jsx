@@ -663,7 +663,11 @@ function MatchDetailModal({ match, onClose }) {
           <div className="rm-modal-events">
             <div className="rm-modal-events-title">Cronaca</div>
             {events.length === 0 ? (
-              <div className="rm-modal-no-events">Nessun evento registrato</div>
+              (done && ((hs ?? 0) + (as_ ?? 0)) > 0) ? (
+                <div className="rm-modal-no-events">⏳ Marcatori in fase di inserimento — verranno aggiunti a breve</div>
+              ) : (
+                <div className="rm-modal-no-events">Nessun evento registrato</div>
+              )
             ) : (
               <div className="rm-live-events" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
                 {[...events]
