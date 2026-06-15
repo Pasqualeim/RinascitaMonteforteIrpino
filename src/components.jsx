@@ -245,7 +245,7 @@ function fmtMatchDate(raw) {
 }
 
 // ── Match row ─────────────────────────────────────────────────────────────
-function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick, hideDate }) {
+function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick, hideDate, tag }) {
   const isTbd = !home || !away;
   if (isTbd && !date && !time) return null;
   const live = status === 'live';
@@ -274,6 +274,7 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, 
             <span className="time">{time || (isTbd ? 'Orario TBD' : '')}</span>
           </>
         )}
+        {tag && <span className="rm-match-tag">{tag}</span>}
       </div>
       <div className="rm-match-team rm-match-team--home">
         <span className="rm-team-name">{homeTeam.name}</span>

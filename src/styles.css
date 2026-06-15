@@ -370,6 +370,11 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 }
 .rm-match-time .date { font-size: 11px; color: var(--fg-3); letter-spacing: 0.16em; }
 .rm-match-time .time { color: #fff; font-size: 15px; }
+.rm-match-tag {
+  margin-left: auto; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--fg-2); background: var(--bg-surface); border: 1px solid var(--border-1);
+  border-radius: 999px; padding: 2px 9px; white-space: nowrap; font-family: var(--font-display);
+}
 .rm-live-tag { display: inline-flex; align-items: center; gap: 5px; color: #FF3D3D; font-size: 12px; }
 .rm-live-tag .dot { width: 6px; height: 6px; background: #FF3D3D; border-radius: 999px; animation: pulse 1.2s infinite; }
 .rm-ft { color: var(--brand-green); }

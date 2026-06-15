@@ -131,6 +131,17 @@ export function CalendarScreen({ data, tournament }) {
       ).slice(0, 8)
     : [];
 
+  // "Tutte" tab and search are cross-girone views → one flat chronological list,
+  // each match tagged with the girone/phase it belongs to. Per-girone tabs keep the
+  // grouped-by-phase layout below.
+  const flatView = selPhase === 'all' || searching;
+  const flatMatches = useMemo(() => {
+    const out = [];
+    for (const g of [...groupPhases, ...knockoutPhases])
+      for (const m of (g.items || [])) if (m) out.push({ ...m, _phaseLabel: g.day });
+    return out;
+  }, [groupPhases, knockoutPhases]);
+
   // While searching, span all phases (ignore selected tab) so a team's matches surface everywhere
   const showGroupPhases = searching ? groupPhases : selPhase === 'all'
     ? groupPhases
@@ -204,6 +215,23 @@ export function CalendarScreen({ data, tournament }) {
           <EmptyState icon="📅" title="Calendario non ancora disponibile" sub="Lo staff pubblicherà il calendario delle partite a breve." />
         ) : searching && hitCount === 0 ? (
           <EmptyState icon="🔍" title="Nessuna partita trovata" sub={`Nessun risultato per «${query.trim()}». Controlla il nome della squadra.`} />
+        ) : flatView ? (
+          (() => {
+            const timeVal = t => t ? Number(String(t).replace(':', '')) : 9999;
+            const items = flatMatches
+              .filter(m => matchHit(m) && ((m.home && m.away) || m.date || m.time))
+              .sort((a, b) => timeVal(a.time) - timeVal(b.time));
+            return groupByDate(items).map(dg => (
+              <div className="rm-cal-dategroup" key={dg.key}>
+                <DateBand parts={dg.parts} tbd={dg.key === '__tbd__'} />
+                <div className="rm-match-list">
+                  {dg.items.map((m, j) => (
+                    <MatchRow key={m.id || j} {...m} hideDate tag={m._phaseLabel} onClick={() => setSelectedMatch(m)} />
+                  ))}
+                </div>
+              </div>
+            ));
+          })()
         ) : (
           <>
             {showGroupPhases.map(g => {
