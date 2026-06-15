@@ -422,8 +422,33 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   text-transform: uppercase; color: #fff; line-height: 1.05;
 }
 .rm-cal-date-sub { font-size: 11.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); }
+/* "Oggi" / "Domani" — prominent, on par with the big day number of other bands */
+.rm-cal-date-rel {
+  font-family: var(--font-display); font-size: 30px; line-height: 0.9;
+  letter-spacing: 0.03em; text-transform: uppercase; color: #fff;
+}
+.rm-cal-date--rel { padding-top: 10px; padding-bottom: 10px; }
 .rm-cal-date--today { background: linear-gradient(90deg, rgba(0,230,118,0.18), rgba(0,230,118,0)); }
 .rm-cal-date--today .rm-cal-date-main { color: var(--brand-green); }
+.rm-cal-date--today .rm-cal-date-rel { color: var(--brand-green); }
+
+/* Section labels + already-played collapsible block in the "Tutte" calendar view */
+.rm-cal-grouplabel {
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--fg-3); margin: 4px 2px 12px;
+}
+/* Segmented toggle (Prossime / Già giocate) — jump to results without scrolling */
+.rm-seg {
+  display: flex; gap: 4px; padding: 4px; margin-bottom: 16px;
+  background: var(--bg-surface); border: 1px solid var(--border-1); border-radius: 10px;
+}
+.rm-seg-btn {
+  flex: 1; padding: 9px 10px; border: 0; border-radius: 7px; cursor: pointer;
+  background: transparent; color: var(--fg-3);
+  font-family: var(--font-display); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase;
+  transition: background 160ms, color 160ms;
+}
+.rm-seg-btn.on { background: var(--brand-green); color: #000; }
 .rm-cal-date--tbd { border-left-color: var(--fg-3); background: rgba(255,255,255,0.025); }
 .rm-cal-date--tbd .rm-cal-date-main { color: var(--fg-3); font-size: 14px; }
 

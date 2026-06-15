@@ -29,9 +29,14 @@ function DateBand({ parts, tbd }) {
   );
   if (!parts) return null;
   if (parts.rel) return (
-    <div className={`rm-cal-date${parts.rel === 'Oggi' ? ' rm-cal-date--today' : ''}`}>
-      <span className="rm-cal-date-main">{parts.rel}</span>
-      {parts.day && <span className="rm-cal-date-sub">{parts.weekday} {parts.day} {parts.monthLong}</span>}
+    <div className={`rm-cal-date rm-cal-date--rel${parts.rel === 'Oggi' ? ' rm-cal-date--today' : ''}`}>
+      <span className="rm-cal-date-rel">{parts.rel}</span>
+      {parts.day && (
+        <span className="rm-cal-date-stack">
+          <span className="rm-cal-date-main">{parts.weekday}</span>
+          <span className="rm-cal-date-sub">{parts.day} {parts.monthLong}</span>
+        </span>
+      )}
     </div>
   );
   return (
@@ -101,8 +106,9 @@ export function CalendarScreen({ data, tournament }) {
   const [selPhase, setSelPhase] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [query, setQuery] = useState('');
+  const [calView, setCalView] = useState('next'); // 'next' | 'played' (only in "Tutte" view)
 
-  useEffect(() => { setSelPhase('all'); setQuery(''); }, [tournament?.id]);
+  useEffect(() => { setSelPhase('all'); setQuery(''); setCalView('next'); }, [tournament?.id]);
 
   const q = query.trim().toLowerCase();
   const searching = q.length > 0;
@@ -218,19 +224,56 @@ export function CalendarScreen({ data, tournament }) {
         ) : flatView ? (
           (() => {
             const timeVal = t => t ? Number(String(t).replace(':', '')) : 9999;
-            const items = flatMatches
-              .filter(m => matchHit(m) && ((m.home && m.away) || m.date || m.time))
-              .sort((a, b) => timeVal(a.time) - timeVal(b.time));
-            return groupByDate(items).map(dg => (
-              <div className="rm-cal-dategroup" key={dg.key}>
-                <DateBand parts={dg.parts} tbd={dg.key === '__tbd__'} />
-                <div className="rm-match-list">
-                  {dg.items.map((m, j) => (
-                    <MatchRow key={m.id || j} {...m} hideDate tag={m._phaseLabel} onClick={() => setSelectedMatch(m)} />
-                  ))}
+            const renderable = flatMatches.filter(m => matchHit(m) && ((m.home && m.away) || m.date || m.time));
+            // Surface what's next: upcoming/live first (chronological), already-played moved
+            // to a collapsible "Già giocate" block at the bottom (most recent first).
+            const upcoming = renderable.filter(m => m.status !== 'ft').sort((a, b) => timeVal(a.time) - timeVal(b.time));
+            const played   = renderable.filter(m => m.status === 'ft').sort((a, b) => timeVal(b.time) - timeVal(a.time));
+            const upGroups = groupByDate(upcoming);
+            const playedGroups = groupByDate(played).reverse(); // most recent date first
+
+            const renderGroups = (groups, emptyTitle) =>
+              groups.length === 0
+                ? <EmptyState icon="📅" title={emptyTitle} />
+                : groups.map(dg => (
+                    <div className="rm-cal-dategroup" key={dg.key}>
+                      <DateBand parts={dg.parts} tbd={dg.key === '__tbd__'} />
+                      <div className="rm-match-list">
+                        {dg.items.map((m, j) => (
+                          <MatchRow key={m.id || j} {...m} hideDate tag={m._phaseLabel} onClick={() => setSelectedMatch(m)} />
+                        ))}
+                      </div>
+                    </div>
+                  ));
+
+            // While searching, show everything (both upcoming and played) so no result
+            // is hidden behind the toggle.
+            if (searching) {
+              return (
+                <>
+                  {upcoming.length > 0 && (<>{played.length > 0 && <div className="rm-cal-grouplabel">Prossime partite</div>}{renderGroups(upGroups)}</>)}
+                  {played.length > 0 && (<><div className="rm-cal-grouplabel">Già giocate</div>{renderGroups(playedGroups)}</>)}
+                </>
+              );
+            }
+
+            // "Tutte" view: segmented toggle so results are one tap away — no scrolling
+            // past every upcoming match to reach the played ones.
+            return (
+              <>
+                <div className="rm-seg">
+                  <button className={`rm-seg-btn ${calView === 'next' ? 'on' : ''}`} onClick={() => setCalView('next')}>
+                    Prossime{upcoming.length ? ` · ${upcoming.length}` : ''}
+                  </button>
+                  <button className={`rm-seg-btn ${calView === 'played' ? 'on' : ''}`} onClick={() => setCalView('played')}>
+                    Già giocate{played.length ? ` · ${played.length}` : ''}
+                  </button>
                 </div>
-              </div>
-            ));
+                {calView === 'next'
+                  ? renderGroups(upGroups, 'Nessuna partita in programma')
+                  : renderGroups(playedGroups, 'Nessuna partita ancora giocata')}
+              </>
+            );
           })()
         ) : (
           <>
