@@ -46,7 +46,7 @@ function Header({ current, onNav, hasLive }) {
     { id: 'calendar', label: 'Calendario' },
     { id: 'table',    label: 'Classifica' },
     { id: 'teams',    label: 'Squadre' },
-    { id: 'registrations', label: 'Iscrizioni' },
+    { id: 'scorers',  label: 'Marcatori' },
     { id: 'events',   label: 'Regolamento' },
     { id: 'news',     label: 'Avvisi' },
   ];
@@ -90,13 +90,13 @@ function BottomNav({ current, onNav, hasLive }) {
 
   const more = [
     { id: 'teams',         label: 'Squadre',      icon: UsersIcon },
-    { id: 'registrations', label: 'Iscrizioni',   icon: ClipboardIcon },
+    { id: 'scorers',       label: 'Marcatori',    icon: BallIcon },
     { id: 'events',        label: 'Regolamento',  icon: NewspaperIcon },
     { id: 'news',          label: 'Avvisi',       icon: BellIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
-  const isMoreActive = drawerOpen || ['teams','registrations','events','news'].includes(current);
+  const isMoreActive = drawerOpen || ['teams','scorers','events','news'].includes(current);
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }

@@ -160,11 +160,7 @@ export function HomeScreen({ onNav, data, tournament }) {
                 <h3 className="rm-section-title" style={{ fontSize: 'clamp(26px,6vw,44px)' }}>Marcatori</h3>
               </div>
             </div>
-            {/* Marcatori nascosti temporaneamente: in aggiornamento dopo le partite di oggi.
-                Ripristinare <TopScorers list={scorers}/> quando i dati sono pronti.
             <TopScorers list={scorers}/>
-            */}
-            <EmptyState icon="⚽" title="Classifica marcatori in aggiornamento" sub="Sarà disponibile al termine delle partite di oggi."/>
           </div>
         </div>
       </section>

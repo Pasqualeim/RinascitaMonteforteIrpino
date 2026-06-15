@@ -63,8 +63,8 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setPending(null);
     if (action === 'end_first') endFirstHalf();
     else if (action === 'start_second') startSecondHalf();
-    else if (action === 'adj_hs_-1') adjustScore('hs', -1);
-    else if (action === 'adj_as_-1') adjustScore('as', -1);
+    else if (action === 'adj_hs_-1') removeLastGoal('hs');
+    else if (action === 'adj_as_-1') removeLastGoal('as');
   }
 
   useEffect(() => {
@@ -263,6 +263,21 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     const finalAs = lm.as ?? 0;
     const events = lm.events || [];
 
+    // Safety net: the final score MUST match the goals in the cronaca, otherwise the
+    // public would show a result with no scorer (or a phantom goal). Block the terminate
+    // and tell staff exactly what to reconcile. Autogol are stored as 'goal' events
+    // credited to the team that benefits (_ts), so they are counted here too.
+    const homeGoals = events.filter(e => e.type === 'goal' && e._ts === lm.home?.short).length;
+    const awayGoals = events.filter(e => e.type === 'goal' && e._ts === lm.away?.short).length;
+    if (homeGoals !== finalHs || awayGoals !== finalAs) {
+      setTerminating(false);
+      const parts = [];
+      if (homeGoals !== finalHs) parts.push(`${lm.home?.short || 'Casa'}: punteggio ${finalHs}, gol in cronaca ${homeGoals}`);
+      if (awayGoals !== finalAs) parts.push(`${lm.away?.short || 'Ospite'}: punteggio ${finalAs}, gol in cronaca ${awayGoals}`);
+      setTerminateError(`Punteggio e cronaca non combaciano (${parts.join(' · ')}). Aggiungi i gol mancanti col marcatore (⚽), oppure usa "− correzione gol", prima di terminare.`);
+      return;
+    }
+
     // 1) CRITICAL: persist the result + full cronaca in a single idempotent call.
     //    The whole event list (autogol mapped to 'own_goal' so it shows in the
     //    cronaca but never counts as a scorer) replaces this match's events
@@ -331,8 +346,18 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     persistLm({ ...lm, phase: 'second_half', timer_started_at: Date.now() });
   }
 
-  function adjustScore(side, delta) {
-    persistLm({ ...lm, [side]: Math.max(0, (lm[side] || 0) + delta), minute: displayMinute });
+  // "− correzione gol": removes the most recent goal for that side AND its cronaca
+  // event together, so the score can never drift away from the recorded goals. Falls
+  // back to a plain score decrement only if no matching goal event exists (legacy state).
+  function removeLastGoal(side) {
+    const teamShort = side === 'hs' ? lm.home?.short : lm.away?.short;
+    const events = lm.events || [];
+    let idx = -1;
+    for (let i = events.length - 1; i >= 0; i--) {
+      if (events[i].type === 'goal' && events[i]._ts === teamShort) { idx = i; break; }
+    }
+    const newEvents = idx >= 0 ? events.filter((_, i) => i !== idx) : events;
+    persistLm({ ...lm, events: newEvents, [side]: Math.max(0, (lm[side] || 0) - 1), minute: displayMinute });
   }
 
   // Goal flow

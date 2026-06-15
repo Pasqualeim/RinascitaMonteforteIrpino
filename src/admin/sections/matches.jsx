@@ -418,6 +418,25 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
   function submit() {
     if (match._isNew && !form._day) { setError('Seleziona la fase'); return; }
     if (sameTeamsSelected) { setError('Casa e ospite non possono coincidere'); return; }
+    // Safety net: a finished match's score must equal the goals recorded in the
+    // cronaca, otherwise the public would show a result with no scorer (or a phantom
+    // goal). Block the save and tell staff exactly what to reconcile. Autogol are
+    // counted for the team that benefits (kept consistent with how they are stored).
+    if (form.status === 'ft') {
+      const isGoal = e => e.type === 'goal' || e.type === 'own_goal';
+      const isHome = e => e._side === 'home' || e.team === form.home?.short;
+      const isAway = e => e._side === 'away' || e.team === form.away?.short;
+      const homeGoals = localEvents.filter(e => isGoal(e) && isHome(e)).length;
+      const awayGoals = localEvents.filter(e => isGoal(e) && isAway(e)).length;
+      const hs = form.hs ?? 0, as = form.as ?? 0;
+      if (homeGoals !== hs || awayGoals !== as) {
+        const parts = [];
+        if (homeGoals !== hs) parts.push(`${form.home?.short || 'Casa'}: punteggio ${hs}, gol in cronaca ${homeGoals}`);
+        if (awayGoals !== as) parts.push(`${form.away?.short || 'Ospite'}: punteggio ${as}, gol in cronaca ${awayGoals}`);
+        setError(`Punteggio e cronaca non combaciano (${parts.join(' · ')}). Aggiungi i gol mancanti col marcatore o correggi il punteggio prima di salvare.`);
+        return;
+      }
+    }
     setError('');
     onSave({ ...form, _localEvents: localEvents, _originalEvents: match.events || [] });
   }
