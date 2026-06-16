@@ -91,10 +91,13 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   // newer write and overwriting it: the events array is cumulative, so the newest
   // write always carries a superset and stale retries are dropped.
   const liveSeqRef = useRef(0);
+  // Returns the (already error-handled) promise so callers that need ordering — like the
+  // terminate flow — can await the write before the next step. Mid-game callers ignore it
+  // (fire-and-forget).
   function syncLive(payload) {
-    if (!tournamentId) return;
+    if (!tournamentId) return Promise.resolve();
     const mySeq = ++liveSeqRef.current;
-    withRetry(() => {
+    return withRetry(() => {
       if (liveSeqRef.current !== mySeq) return Promise.resolve(); // superseded by a newer sync
       return rmAdminDomain.updateLive(payload);
     }).catch(e => console.warn('Live sync:', e));
@@ -183,10 +186,10 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     return (lm.events || []).filter(e => e.type === 'yellow' && e.player === playerName && e._ts === teamShort).length;
   }
 
-  // Live updates only touch the live board (live_match_state) + local cache.
-  // Marcatori are intentionally NOT written here: capocannonieri are computed
-  // from match_events, which are persisted once, at the end of the match
-  // (see doTerminate). This prevents the public scorer list from changing mid-game.
+  // Live updates touch the live board (live_match_state) + local cache. The client never
+  // writes the scorers table here — capocannonieri are derived from match_events on the
+  // server. A DB safety-net trigger mirrors the live cronaca into match_events as it
+  // happens; doTerminate then re-asserts the final list authoritatively.
   function persistLm(newLm) {
     onSave({ ...data, live_match: newLm }, 'Live aggiornato');
     setLm({ ...newLm });
@@ -322,7 +325,25 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
       }
     }
 
-    // 2) Result is safely stored → close the live board.
+    // 2) Pin the FINAL cronaca+score onto the DB live row and AWAIT it. The safety-net
+    //    trigger re-mirrors the PREVIOUS live row when the match is terminated; awaiting
+    //    here guarantees that previous row IS the final result, so a last-second event whose
+    //    background sync was still in flight can't be lost to a stale overwrite at terminate.
+    //    active:true keeps the trigger from finalizing on this write (the reset below does).
+    if (tournamentId && lm.match_id) {
+      await syncLive({
+        tournament_id: tournamentId,
+        match_id: lm.match_id,
+        active: true,
+        home_team_id: getTeamId(lm.home?.short),
+        away_team_id: getTeamId(lm.away?.short),
+        home_score: finalHs, away_score: finalAs, minute: displayMinute,
+        phase: lm.phase || null, timer_started_at: lm.timer_started_at || null,
+        pitch: lm.pitch || '', events,
+      });
+    }
+
+    // 3) Result is safely stored → close the live board.
     const terminatedLm = { ...lm, active: false, phase: null, timer_started_at: null, minute: displayMinute };
     const isThisMatch = m =>
       (lm.match_id && m.id === lm.match_id) ||
@@ -335,9 +356,10 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     onSave({ ...data, live_match: terminatedLm, matches_giornata: updatedGiornata }, 'Partita terminata');
     setLm({ ...terminatedLm });
 
-    // 3) Clear the live board state (retry so the public "LIVE" badge reliably
+    // 4) Clear the live board state (retry so the public "LIVE" badge reliably
     //    disappears even on a flaky connection). syncLive bumps the sequence, so any
     //    in-flight retry of a mid-game event is dropped and can't resurrect the board.
+    //    The trigger finalizes the match from the now-final live row written in step 2.
     syncLive({
       tournament_id: tournamentId, match_id: null, active: false,
       home_team_id: null, away_team_id: null,

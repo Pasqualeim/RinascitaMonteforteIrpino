@@ -2,6 +2,20 @@ import React, { useState, useMemo } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
+// Retry a flaky network call a few times before giving up. Staff correct results on mobile
+// data; a single transient failure must not silently drop a manual fix.
+async function withRetry(fn, tries = 3) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try { return await fn(); }
+    catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await new Promise(r => setTimeout(r, 400 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 const KNOCKOUT_PRESETS = ['Sedicesimi di finale', 'Ottavi di finale', 'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale', '3° posto'];
 const KNOCKOUT_SET = new Set(KNOCKOUT_PRESETS);
 
@@ -94,7 +108,25 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
 
       let matchId = updated.id;
 
+      // Map the whole cronaca to the bulk, idempotent payload. The server replaces this
+      // match's events in one shot (delete+insert), so a retry after a network blip is safe
+      // (no duplicates, no silent partial loss) — same path the live "Termina" uses. Only
+      // sent for finished matches; omitted otherwise so existing events aren't touched.
+      const evPayload = (updated.status === 'ft')
+        ? (updated._localEvents || []).map(ev => {
+            const isHome = ev._side === 'home' || ev.team === updated.home?.short;
+            const teamObj = isHome ? homeTeam : awayTeam;
+            return {
+              event_type: ev.type,
+              team_id: teamObj?.id || null,
+              player_name: ev.player || null,
+              minute: ev.minute ?? null,
+            };
+          })
+        : null;
+
       if (updated._isNew) {
+        // createMatch is NOT retried — a lost response on retry would create a duplicate match.
         const res = await rmAdminDomain.createMatch({
           tournament_id: tournamentId,
           group_id,
@@ -110,8 +142,14 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
           sort_order: 0,
         });
         matchId = res?.data?.id || null;
+        // Persist the cronaca separately (idempotent → retry-safe).
+        if (evPayload && matchId) {
+          await withRetry(() => rmAdminDomain.updateMatch(matchId, {
+            status: 'ft', home_score, away_score, events: evPayload,
+          }));
+        }
       } else {
-        await rmAdminDomain.updateMatch(updated.id, {
+        await withRetry(() => rmAdminDomain.updateMatch(updated.id, {
           home_team_id: home_team_id ?? null,
           away_team_id: away_team_id ?? null,
           group_id: group_id ?? null,
@@ -122,33 +160,8 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
           match_date: updated.isoDate || null,
           match_time: updated.time || null,
           pitch: updated.pitch || 'Campo Sportivo',
-        });
-      }
-
-      // Sync events for finished matches
-      if (updated.status === 'ft' && matchId) {
-        const originalEvts = updated._originalEvents || [];
-        const localEvts = updated._localEvents || [];
-        const localIds = new Set(localEvts.filter(e => e.id).map(e => e.id));
-        // Delete removed events
-        for (const ev of originalEvts) {
-          if (ev.id && !localIds.has(ev.id)) {
-            await rmAdminDomain.deleteMatchEvent(ev.id).catch(e => console.warn('Event delete:', e));
-          }
-        }
-        // Add new events
-        for (const ev of localEvts) {
-          if (!ev.id) {
-            const teamObj = ev._side === 'home' ? homeTeam : awayTeam;
-            await rmAdminDomain.createMatchEvent({
-              match_id: matchId,
-              team_id: teamObj?.id || null,
-              event_type: ev.type,
-              player_name: ev.player || null,
-              minute: ev.minute ?? null,
-            }).catch(e => console.warn('Event create:', e));
-          }
-        }
+          ...(evPayload ? { events: evPayload } : {}),
+        }));
       }
 
       setEditing(null);
