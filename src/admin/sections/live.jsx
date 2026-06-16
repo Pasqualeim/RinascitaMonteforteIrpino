@@ -84,6 +84,22 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   const lmRef = useRef(lm);
   useEffect(() => { lmRef.current = lm; }, [lm]);
 
+  // Background, silent sync of the live board to the DB. Every goal/card/autogol
+  // retries up to 3x on a flaky connection so a single event is never lost — with
+  // NO UI for the staff (they're not technical; the safety net must be invisible).
+  // A monotonic sequence guards against a slow retry of an OLD event landing after a
+  // newer write and overwriting it: the events array is cumulative, so the newest
+  // write always carries a superset and stale retries are dropped.
+  const liveSeqRef = useRef(0);
+  function syncLive(payload) {
+    if (!tournamentId) return;
+    const mySeq = ++liveSeqRef.current;
+    withRetry(() => {
+      if (liveSeqRef.current !== mySeq) return Promise.resolve(); // superseded by a newer sync
+      return rmAdminDomain.updateLive(payload);
+    }).catch(e => console.warn('Live sync:', e));
+  }
+
   useEffect(() => {
     if (!lm.active || lm.phase === 'half_time') return;
     function calcMinute(s) {
@@ -174,22 +190,20 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
   function persistLm(newLm) {
     onSave({ ...data, live_match: newLm }, 'Live aggiornato');
     setLm({ ...newLm });
-    if (tournamentId) {
-      rmAdminDomain.updateLive({
-        tournament_id: tournamentId,
-        match_id: newLm.match_id || null,
-        active: newLm.active ?? false,
-        home_team_id: getTeamId(newLm.home?.short),
-        away_team_id: getTeamId(newLm.away?.short),
-        home_score: newLm.hs ?? 0,
-        away_score: newLm.as ?? 0,
-        minute: newLm.minute ?? 0,
-        phase: newLm.phase || null,
-        timer_started_at: newLm.timer_started_at || null,
-        pitch: newLm.pitch || '',
-        events: newLm.events || [],
-      }).catch(e => console.warn('Live sync:', e));
-    }
+    syncLive({
+      tournament_id: tournamentId,
+      match_id: newLm.match_id || null,
+      active: newLm.active ?? false,
+      home_team_id: getTeamId(newLm.home?.short),
+      away_team_id: getTeamId(newLm.away?.short),
+      home_score: newLm.hs ?? 0,
+      away_score: newLm.as ?? 0,
+      minute: newLm.minute ?? 0,
+      phase: newLm.phase || null,
+      timer_started_at: newLm.timer_started_at || null,
+      pitch: newLm.pitch || '',
+      events: newLm.events || [],
+    });
   }
 
   function updateGiornataMatch(giornata, predicate, patch) {
@@ -232,7 +246,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     onSave({ ...data, live_match: updatedLm, matches_giornata: updatedGiornata }, 'Diretta avviata');
     setLm({ ...updatedLm });
     if (tournamentId) {
-      withRetry(() => rmAdminDomain.updateLive({
+      syncLive({
         tournament_id: tournamentId,
         match_id: updatedLm.match_id,
         active: true,
@@ -242,7 +256,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
         phase: 'first_half',
         timer_started_at: updatedLm.timer_started_at,
         pitch: updatedLm.pitch || '', events: [],
-      })).catch(e => console.warn('Live start sync:', e));
+      });
       // Mark the match itself as live in the DB so the public calendar reflects it
       // (live_match_state alone drives the live board, but the match tile stays 'sch'
       // without this). doTerminate later flips it to 'ft'.
@@ -322,15 +336,14 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
     setLm({ ...terminatedLm });
 
     // 3) Clear the live board state (retry so the public "LIVE" badge reliably
-    //    disappears even on a flaky connection).
-    if (tournamentId) {
-      withRetry(() => rmAdminDomain.updateLive({
-        tournament_id: tournamentId, match_id: null, active: false,
-        home_team_id: null, away_team_id: null,
-        home_score: 0, away_score: 0, minute: 0,
-        phase: null, timer_started_at: null, pitch: '', events: [],
-      })).catch(e => console.warn('Live reset sync:', e));
-    }
+    //    disappears even on a flaky connection). syncLive bumps the sequence, so any
+    //    in-flight retry of a mid-game event is dropped and can't resurrect the board.
+    syncLive({
+      tournament_id: tournamentId, match_id: null, active: false,
+      home_team_id: null, away_team_id: null,
+      home_score: 0, away_score: 0, minute: 0,
+      phase: null, timer_started_at: null, pitch: '', events: [],
+    });
 
     setTerminating(false);
     onRefresh?.();
