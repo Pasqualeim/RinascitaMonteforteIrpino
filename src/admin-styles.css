@@ -733,9 +733,13 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   flex-direction: column;
   animation: admSlideUp 250ms cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* Mobile Full-Screen Layout */
-  min-height: 100vh;
-  min-height: 100dvh;
+  /* Mobile Full-Screen Layout — height MUST be bounded to the viewport, otherwise a long
+     form (many events) makes the modal taller than the screen; the overlay clips it from
+     flex-end and .adm-modal-scroll never gets a bounded height to scroll within. */
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   border-radius: 0;
   border-bottom: 0;
 }
@@ -745,6 +749,7 @@ input[type="time"]::-webkit-calendar-picker-indicator {
     align-items: center;
   }
   .adm-modal {
+    height: auto;
     min-height: auto;
     max-height: 90vh;
     border-radius: 12px;
