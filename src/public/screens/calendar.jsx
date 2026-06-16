@@ -69,6 +69,7 @@ const TAB_SHORT = {
 
 export function CalendarScreen({ data, tournament }) {
   const rawGiornata = tournament?.matches_giornata || data?.matches_giornata || DEFAULT_MATCHES_GIORNATA;
+  const teams = tournament?.teams || data?.teams || [];
 
   // Known group names from tournament data
   const groupNames = useMemo(() => {
@@ -164,7 +165,7 @@ export function CalendarScreen({ data, tournament }) {
 
   return (
     <div data-screen-label="calendar">
-      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />}
+      {selectedMatch && <MatchDetailModal match={selectedMatch} teams={teams} onClose={() => setSelectedMatch(null)} />}
       <section className="rm-section">
         <div className="rm-section-head">
           <div>

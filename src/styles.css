@@ -514,13 +514,17 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-table-title { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.08em; text-transform: uppercase; margin: 0; font-weight: 400; color: #fff; }
 .rm-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .rm-table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 340px; }
-.rm-table th { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-3); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border-1); font-weight: 400; white-space: nowrap; }
-.rm-table td { padding: 12px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--fg-1); white-space: nowrap; }
+.rm-table th { font-family: var(--font-display); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3); text-align: left; padding: 10px 7px; border-bottom: 1px solid var(--border-1); font-weight: 400; white-space: nowrap; }
+.rm-table td { padding: 12px 7px; border-bottom: 1px solid var(--border-subtle); color: var(--fg-1); white-space: nowrap; }
+.rm-table th:first-child, .rm-table td:first-child { padding-left: 14px; }
+.rm-table th:last-child, .rm-table td:last-child { padding-right: 14px; }
 .rm-table tr:last-child td { border-bottom: 0; }
 .rm-table tr:hover td { background: rgba(0,230,118,0.03); }
 .rm-table tr.top td.pos { color: var(--brand-green); }
 .rm-table .pos { font-family: var(--font-display); font-size: 16px; color: var(--fg-3); width: 30px; }
-.rm-team-cell { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; color: #fff; text-transform: uppercase; }
+.rm-team-cell { display: flex; align-items: center; gap: 8px; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.04em; color: #fff; text-transform: uppercase; min-width: 0; }
+.rm-table td.rm-team-col { max-width: 0; width: 100%; }
+.rm-team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .rm-pts { font-family: var(--font-display); font-size: 16px; color: var(--brand-green); font-variant-numeric: tabular-nums; }
 .rm-table tr.top .rm-pts { font-size: 20px; }
 .rm-table tr.rm-qual-sep td { padding: 0; border-bottom: 0; }
@@ -900,6 +904,35 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   text-transform: uppercase; color: var(--fg-1);
   line-height: 1.2;
 }
+.rm-modal-team-btn {
+  background: transparent; border: 0; cursor: pointer; padding: 6px 4px;
+  border-radius: 12px; transition: background 0.15s ease;
+  font-family: inherit;
+}
+.rm-modal-team-btn:active { background: rgba(255,255,255,0.05); }
+.rm-modal-team-btn.on { background: rgba(0,230,118,0.08); }
+.rm-modal-team-btn.on .rm-modal-team-flag { border-color: var(--brand-green); }
+.rm-modal-team-hint {
+  display: block; margin-top: 4px;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--brand-green);
+}
+.rm-modal-roster { padding: 4px 16px 18px; }
+.rm-modal-roster-back {
+  background: transparent; border: 0; cursor: pointer; padding: 6px 0;
+  color: var(--brand-green); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.04em; font-family: inherit;
+}
+.rm-modal-roster-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 0 12px; border-bottom: 1px solid var(--border-subtle); margin-bottom: 6px;
+}
+.rm-modal-roster-name {
+  font-family: var(--font-display); font-size: 20px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: #fff; line-height: 1.1;
+}
+.rm-modal-roster-meta { font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+.rm-modal-roster-list { max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .rm-modal-scoreline {
   font-family: var(--font-display); font-size: 48px; letter-spacing: 0.04em;
   color: var(--fg-1); line-height: 1;

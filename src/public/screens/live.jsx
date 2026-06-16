@@ -6,6 +6,7 @@ import { rmDeriveMatchesToday } from '../../domain.js';
 export function LiveScreen({ data, tournament }) {
   const liveMatch = tournament?.live_match || data?.live_match || DEFAULT_LIVE_MATCH;
   const matchesGiornata = tournament?.matches_giornata || data?.matches_giornata || [];
+  const teams = tournament?.teams || data?.teams || [];
   const matchesToday = rmDeriveMatchesToday(matchesGiornata).slice(0, 10);
   const [selectedMatch, setSelectedMatch] = useState(null);
   return (
@@ -32,7 +33,7 @@ export function LiveScreen({ data, tournament }) {
           : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m} onClick={() => setSelectedMatch(m)}/>)}</div>
         }
       </section>
-      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)}/>}
+      {selectedMatch && <MatchDetailModal match={selectedMatch} teams={teams} onClose={() => setSelectedMatch(null)}/>}
     </div>
   );
 }

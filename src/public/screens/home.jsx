@@ -95,7 +95,7 @@ export function HomeScreen({ onNav, data, tournament }) {
 
   return (
     <div data-screen-label="home">
-      {selectedMatch && <MatchDetailModal match={selectedMatch} onClose={() => setSelectedMatch(null)} />}
+      {selectedMatch && <MatchDetailModal match={selectedMatch} teams={teams} onClose={() => setSelectedMatch(null)} />}
       <section className="rm-hero">
         <div className="rm-hero-glow"></div>
         <div className="rm-hero-inner">

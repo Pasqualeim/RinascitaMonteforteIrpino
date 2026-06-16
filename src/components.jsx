@@ -402,20 +402,21 @@ function StandingsTable({ rows, group, updatedLabel, qualifyCount = 2 }) {
       </div>
       <table className="rm-table">
         <thead>
-          <tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>Pt</th></tr>
+          <tr><th>#</th><th>Squadra</th><th>G</th><th>V</th><th>N</th><th>P</th><th>DR</th><th>Pt</th></tr>
         </thead>
         <tbody>
           {safeRows.map((r, i) => (
             <Fragment key={r.short + i}>
               {qc > 0 && qc < safeRows.length && i === qc && (
                 <tr className="rm-qual-sep" aria-hidden="true">
-                  <td colSpan={7}><span>Qualificate ↑</span></td>
+                  <td colSpan={8}><span>Qualificate ↑</span></td>
                 </tr>
               )}
               <tr className={i < qc ? 'top' : ''}>
                 <td className="pos">{i + 1}</td>
-                <td><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1 }}>{r.flag || '🏳️'}</span>{r.name}</div></td>
+                <td className="rm-team-col"><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{r.flag || '🏳️'}</span><span className="rm-team-name">{r.name}</span></div></td>
                 <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
+                <td>{(() => { const dr = r.gd ?? ((r.gf ?? 0) - (r.gs ?? 0)); return dr > 0 ? `+${dr}` : dr; })()}</td>
                 <td><span className="rm-pts">{r.pt}</span></td>
               </tr>
             </Fragment>
@@ -610,18 +611,76 @@ function Footer() {
 }
 
 // ── Match detail modal ────────────────────────────────────────────────────
-function MatchDetailModal({ match, onClose }) {
+function rmPlayerName(p) {
+  if (p.nome || p.cognome) return [p.nome, p.cognome].filter(Boolean).join(' ');
+  return p.name || '';
+}
+
+function MatchRosterPanel({ team, onBack }) {
+  const players = team?.players || [];
+  const sorted = [...players].sort((a, b) => {
+    const ca = (a.cognome || a.name || '').toLowerCase();
+    const cb = (b.cognome || b.name || '').toLowerCase();
+    return ca.localeCompare(cb, 'it');
+  });
+  const captainName = team?.captain?.toLowerCase().trim();
+
+  return (
+    <div className="rm-modal-roster">
+      <button className="rm-modal-roster-back" onClick={onBack}>‹ Torna alla partita</button>
+      <div className="rm-modal-roster-head">
+        <span style={{ fontSize: 22 }}>{team?.flag || '🏳️'}</span>
+        <div>
+          <div className="rm-modal-roster-name">{team?.name || '?'}</div>
+          <div className="rm-modal-roster-meta">
+            {players.length > 0 ? `${players.length} giocatori` : 'Rosa non disponibile'}
+            {team?.captain && <> · Cap. {team.captain}</>}
+          </div>
+        </div>
+      </div>
+      {players.length === 0 ? (
+        <div className="rm-modal-no-events">Rosa non ancora pubblicata dallo staff.</div>
+      ) : (
+        <div className="rm-modal-roster-list">
+          {sorted.map((p, i) => {
+            const name = rmPlayerName(p);
+            const isCap = captainName && name.toLowerCase().trim() === captainName;
+            return (
+              <div key={p.id || i} className="rm-player-row">
+                <span className="rm-player-num">{i + 1}</span>
+                <span className="rm-player-name">{name}</span>
+                {isCap && <span className="rm-player-captain">Capitano</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MatchDetailModal({ match, onClose, teams = [] }) {
   if (!match) return null;
   const { home, away, hs, as: as_, date, time, status, phase, events = [] } = match;
   const done = status === 'ft';
   const live = status === 'live';
   const hasScore = hs != null;
 
+  const [rosterShort, setRosterShort] = useState(null);
+
   const EVENT_ICON = { goal: '⚽', own_goal: '⚽', yellow: '🟨', red: '🟥', yellow_red: '🟨🟥' };
 
   function handleOverlayClick(e) {
     if (e.target === e.currentTarget) onClose();
   }
+
+  // Lookup rosa completa dal registry per sigla (match.home/away non ha players)
+  const findTeam = (mt) => (mt?.short && teams.find(t => t.short === mt.short)) || mt || null;
+  const homeFull = findTeam(home);
+  const awayFull = findTeam(away);
+  const homeHasRoster = (homeFull?.players?.length ?? 0) > 0;
+  const awayHasRoster = (awayFull?.players?.length ?? 0) > 0;
+  const activeTeam = rosterShort === home?.short ? homeFull : rosterShort === away?.short ? awayFull : null;
 
   return (
     <div className="rm-modal-overlay" onClick={handleOverlayClick}>
@@ -633,25 +692,39 @@ function MatchDetailModal({ match, onClose }) {
         </div>
 
         <div className="rm-modal-score-block">
-          <div className="rm-modal-team">
+          <button
+            type="button"
+            className={`rm-modal-team rm-modal-team-btn${rosterShort === home?.short ? ' on' : ''}`}
+            onClick={() => setRosterShort(s => s === home?.short ? null : home?.short)}
+          >
             <div className="rm-modal-team-flag" style={{ borderColor: home?.color || 'var(--brand-green)', fontSize: 24 }}>
               {home?.flag || home?.short || '?'}
             </div>
             <div className="rm-modal-team-name">{home?.name || '?'}</div>
-          </div>
+            <span className="rm-modal-team-hint">{homeHasRoster ? 'Vedi rosa ›' : 'Rosa n/d'}</span>
+          </button>
 
           <div className={`rm-modal-scoreline${!hasScore ? ' vs' : ''}`}>
             {hasScore ? `${hs} – ${as_}` : 'VS'}
           </div>
 
-          <div className="rm-modal-team">
+          <button
+            type="button"
+            className={`rm-modal-team rm-modal-team-btn${rosterShort === away?.short ? ' on' : ''}`}
+            onClick={() => setRosterShort(s => s === away?.short ? null : away?.short)}
+          >
             <div className="rm-modal-team-flag" style={{ borderColor: away?.color || 'var(--brand-green)', fontSize: 24 }}>
               {away?.flag || away?.short || '?'}
             </div>
             <div className="rm-modal-team-name">{away?.name || '?'}</div>
-          </div>
+            <span className="rm-modal-team-hint">{awayHasRoster ? 'Vedi rosa ›' : 'Rosa n/d'}</span>
+          </button>
         </div>
 
+        {activeTeam ? (
+          <MatchRosterPanel team={activeTeam} onBack={() => setRosterShort(null)} />
+        ) : (
+        <>
         <div className="rm-modal-meta">
           {date && <span className="rm-modal-meta-item"><CalIcon size={12}/> {date}</span>}
           {time && <span className="rm-modal-meta-item"><ClockIcon size={12}/> {time}</span>}
@@ -691,6 +764,8 @@ function MatchDetailModal({ match, onClose }) {
               </div>
             )}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>
