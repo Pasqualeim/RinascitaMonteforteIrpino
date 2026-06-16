@@ -750,7 +750,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
                   <div style={{ flex: 1, textAlign: 'right', paddingRight: 6, fontSize: 13 }}>
                     {isHome && (
                       <span>
-                        <span style={{ color: '#fff', fontWeight: 600 }}>{ev.player}</span>
+                        <span style={{ color: ev.player ? '#fff' : 'var(--fg-3)', fontWeight: ev.player ? 600 : 400, fontStyle: ev.player ? 'normal' : 'italic' }}>{ev.player || 'senza marcatore'}</span>
                         {ev._reason === 'doppio_giallo' && <span style={{ fontSize: 11, color: 'var(--brand-gold)', marginLeft: 4 }}>2°</span>}
                         <span style={{ marginLeft: 4 }}>{icon}</span>
                       </span>
@@ -765,7 +765,7 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
                     {!isHome && (
                       <span>
                         <span style={{ marginRight: 4 }}>{icon}</span>
-                        <span style={{ color: '#fff', fontWeight: 600 }}>{ev.player}</span>
+                        <span style={{ color: ev.player ? '#fff' : 'var(--fg-3)', fontWeight: ev.player ? 600 : 400, fontStyle: ev.player ? 'normal' : 'italic' }}>{ev.player || 'senza marcatore'}</span>
                         {ev._reason === 'doppio_giallo' && <span style={{ fontSize: 11, color: 'var(--brand-gold)', marginLeft: 4 }}>2°</span>}
                       </span>
                     )}
@@ -919,6 +919,11 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
                     </button>
                   ))}
                   {goalFlow.step !== 'autogol' && (
+                    <button type="button" onClick={() => pickGoalPlayer('', false)} style={{ padding: '10px 12px', background: 'rgba(0,230,118,0.06)', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg-2)', fontSize: 13, textAlign: 'left' }}>
+                      ⚽ Gol senza marcatore
+                    </button>
+                  )}
+                  {goalFlow.step !== 'autogol' && (
                     <button type="button" onClick={switchToAutogol} style={{ padding: '10px 12px', background: 'rgba(255,61,61,0.06)', border: '1px solid rgba(255,61,61,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg-2)', fontSize: 13, textAlign: 'left' }}>
                       Autogol (segna giocatore avversario)
                     </button>
@@ -933,6 +938,11 @@ export function LiveSection({ data, onSave, onRefresh, editionId, tournamentId }
                     onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) pickGoalPlayer(e.target.value.trim(), goalFlow.step === 'autogol'); }}
                     style={{ marginBottom: 8 }}
                   />
+                  {goalFlow.step !== 'autogol' && (
+                    <button type="button" onClick={() => pickGoalPlayer('', false)} style={{ padding: '8px 12px', marginBottom: 8, background: 'rgba(0,230,118,0.06)', border: '1px solid rgba(0,230,118,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg-2)', fontSize: 13, width: '100%' }}>
+                      ⚽ Gol senza marcatore
+                    </button>
+                  )}
                   {goalFlow.step !== 'autogol' && (
                     <button type="button" onClick={switchToAutogol} style={{ padding: '8px 12px', background: 'rgba(255,61,61,0.06)', border: '1px solid rgba(255,61,61,0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg-2)', fontSize: 13, width: '100%' }}>
                       Autogol
