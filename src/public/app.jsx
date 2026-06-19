@@ -22,6 +22,7 @@ function App() {
 
   const [data, setData] = useState(() => rmGetAllData());
   const [activeTournamentId, setActiveTournamentId] = useState(null);
+  const [catCompact, setCatCompact] = useState(false);
 
   const refresh = useCallback(async () => {
     const remoteData = await rmLoadData();
@@ -54,6 +55,14 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [screen]);
 
+  // Cat-bar resta sticky ma si rimpicciolisce dopo un po' di scroll
+  useEffect(() => {
+    const onScroll = () => setCatCompact(window.scrollY > 48);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const activeTournament = useMemo(() =>
     data?.tournaments?.find(t => t.id === activeTournamentId) || data?.tournaments?.[0] || null,
     [data, activeTournamentId]
@@ -66,16 +75,21 @@ function App() {
       <StatusStrip items={data?.strip_items}/>
       <Header current={screen} onNav={setScreen} hasLive={hasLive}/>
       {(data?.tournaments?.length > 1) && (
-        <div className="rm-cat-bar">
-          {data.tournaments.map(t => (
-            <button
-              key={t.id}
-              className={`rm-cat-pill ${activeTournamentId === t.id ? 'on' : ''}`}
-              onClick={() => setActiveTournamentId(t.id)}
-            >
-              {t.name}
-            </button>
-          ))}
+        <div className={`rm-cat-bar ${catCompact ? 'compact' : ''}`}>
+          <span className="rm-cat-label">🏆 Categoria</span>
+          <div className="rm-cat-switch" role="tablist" aria-label="Seleziona categoria torneo">
+            {data.tournaments.map(t => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={activeTournamentId === t.id}
+                className={`rm-cat-pill ${activeTournamentId === t.id ? 'on' : ''}`}
+                onClick={() => setActiveTournamentId(t.id)}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}

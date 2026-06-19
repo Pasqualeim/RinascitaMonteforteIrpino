@@ -158,14 +158,14 @@ export function HomeScreen({ onNav, data, tournament }) {
         <section className="rm-section">
           <div className="rm-section-head">
             <div>
-              <span className="rm-eyebrow">{scorers.length > 3 ? 'Top 3 Capocannonieri' : 'Capocannonieri'}</span>
+              <span className="rm-eyebrow">{scorers.length > 5 ? 'Top 5 Capocannonieri' : 'Capocannonieri'}</span>
               <h3 className="rm-section-title">Marcatori</h3>
             </div>
             <button className="rm-section-link" onClick={() => onNav('scorers')}>Tutti i marcatori <ArrowIcon size={13}/></button>
           </div>
-          {scorers.length > 3 ? (
+          {scorers.length > 5 ? (
             <div className="rm-scorers-peek" onClick={() => onNav('scorers')} title="Vedi tutti i marcatori">
-              <TopScorers list={scorers.slice(0, 4)}/>
+              <TopScorers list={scorers.slice(0, 5)}/>
             </div>
           ) : (
             <TopScorers list={scorers}/>
