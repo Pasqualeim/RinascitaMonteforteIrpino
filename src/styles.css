@@ -9,7 +9,7 @@ html {
 }
 body {
   margin: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   background: #000;
   color: var(--fg-1);
@@ -26,7 +26,7 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-app {
   min-height: 100vh;
   padding-bottom: 72px;
-  overflow-x: hidden;
+  overflow-x: clip;
   width: 100%;
   max-width: 100%;
   overscroll-behavior-x: none;
