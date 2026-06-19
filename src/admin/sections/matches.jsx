@@ -368,6 +368,7 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
   const [form, setForm] = useState({ ...match });
   const [error, setError] = useState('');
   const [pendingTeamChange, setPendingTeamChange] = useState(null); // { field, team, strong }
+  const [pendingMismatch, setPendingMismatch] = useState(null); // { detail } — score≠cronaca, conferma vittoria a tavolino
   const [localEvents, setLocalEvents] = useState(match.events || []);
   const [addingEvent, setAddingEvent] = useState(false);
   const [editingEventIdx, setEditingEventIdx] = useState(null);
@@ -418,6 +419,12 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
     setPendingTeamChange(null);
   }
 
+  function confirmMismatchSave() {
+    setPendingMismatch(null);
+    setError('');
+    onSave({ ...form, _localEvents: localEvents, _originalEvents: match.events || [] });
+  }
+
   const groupPresets = (groups || []).map(g => g.name);
   const koPresets = KNOCKOUT_PRESETS.filter(p => KNOCKOUT_SET.has(p));
   const chipStyle = (active) => ({
@@ -431,9 +438,10 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
   function submit() {
     if (match._isNew && !form._day) { setError('Seleziona la fase'); return; }
     if (sameTeamsSelected) { setError('Casa e ospite non possono coincidere'); return; }
-    // Safety net: a finished match's score must equal the goals recorded in the
+    // Safety net: a finished match's score should equal the goals recorded in the
     // cronaca, otherwise the public would show a result with no scorer (or a phantom
-    // goal). Block the save and tell staff exactly what to reconcile. Autogol are
+    // goal). But some results are legit without events (es. vittoria a tavolino 3-0):
+    // instead of blocking, warn staff and let them confirm or cancel. Autogol are
     // counted for the team that benefits (kept consistent with how they are stored).
     if (form.status === 'ft') {
       const isGoal = e => e.type === 'goal' || e.type === 'own_goal';
@@ -446,7 +454,8 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
         const parts = [];
         if (homeGoals !== hs) parts.push(`${form.home?.short || 'Casa'}: punteggio ${hs}, gol in cronaca ${homeGoals}`);
         if (awayGoals !== as) parts.push(`${form.away?.short || 'Ospite'}: punteggio ${as}, gol in cronaca ${awayGoals}`);
-        setError(`Punteggio e cronaca non combaciano (${parts.join(' · ')}). Aggiungi i gol mancanti col marcatore o correggi il punteggio prima di salvare.`);
+        setError('');
+        setPendingMismatch({ detail: parts.join(' · ') });
         return;
       }
     }
@@ -487,6 +496,31 @@ function MatchForm({ match, teams, groups, allPresets, defaultPhase, scorers = [
               <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setPendingTeamChange(null)}>Annulla</button>
               <button type="button" className={`adm-btn adm-btn-sm ${pendingTeamChange.strong ? 'adm-btn-danger' : ''}`} style={{ flex: 2 }} onClick={confirmTeamChange}>
                 Sì, cambia
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {pendingMismatch && (
+      <div className="adm-overlay" style={{ zIndex: 1100 }} onClick={() => setPendingMismatch(null)}>
+        <div className="adm-modal" style={{ minHeight: 'auto', maxHeight: '90vh', borderRadius: 12 }} onClick={e => e.stopPropagation()}>
+          <div className="adm-modal-header" style={{ borderBottom: '1px solid rgba(245,197,24,0.3)' }}>
+            <h3 className="adm-modal-title" style={{ color: '#F5C518' }}>⚠️ Punteggio senza cronaca</h3>
+            <button className="adm-btn adm-btn-ghost adm-btn-icon" onClick={() => setPendingMismatch(null)}>✕</button>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#F5C518', lineHeight: 1.5 }}>
+              Punteggio e cronaca non combaciano ({pendingMismatch.detail}).
+            </div>
+            <p style={{ fontSize: 14, color: 'var(--fg-1)', lineHeight: 1.6, margin: '0 0 20px' }}>
+              Salva comunque? Usa questa opzione per risultati senza eventi segnabili, es. <strong>vittoria a tavolino (3-0)</strong>. Altrimenti annulla e aggiungi i gol mancanti col marcatore.
+            </p>
+            <div className="adm-form-actions" style={{ marginTop: 0 }}>
+              <button type="button" className="adm-btn adm-btn-ghost adm-btn-sm" style={{ flex: 1 }} onClick={() => setPendingMismatch(null)}>Annulla</button>
+              <button type="button" className="adm-btn adm-btn-sm" style={{ flex: 2 }} onClick={confirmMismatchSave}>
+                Salva comunque
               </button>
             </div>
           </div>
