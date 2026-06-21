@@ -65,9 +65,11 @@ export function rmHydrateTournamentData(saved, defaults = {}) {
 
 export function rmDeriveMatchesToday(matchesGiornata) {
   const todayISO = new Date().toISOString().slice(0, 10);
+  const timeKey = (m) => (typeof m.time === 'string' && /^\d{1,2}:\d{2}$/.test(m.time)) ? m.time.padStart(5, '0') : '99:99';
   return (matchesGiornata || [])
     .flatMap(group => group.items || [])
     .filter(match => match?.home && match?.away && (match.status === 'live' || match.date === 'Oggi' || match.date === todayISO))
+    .sort((a, b) => timeKey(a).localeCompare(timeKey(b)))
     .slice(0, 5);
 }
 
