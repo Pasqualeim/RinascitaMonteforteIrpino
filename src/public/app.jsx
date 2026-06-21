@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { rmGetAllData, rmLoadData, rmMergeDefaults } from '../data.js';
+import { rmDeriveMatchesToday } from '../domain.js';
 import { StatusStrip, Header, Footer, BottomNav } from '../components.jsx';
 import { HomeScreen } from './screens/home.jsx';
 import { LiveScreen } from './screens/live.jsx';
@@ -70,6 +71,19 @@ function App() {
 
   const hasLive = !!(activeTournament?.live_match?.active || data?.live_match?.active);
 
+  // Stato per categoria: live > oggi > niente (calcolo unico, riusato in pill + riga)
+  const catStatuses = useMemo(() => {
+    const list = data?.tournaments || [];
+    return list.map(t => {
+      const isLive = !!t.live_match?.active;
+      const hasToday = rmDeriveMatchesToday(t.matches_giornata || []).length > 0;
+      return { id: t.id, status: isLive ? 'live' : (hasToday ? 'today' : '') };
+    });
+  }, [data?.tournaments]);
+  const statusOf = (id) => catStatuses.find(c => c.id === id)?.status || '';
+  const liveNames  = (data?.tournaments || []).filter(t => statusOf(t.id) === 'live').map(t => t.name);
+  const todayNames = (data?.tournaments || []).filter(t => statusOf(t.id) === 'today').map(t => t.name);
+
   return (
     <div className="rm-app">
       <StatusStrip items={data?.strip_items}/>
@@ -78,18 +92,41 @@ function App() {
         <div className={`rm-cat-bar ${catCompact ? 'compact' : ''}`}>
           <span className="rm-cat-label">🏆 Categoria</span>
           <div className="rm-cat-switch" role="tablist" aria-label="Seleziona categoria torneo">
-            {data.tournaments.map(t => (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={activeTournamentId === t.id}
-                className={`rm-cat-pill ${activeTournamentId === t.id ? 'on' : ''}`}
-                onClick={() => setActiveTournamentId(t.id)}
-              >
-                {t.name}
-              </button>
-            ))}
+            {data.tournaments.map(t => {
+              const status = statusOf(t.id);
+              const statusLabel = status === 'live' ? 'in diretta ora' : (status === 'today' ? 'si gioca oggi' : '');
+              return (
+                <button
+                  key={t.id}
+                  role="tab"
+                  aria-selected={activeTournamentId === t.id}
+                  aria-label={statusLabel ? `${t.name} · ${statusLabel}` : t.name}
+                  className={`rm-cat-pill ${activeTournamentId === t.id ? 'on' : ''}`}
+                  onClick={() => setActiveTournamentId(t.id)}
+                >
+                  {t.name}
+                  {status === 'today' && <span className="rm-cat-tag today" aria-hidden="true">oggi</span>}
+                  {status === 'live'  && <span className="rm-cat-tag live" aria-hidden="true">live</span>}
+                </button>
+              );
+            })}
           </div>
+          {(liveNames.length > 0 || todayNames.length > 0) && (
+            <p className="rm-cat-hint">
+              {liveNames.length > 0 && (
+                <span className="rm-cat-hint-seg live">
+                  <span className="rm-cat-dot live" aria-hidden="true"></span>
+                  In diretta ora: {liveNames.join(', ')}
+                </span>
+              )}
+              {todayNames.length > 0 && (
+                <span className="rm-cat-hint-seg today">
+                  <span className="rm-cat-dot today" aria-hidden="true"></span>
+                  Oggi in campo: {todayNames.join(', ')}
+                </span>
+              )}
+            </p>
+          )}
         </div>
       )}
       {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}

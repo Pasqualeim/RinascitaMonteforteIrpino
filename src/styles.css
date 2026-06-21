@@ -129,6 +129,43 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   box-shadow: var(--glow-green-sm);
 }
 
+/* Indicatore "si gioca oggi / in diretta" sulle categorie */
+.rm-cat-pill { display: inline-flex; align-items: center; }
+.rm-cat-dot { width: 7px; height: 7px; border-radius: 999px; flex-shrink: 0; }
+.rm-cat-dot.today { background: var(--brand-green); box-shadow: 0 0 6px rgba(0,230,118,0.85); }
+.rm-cat-dot.live  { background: #FF3D3D; box-shadow: 0 0 6px rgba(255,61,61,0.9); animation: pulse 1.2s infinite; }
+
+/* Micro-tag dentro la pill (parola = niente ambiguità) */
+.rm-cat-tag {
+  margin-left: 7px;
+  font-size: 10px; line-height: 1; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 7px; border-radius: 999px;
+}
+.rm-cat-tag.today { background: rgba(0,230,118,0.16); color: var(--brand-green); }
+.rm-cat-tag.live  { background: rgba(255,61,61,0.18); color: #FF6B6B; animation: pulse 1.2s infinite; }
+.rm-cat-pill.on .rm-cat-tag.today { background: rgba(0,0,0,0.2); color: #00351b; }
+.rm-cat-pill.on .rm-cat-tag.live  { background: rgba(0,0,0,0.22); color: #6b0000; }
+
+/* Riga sotto la barra: dice esplicitamente chi gioca oggi */
+.rm-cat-hint {
+  flex-basis: 100%;
+  margin: 2px 0 0;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 4px 18px;
+  font-family: var(--font-body);
+  font-size: 12.5px; font-weight: 600;
+}
+.rm-cat-hint-seg { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.rm-cat-hint-seg.today { color: var(--brand-green); }
+.rm-cat-hint-seg.live  { color: #FF6B6B; }
+
+/* Stato compatto (dopo scroll): tag più piccolo, riga nascosta per restare snello */
+.rm-cat-bar.compact .rm-cat-tag { font-size: 9px; padding: 2px 5px; margin-left: 5px; }
+.rm-cat-bar.compact .rm-cat-hint { display: none; }
+
+@media (prefers-reduced-motion: reduce) { .rm-cat-dot.live, .rm-cat-tag.live { animation: none; } }
+
 /* Stato compatto: dopo lo scroll resta visibile ma occupa meno spazio */
 .rm-cat-bar.compact {
   gap: 0;
