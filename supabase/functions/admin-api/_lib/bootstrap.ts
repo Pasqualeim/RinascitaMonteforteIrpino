@@ -68,19 +68,72 @@ export async function buildBootstrap(editionId: string) {
     // an autogol never counts as a scorer. match_events for a match are written only
     // when the match ends (see admin live.jsx doTerminate), so the marcatori list
     // does NOT change while a match is live — this is intentional.
-    const autoMap: Record<string, { name: string; team: string; flag: string; goals: number }> = {};
+    //
+    // Goals are aggregated by PLAYER NAME only (not name+team). A player keeps his
+    // running goal tally when he changes team between phases (es. comprato da un'altra
+    // squadra dopo i gironi): i suoi gol restano agganciati al nome e continuano a
+    // sommarsi. The team/flag shown next to him is his CURRENT team — taken from the
+    // roster he's now registered in (team_registrations.players); if he isn't in any
+    // current roster, falls back to the team of his most recent goal.
+    const nameKey = (s: string) => (s || "").trim().toLowerCase();
+
+    // Chronological rank per match (matches already ordered by date/time/sort above).
+    const matchOrder: Record<string, number> = {};
+    matches.forEach((m: any, i: number) => { matchOrder[m.id] = i; });
+
+    // Player full name -> current team(s) from rosters. Same `name` string the live
+    // writes into match_events.player_name (built from "Nome Cognome"), so it matches.
+    const rosterTeams: Record<string, { team_id: string; short: string; flag: string }[]> = {};
+    for (const r of regs) {
+      for (const p of (r.players || [])) {
+        const k = nameKey(p.name || [p.nome, p.cognome].filter(Boolean).join(" "));
+        if (!k) continue;
+        (rosterTeams[k] ||= []).push({ team_id: r.teams.id, short: r.teams.short, flag: r.teams.flag });
+      }
+    }
+
+    const autoMap: Record<string, {
+      name: string; goals: number;
+      lastTeamId: string; lastShort: string; lastFlag: string; lastRank: number;
+    }> = {};
     for (const ev of goalEvents) {
       if (!ev.player_name) continue;
-      const key = `${ev.player_name}__${(ev as any).teams?.short || ev.team_id}`;
-      if (!autoMap[key]) autoMap[key] = { name: ev.player_name, team: (ev as any).teams?.short || "", flag: (ev as any).teams?.flag || "", goals: 0 };
+      const key = nameKey(ev.player_name);
+      const short = (ev as any).teams?.short || "";
+      const flag = (ev as any).teams?.flag || "";
+      const rank = (matchOrder[ev.match_id] ?? 0) * 1000 + (ev.minute ?? 0);
+      if (!autoMap[key]) autoMap[key] = { name: ev.player_name, goals: 0, lastTeamId: ev.team_id, lastShort: short, lastFlag: flag, lastRank: -1 };
       autoMap[key].goals++;
+      if (rank >= autoMap[key].lastRank) {
+        autoMap[key].lastRank = rank;
+        autoMap[key].lastTeamId = ev.team_id;
+        autoMap[key].lastShort = short;
+        autoMap[key].lastFlag = flag;
+      }
     }
+
+    // Current team wins (the one matching his latest goal when in several rosters,
+    // else the single/last roster); otherwise the team of his most recent goal.
+    const resolveTeam = (key: string, a: { lastTeamId: string; lastShort: string; lastFlag: string }) => {
+      const rosters = rosterTeams[key];
+      if (rosters && rosters.length) {
+        const pick = rosters.find(rt => rt.team_id === a.lastTeamId) || rosters[rosters.length - 1];
+        return { team: pick.short, flag: pick.flag };
+      }
+      return { team: a.lastShort, flag: a.lastFlag };
+    };
+
     // Merge: manual overrides auto (staff correction), auto fills new players
-    const manualKeys = new Set(manualScorers.map((s: any) => s.player_name));
-    const autoOnlyScorers = Object.values(autoMap).filter(a => !manualKeys.has(a.name));
+    const manualKeys = new Set(manualScorers.map((s: any) => nameKey(s.player_name)));
+    const autoOnlyScorers = Object.entries(autoMap)
+      .filter(([key]) => !manualKeys.has(key))
+      .map(([key, a]) => {
+        const t = resolveTeam(key, a);
+        return { id: null, name: a.name, team: t.team, flag: t.flag, goals: a.goals };
+      });
     const mergedScorers = [
       ...manualScorers.map((s: any) => ({ id: s.id, name: s.player_name, team: s.teams?.short || "", flag: s.teams?.flag || "", goals: s.goals })),
-      ...autoOnlyScorers.map(a => ({ id: null, name: a.name, team: a.team, flag: a.flag, goals: a.goals })),
+      ...autoOnlyScorers,
     ].sort((a, b) => b.goals - a.goals);
 
     // Per-team aggregate stats from standings_view (counts only status='ft' matches).
