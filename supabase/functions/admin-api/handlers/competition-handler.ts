@@ -3,7 +3,7 @@ import { ok } from "../_lib/helpers.ts";
 import { requireSession } from "../_lib/session.ts";
 
 export async function competitionHandler(req: Request, base: string, id: string | null): Promise<Response | null> {
-  const ROUTES = ["/groups","/teams","/registrations","/matches","/match-events","/live","/scorers"];
+  const ROUTES = ["/groups","/teams","/registrations","/matches","/match-events","/live","/scorers","/knockout-ties"];
   if (!ROUTES.includes(base)) return null;
 
   const auth = await requireSession(req);
@@ -195,6 +195,41 @@ export async function competitionHandler(req: Request, base: string, id: string 
     }
     if (method === "DELETE" && id) {
       const { error } = await db.from("scorers").delete().eq("id", id);
+      if (error) throw error;
+      return ok(req, 200, { ok: true });
+    }
+  }
+
+  // Knockout ties (tabellone qualificazione, per tournament)
+  if (base === "/knockout-ties") {
+    if (method === "POST") {
+      const { tournament_id, round, sort_order, home_label, away_label, note } = body;
+      if (!tournament_id) return ok(req, 400, { error: "tournament_id obbligatorio" });
+      const { data, error } = await db.from("knockout_ties").insert({
+        tournament_id,
+        round: String(round ?? "").trim(),
+        sort_order: sort_order ?? 0,
+        home_label: String(home_label ?? "").trim(),
+        away_label: String(away_label ?? "").trim(),
+        note: note ?? null,
+      }).select().single();
+      if (error) throw error;
+      return ok(req, 201, { ok: true, data });
+    }
+    if (method === "PUT" && id) {
+      const upd: Record<string, unknown> = {};
+      if (body.round !== undefined) upd.round = String(body.round).trim();
+      if (body.sort_order !== undefined) upd.sort_order = body.sort_order;
+      if (body.home_label !== undefined) upd.home_label = String(body.home_label).trim();
+      if (body.away_label !== undefined) upd.away_label = String(body.away_label).trim();
+      if (body.note !== undefined) upd.note = body.note ?? null;
+      if (Object.keys(upd).length === 0) return ok(req, 400, { error: "Nessun campo da aggiornare" });
+      const { data, error } = await db.from("knockout_ties").update(upd).eq("id", id).select().single();
+      if (error) throw error;
+      return ok(req, 200, { ok: true, data });
+    }
+    if (method === "DELETE" && id) {
+      const { error } = await db.from("knockout_ties").delete().eq("id", id);
       if (error) throw error;
       return ok(req, 200, { ok: true });
     }

@@ -38,6 +38,10 @@ export const rmAdminDomain = {
   createScorer: (p)    => rmAdminApiCrud('POST', '/scorers', p),
   updateScorer: (id,p) => rmAdminApiCrud('PUT', `/scorers/${id}`, p),
   deleteScorer: (id)   => rmAdminApiCrud('DELETE', `/scorers/${id}`),
+  // Knockout ties (tabellone qualificazione, per tournament)
+  createKnockoutTie: (p)    => rmAdminApiCrud('POST', '/knockout-ties', p),
+  updateKnockoutTie: (id,p) => rmAdminApiCrud('PUT', `/knockout-ties/${id}`, p),
+  deleteKnockoutTie: (id)   => rmAdminApiCrud('DELETE', `/knockout-ties/${id}`),
   // Edition-level content
   createNews: (p)    => rmAdminApiCrud('POST', '/news', p),
   updateNews: (id,p) => rmAdminApiCrud('PUT', `/news/${id}`, p),

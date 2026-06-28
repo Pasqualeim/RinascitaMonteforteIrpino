@@ -49,6 +49,7 @@ src/
       gironi.jsx        → CRUD gironi: nome, colore
       matches.jsx       → CRUD partite: stato, score, orario, campo, fase
       standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB)
+      bracket.jsx       → CRUD tabellone qualificazione: incroci fase eliminazione + intro per categoria
       scorers.jsx       → CRUD marcatori con gol
       teams.jsx         → CRUD squadre: nazione, girone, capitano
       content.jsx       → CRUD eventi, albo d'oro, sponsor
@@ -67,7 +68,7 @@ dist/                   → Output build (non committare)
 - `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori, bacheca, premi, sponsor
 - `live` — Tabellone diretta + risultati oggi
 - `calendar` — Calendario partite con filtri dinamici per fase/girone
-- `table` — Classifica per girone (tab dinamici, auto-calcolati) + marcatori
+- `table` — Classifica per girone (tab dinamici, auto-calcolati) + sezione "Come ci si qualifica" (tabellone qualificazione da `tournament.bracket`) + eliminatorie + marcatori
 - `teams` — Squadre filtrabili per girone, con nazioni FIFA 2026
 - `events` — Timeline eventi
 - `news` — Bacheca avvisi
@@ -101,6 +102,7 @@ dist/                   → Output build (non committare)
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
 | Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
 | Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB) |
+| Qualificazione | Tabellone fase a eliminazione: incroci per posizione (`round`, casa, ospite, nota, ordinabili) + intro testuale per categoria. Solo testo/regole, indipendente dalle partite KO reali (tab Eliminatorie/`fasi`) |
 | Marcatori | CRUD capocannonieri con gol |
 | Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
 | Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
@@ -145,6 +147,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | `editions` | — | Container annuale (es. "Rinascita Cup 2026") |
 | `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…) |
 | `groups` | `tournament_id` | Gironi dentro una categoria (col. `qualify_count` smallint default 2 = squadre che passano il turno) |
+| `knockout_ties` | `tournament_id` | Incroci tabellone qualificazione (regolamento fase eliminazione): `round`, `sort_order`, `home_label`, `away_label`, `note`. Testo libero editabile. Intro per categoria su `tournaments.bracket_intro` |
 | `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
 | `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria |
 | `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |
@@ -177,6 +180,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | POST/DELETE | `/match-events[/:id]` | Sì | CRUD eventi partita |
 | PUT | `/live` | Sì | Aggiorna stato live (tournament_id) |
 | POST/PUT/DELETE | `/scorers[/:id]` | Sì | CRUD marcatori (tournament_id) |
+| POST/PUT/DELETE | `/knockout-ties[/:id]` | Sì | CRUD incroci tabellone qualificazione (tournament_id) |
 | POST/PUT/DELETE | `/news[/:id]` | Sì | CRUD news (edition_id) |
 | POST/PUT/DELETE | `/events[/:id]` | Sì | CRUD eventi (edition_id) |
 | POST/PUT/DELETE | `/honors[/:id]` | Sì | CRUD albo d'oro |
@@ -191,6 +195,7 @@ Migrazione dati (una-tantum, da Settings admin):
   tournaments: [          // array categorie
     {
       id, name, slug, sort_order, prize_first, prize_second, prize_third,
+      bracket_intro, bracket,   // tabellone qualificazione (incroci editabili)
       groups, teams, standings_groups, live_match,
       matches, matches_giornata, scorers
     }
@@ -247,7 +252,7 @@ Migrazione dati (una-tantum, da Settings admin):
 
 **Schermate pubbliche:**
 - `HomeScreen` — usa `data.edition` per nome/date/premi (dinamico da bootstrap)
-- `TableScreen` — classifica per-girone con tab dinamici
+- `TableScreen` — classifica per-girone con tab dinamici + tabellone qualificazione ("Come ci si qualifica", da `tournament.bracket`/`bracket_intro`)
 - `TeamsScreen` — filtra per girone, mostra flag nazione
 - `CalendarScreen` — tab per fase/girone
 - `HonorsScreen` — picker edizioni da `/editions`, carica dati edizione specifica

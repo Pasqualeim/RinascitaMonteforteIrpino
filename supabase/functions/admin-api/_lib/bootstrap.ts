@@ -18,7 +18,7 @@ export async function buildBootstrap(editionId: string) {
   const tournamentRows = tourRes.data || [];
 
   const tournaments = await Promise.all(tournamentRows.map(async (t: any) => {
-    const [groupsRes, regsRes, matchesRes, liveRes, scorersRes, standingsRes] = await Promise.all([
+    const [groupsRes, regsRes, matchesRes, liveRes, scorersRes, standingsRes, koRes] = await Promise.all([
       db.from("groups").select("*").eq("tournament_id", t.id).order("sort_order"),
       db.from("team_registrations").select("*, teams!inner(id,name,short,nation,flag,color)").eq("tournament_id", t.id),
       db.from("matches")
@@ -33,6 +33,7 @@ export async function buildBootstrap(editionId: string) {
       db.from("scorers").select("*, teams(short,flag)")
         .eq("tournament_id", t.id).order("goals", { ascending: false }).order("sort_order"),
       db.from("standings_view").select("*").eq("tournament_id", t.id),
+      db.from("knockout_ties").select("*").eq("tournament_id", t.id).order("sort_order"),
     ]);
 
     const matchIds = (matchesRes.data || []).map((m: any) => m.id);
@@ -218,11 +219,18 @@ export async function buildBootstrap(editionId: string) {
       });
     }
 
+    // Tabellone qualificazione (fase a eliminazione) — incroci editabili dallo staff.
+    const bracket = (koRes.data || []).map((k: any) => ({
+      id: k.id, round: k.round || "", sort_order: k.sort_order ?? 0,
+      home_label: k.home_label || "", away_label: k.away_label || "", note: k.note || "",
+    }));
+
     return {
       id: t.id, name: t.name, slug: t.slug, sort_order: t.sort_order,
       prize_first: t.prize_first, prize_second: t.prize_second, prize_third: t.prize_third, prizes: t.prizes || [],
       registration_fee: t.registration_fee ?? null, min_teams: t.min_teams ?? null, max_teams: t.max_teams ?? null,
       registration_open: t.registration_open ?? null, registration_notes: t.registration_notes ?? null,
+      bracket_intro: t.bracket_intro ?? null, bracket,
       groups, teams,
       standings_groups: Object.values(standingsMap).sort(
         (a: any, b: any) => (groupOrder[a.id] ?? 99) - (groupOrder[b.id] ?? 99)
@@ -250,6 +258,8 @@ export async function buildBootstrap(editionId: string) {
     matches:          first?.matches || [],
     matches_giornata: first?.matches_giornata || [],
     scorers:          first?.scorers || [],
+    bracket:          first?.bracket || [],
+    bracket_intro:    first?.bracket_intro ?? null,
     news:    (newsRes.data    || []).map((n: any) => ({ id: n.id, title: n.title, body: n.body, category: n.category, tone: n.tone, pinned: n.pinned, date: n.created_at })),
     events:  (eventsRes.data  || []).map((e: any) => ({ id: e.id, title: e.title, date: e.event_date, time: e.event_time, type: e.event_type, description: e.description })),
     honors:  (honorsRes.data  || []).map((h: any) => ({ id: h.id, edition: h.edition_name, year: h.year, winner: h.winner, runner_up: h.runner_up, third: h.third_place, mvp: h.mvp, top_scorer: h.top_scorer })),

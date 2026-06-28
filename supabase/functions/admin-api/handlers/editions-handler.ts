@@ -46,7 +46,7 @@ export async function editionsHandler(req: Request, base: string, id: string | n
       return ok(req, 201, { ok: true, data });
     }
     if (method === "PUT" && id) {
-      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third","prizes","registration_fee","min_teams","max_teams","registration_open","registration_notes"];
+      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third","prizes","registration_fee","min_teams","max_teams","registration_open","registration_notes","bracket_intro"];
       const upd: Record<string, unknown> = {};
       for (const k of allowed) { if (k in body) upd[k] = body[k]; }
       const { data, error } = await db.from("tournaments").update(upd).eq("id", id).select().single();
