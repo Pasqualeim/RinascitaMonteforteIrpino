@@ -33,7 +33,9 @@ export async function buildBootstrap(editionId: string) {
       db.from("scorers").select("*, teams(short,flag)")
         .eq("tournament_id", t.id).order("goals", { ascending: false }).order("sort_order"),
       db.from("standings_view").select("*").eq("tournament_id", t.id),
-      db.from("knockout_ties").select("*").eq("tournament_id", t.id).order("sort_order"),
+      db.from("knockout_ties")
+        .select("*, home_team:home_team_id(id,name,short,flag,color), away_team:away_team_id(id,name,short,flag,color)")
+        .eq("tournament_id", t.id).order("sort_order"),
     ]);
 
     const matchIds = (matchesRes.data || []).map((m: any) => m.id);
@@ -219,10 +221,16 @@ export async function buildBootstrap(editionId: string) {
       });
     }
 
-    // Tabellone qualificazione (fase a eliminazione) — incroci editabili dallo staff.
+    // Tabellone qualificazione (fase a eliminazione) — incroci gestibili come partite.
+    // home_label/away_label restano come fallback finché le squadre reali non sono note.
     const bracket = (koRes.data || []).map((k: any) => ({
       id: k.id, round: k.round || "", sort_order: k.sort_order ?? 0,
-      home_label: k.home_label || "", away_label: k.away_label || "", note: k.note || "",
+      home_label: k.home_label || "", away_label: k.away_label || "",
+      home_team: k.home_team ? { id: k.home_team.id, name: k.home_team.name, short: k.home_team.short, flag: k.home_team.flag, color: k.home_team.color } : null,
+      away_team: k.away_team ? { id: k.away_team.id, name: k.away_team.name, short: k.away_team.short, flag: k.away_team.flag, color: k.away_team.color } : null,
+      home_score: k.home_score ?? null, away_score: k.away_score ?? null,
+      status: k.status || "sch",
+      date: k.match_date || null, time: k.match_time || null, pitch: k.pitch || "",
     }));
 
     return {

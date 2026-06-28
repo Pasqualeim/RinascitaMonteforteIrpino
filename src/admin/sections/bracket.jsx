@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
+import { MatchesSection } from './matches.jsx';
 
 // Suggerimenti fase — modificabili a mano nel campo (datalist, non vincolante).
 const ROUND_PRESETS = ['Quarti di finale', 'Semifinali', 'Prefinale', 'Finale 3°/4° posto', 'Finale'];
@@ -19,7 +20,7 @@ function groupByRound(ties) {
   return { sorted, order, map };
 }
 
-export function BracketSection({ data, onRefresh, tournamentId }) {
+export function BracketSection({ data, onSave, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -36,6 +37,11 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
 
   const ties = data.bracket || [];
   const { sorted, order, map } = groupByRound(ties);
+
+  // Autocomplete etichette: squadre reali + posizioni dai gironi.
+  const teamNames = (data.teams || []).map(t => t.name).filter(Boolean);
+  const posLabels = (data.groups || []).flatMap(g => [`Prima del ${g.name}`, `Seconda del ${g.name}`, `Terza del ${g.name}`]);
+  const labelSuggestions = [...new Set([...teamNames, ...posLabels])];
 
   if (!tournamentId) {
     return (
@@ -64,7 +70,6 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
         round: (t.round || '').trim(),
         home_label: (t.home_label || '').trim(),
         away_label: (t.away_label || '').trim(),
-        note: (t.note || '').trim() || null,
       };
       if (t._isNew) {
         const nextOrder = sorted.length ? Math.max(...sorted.map(x => x.sort_order ?? 0)) + 1 : 0;
@@ -108,21 +113,23 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 6 }}>
-        <div>
-          <h2 className="adm-section-title" style={{ margin: 0 }}>Qualificazione</h2>
-          <p className="adm-section-sub" style={{ margin: 0 }}>Tabellone fase a eliminazione · {ties.length} incroci</p>
-        </div>
-        <button className="adm-btn adm-btn-sm" onClick={() => setEditing({ _isNew: true, round: order[order.length - 1] || ROUND_PRESETS[0], home_label: '', away_label: '', note: '' })} disabled={busy}>+ Incrocio</button>
-      </div>
-      <p className="adm-section-sub" style={{ marginTop: 0, fontSize: 12 }}>
-        Definisci gli accoppiamenti per posizione (es. “Prima del Girone A” vs “Terza del Girone B”). Testo libero, modificabile in qualsiasi momento.
+      <h2 className="adm-section-title" style={{ margin: 0 }}>Qualificazione</h2>
+      <p className="adm-section-sub" style={{ marginTop: 2 }}>
+        In alto il <strong>tabellone posizionale</strong> mostrato sul sito (es. “Prima del Girone A” vs “Terza del Girone B”).
+        In basso le <strong>partite della fase a eliminazione</strong>, con lo stesso editor delle partite dei gironi.
       </p>
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
+      {/* ── Tabellone posizionale (vista pubblica regolamento) ── */}
+      <div className="adm-eyebrow" style={{ marginTop: 10 }}>Sito pubblico · “Come ci si qualifica”</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '4px 0 10px' }}>
+        <span className="adm-section-sub" style={{ margin: 0, fontSize: 12 }}>{ties.length} incroci (etichette posizione)</span>
+        <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setEditing({ _isNew: true, round: order[order.length - 1] || ROUND_PRESETS[0], home_label: '', away_label: '' })} disabled={busy}>+ Incrocio</button>
+      </div>
+
       {/* Introduzione */}
-      <div className="adm-card" style={{ marginBottom: 14 }}>
+      <div className="adm-card" style={{ marginBottom: 12 }}>
         <div className="adm-card-header"><span className="adm-card-title">Introduzione (opzionale)</span></div>
         <div className="adm-card-body">
           <textarea
@@ -138,9 +145,8 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
         </div>
       </div>
 
-      {/* Incroci raggruppati per fase */}
       {ties.length === 0 ? (
-        <div className="adm-card"><div className="adm-empty">Nessun incrocio. Clicca “+ Incrocio” per costruire il tabellone.</div></div>
+        <div className="adm-card"><div className="adm-empty">Nessun incrocio. Clicca “+ Incrocio” per costruire il tabellone posizionale.</div></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {order.map(round => (
@@ -160,7 +166,6 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
                           <span style={{ color: 'var(--brand-green)', fontFamily: 'var(--font-display)', fontSize: 13, letterSpacing: '0.06em' }}>VS</span>
                           <span>{t.away_label || '—'}</span>
                         </div>
-                        {t.note && <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 3 }}>{t.note}</div>}
                       </div>
                       <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                         <button className="adm-btn adm-btn-ghost adm-btn-icon" title="Su" disabled={busy || globalIdx <= 0} onClick={() => moveTie(t, -1)}>↑</button>
@@ -177,8 +182,17 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
         </div>
       )}
 
+      {/* ── Partite della fase a eliminazione (stesso editor dei gironi) ── */}
+      <div style={{ height: 1, background: 'var(--border-1)', margin: '22px 0 14px' }} />
+      <div className="adm-eyebrow">Risultati & calendario</div>
+      <h3 className="adm-section-title" style={{ margin: '2px 0 8px' }}>Partite eliminatorie</h3>
+      <p className="adm-section-sub" style={{ marginTop: 0, fontSize: 12 }}>
+        Stessa scheda “Modifica partita” dei gironi: squadre, stato, punteggio, gol e cartellini (alimentano i marcatori), data e ora.
+      </p>
+      <MatchesSection data={data} onSave={onSave} onRefresh={onRefresh} tournamentId={tournamentId} scope="knockout" compact />
+
       {editing && (
-        <TieForm item={editing} onSave={saveTie} onClose={() => setEditing(null)} busy={busy} />
+        <TieForm item={editing} onSave={saveTie} onClose={() => setEditing(null)} busy={busy} suggestions={labelSuggestions} />
       )}
       {deleting && (
         <Confirm msg="Eliminare questo incrocio?" onOk={() => deleteTie(deleting)} onCancel={() => setDeleting(null)} />
@@ -187,8 +201,8 @@ export function BracketSection({ data, onRefresh, tournamentId }) {
   );
 }
 
-function TieForm({ item, onSave, onClose, busy }) {
-  const [form, setForm] = useState({ round: '', home_label: '', away_label: '', note: '', ...item });
+function TieForm({ item, onSave, onClose, busy, suggestions = [] }) {
+  const [form, setForm] = useState({ round: '', home_label: '', away_label: '', ...item });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isNew = !!item._isNew;
 
@@ -210,16 +224,18 @@ function TieForm({ item, onSave, onClose, busy }) {
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Casa</label>
-              <input className="adm-input" value={form.home_label || ''} onChange={e => set('home_label', e.target.value)} placeholder="es. Prima del Girone A" />
+              <input className="adm-input" list="rm-tie-labels" value={form.home_label || ''} onChange={e => set('home_label', e.target.value)} placeholder="es. Prima del Girone A" />
             </div>
             <div className="adm-form-group">
               <label className="adm-label">Ospite</label>
-              <input className="adm-input" value={form.away_label || ''} onChange={e => set('away_label', e.target.value)} placeholder="es. Terza del Girone B" />
+              <input className="adm-input" list="rm-tie-labels" value={form.away_label || ''} onChange={e => set('away_label', e.target.value)} placeholder="es. Terza del Girone B" />
             </div>
-            <div className="adm-form-group">
-              <label className="adm-label">Nota (opzionale)</label>
-              <input className="adm-input" value={form.note || ''} onChange={e => set('note', e.target.value)} placeholder="es. Struttura provvisoria" />
-            </div>
+            <datalist id="rm-tie-labels">
+              {suggestions.map(s => <option key={s} value={s} />)}
+            </datalist>
+            <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '2px 0 0' }}>
+              Solo etichette di posizione per il sito. I risultati si inseriscono sotto, in “Partite eliminatorie”.
+            </p>
             <div className="adm-form-actions" style={{ marginTop: 16 }}>
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>
               <button className="adm-btn adm-btn-sm" onClick={() => onSave(form)} disabled={busy}>Salva</button>

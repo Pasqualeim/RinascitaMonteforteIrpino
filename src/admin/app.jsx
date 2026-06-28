@@ -208,7 +208,7 @@ function AdminApp() {
         {tab === 'news'       && <NewsSection {...props} />}
         {tab === 'gironi'     && <GironiSection {...props} />}
         {tab === 'fasi'       && <SetupSection {...props} />}
-        {tab === 'matches'    && <MatchesSection {...props} />}
+        {tab === 'matches'    && <MatchesSection {...props} scope="group" />}
         {tab === 'standings'  && <StandingsSection {...props} />}
         {tab === 'bracket'    && <BracketSection {...props} />}
         {tab === 'scorers'    && <ScorersSection {...props} />}

@@ -200,10 +200,11 @@ export async function competitionHandler(req: Request, base: string, id: string 
     }
   }
 
-  // Knockout ties (tabellone qualificazione, per tournament)
+  // Knockout ties (tabellone qualificazione, per tournament) — gestibili come partite
   if (base === "/knockout-ties") {
     if (method === "POST") {
-      const { tournament_id, round, sort_order, home_label, away_label, note } = body;
+      const { tournament_id, round, sort_order, home_label, away_label,
+        home_team_id, away_team_id, match_date, match_time, pitch, status, home_score, away_score } = body;
       if (!tournament_id) return ok(req, 400, { error: "tournament_id obbligatorio" });
       const { data, error } = await db.from("knockout_ties").insert({
         tournament_id,
@@ -211,7 +212,14 @@ export async function competitionHandler(req: Request, base: string, id: string 
         sort_order: sort_order ?? 0,
         home_label: String(home_label ?? "").trim(),
         away_label: String(away_label ?? "").trim(),
-        note: note ?? null,
+        home_team_id: home_team_id || null,
+        away_team_id: away_team_id || null,
+        match_date: match_date || null,
+        match_time: match_time || null,
+        pitch: pitch || null,
+        status: status || "sch",
+        home_score: home_score ?? null,
+        away_score: away_score ?? null,
       }).select().single();
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
@@ -222,7 +230,14 @@ export async function competitionHandler(req: Request, base: string, id: string 
       if (body.sort_order !== undefined) upd.sort_order = body.sort_order;
       if (body.home_label !== undefined) upd.home_label = String(body.home_label).trim();
       if (body.away_label !== undefined) upd.away_label = String(body.away_label).trim();
-      if (body.note !== undefined) upd.note = body.note ?? null;
+      if (body.home_team_id !== undefined) upd.home_team_id = body.home_team_id || null;
+      if (body.away_team_id !== undefined) upd.away_team_id = body.away_team_id || null;
+      if (body.match_date !== undefined) upd.match_date = body.match_date || null;
+      if (body.match_time !== undefined) upd.match_time = body.match_time || null;
+      if (body.pitch !== undefined) upd.pitch = body.pitch || null;
+      if (body.status !== undefined) upd.status = body.status || "sch";
+      if (body.home_score !== undefined) upd.home_score = body.home_score ?? null;
+      if (body.away_score !== undefined) upd.away_score = body.away_score ?? null;
       if (Object.keys(upd).length === 0) return ok(req, 400, { error: "Nessun campo da aggiornare" });
       const { data, error } = await db.from("knockout_ties").update(upd).eq("id", id).select().single();
       if (error) throw error;

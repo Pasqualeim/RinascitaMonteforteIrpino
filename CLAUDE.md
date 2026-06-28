@@ -47,7 +47,7 @@ src/
       live.jsx          → Live match: punteggio +/−, minuto, eventi, undo
       news.jsx          → CRUD avvisi: titolo, testo, tono, pin
       gironi.jsx        → CRUD gironi: nome, colore
-      matches.jsx       → CRUD partite: stato, score, orario, campo, fase
+      matches.jsx       → CRUD partite (MatchForm standard). Prop `scope`: 'group'|'knockout'|'all' filtra fasi; riusata in Qualificazione (scope=knockout) e tab Partite gironi (scope=group)
       standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB)
       bracket.jsx       → CRUD tabellone qualificazione: incroci fase eliminazione + intro per categoria
       scorers.jsx       → CRUD marcatori con gol
@@ -100,9 +100,9 @@ dist/                   → Output build (non committare)
 | Gironi | CRUD gironi con colore + n° squadre qualificate al turno (`qualify_count`), auto-calcolo standings per girone |
 | Live 🔴 | Avvia/termina diretta (con confirm), selezione partita da calendario, timer real-time, fasi (1°T/Intervallo/2°T), punteggio +/−, eventi (⚽🟨🟥), undo |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
-| Partite | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (girone/knockout) |
+| Partite gironi | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (etichetta dashboard "Partite gironi"; tab interno `matches`). La fase KO ora si gestisce in Qualificazione |
 | Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB) |
-| Qualificazione | Tabellone fase a eliminazione: incroci per posizione (`round`, casa, ospite, nota, ordinabili) + intro testuale per categoria. Solo testo/regole, indipendente dalle partite KO reali (tab Eliminatorie/`fasi`) |
+| Qualificazione | Due parti: (1) **tabellone posizionale** editabile (`knockout_ties`: round, casa/ospite per posizione, riordino, intro) = vista pubblica "Come ci si qualifica"; (2) **Partite eliminatorie** = `MatchesSection scope="knockout"` riusato → STESSO editor "Modifica partita" dei gironi (squadre, stato, punteggio, gol/cartellini→marcatori, data/ora). Le KO sono vere `matches` (phase=KO) e compaiono in Live/Calendario/Eliminatorie pubblico. Tab `fasi` (SetupSection) resta nel codice ma non linkato |
 | Marcatori | CRUD capocannonieri con gol |
 | Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
 | Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
@@ -147,7 +147,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | `editions` | — | Container annuale (es. "Rinascita Cup 2026") |
 | `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…) |
 | `groups` | `tournament_id` | Gironi dentro una categoria (col. `qualify_count` smallint default 2 = squadre che passano il turno) |
-| `knockout_ties` | `tournament_id` | Incroci tabellone qualificazione (regolamento fase eliminazione): `round`, `sort_order`, `home_label`, `away_label`, `note`. Testo libero editabile. Intro per categoria su `tournaments.bracket_intro` |
+| `knockout_ties` | `tournament_id` | Tabellone posizionale (solo display pubblico "Come ci si qualifica"): `round`, `sort_order`, `home_label`/`away_label` (es. "Prima del Girone A"). Le partite KE **vere** stanno in `matches` (phase=KO). Colonne match (`home_team_id`/`status`/`home_score`/`note`…) presenti ma **deprecate/non usate**. Intro su `tournaments.bracket_intro` |
 | `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
 | `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria |
 | `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |

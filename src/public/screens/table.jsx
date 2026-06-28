@@ -125,25 +125,19 @@ export function TableScreen({ data, tournament, onNav }) {
                     </span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px' }}>
-                    {ties.map((t, i) => (
-                      <div key={t.id || i}>
-                        <div style={{ display: 'grid', gridTemplateColumns: ties.length > 1 ? '22px 1fr auto 1fr' : '1fr auto 1fr', alignItems: 'stretch', gap: 8 }}>
+                    {ties.map((t, i) => {
+                      const boxStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 8px', borderRadius: 8, border: `1px solid ${accent}`, background: isFinal ? 'rgba(245,197,24,0.06)' : 'rgba(0,230,118,0.06)', fontSize: 13, fontWeight: 600, color: '#fff', minHeight: 38 };
+                      return (
+                        <div key={t.id || i} style={{ display: 'grid', gridTemplateColumns: ties.length > 1 ? '22px 1fr auto 1fr' : '1fr auto 1fr', alignItems: 'stretch', gap: 8 }}>
                           {ties.length > 1 && (
                             <span style={{ alignSelf: 'center', textAlign: 'center', fontFamily: 'var(--font-display)', fontSize: 15, color: accent, lineHeight: 1 }}>{i + 1}</span>
                           )}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 8px', borderRadius: 8, border: `1px solid ${accent}`, background: isFinal ? 'rgba(245,197,24,0.06)' : 'rgba(0,230,118,0.06)', fontSize: 13, fontWeight: 600, color: '#fff', minHeight: 38 }}>
-                            {t.home_label || 'TBD'}
-                          </div>
+                          <div style={boxStyle}>{t.home_label || 'TBD'}</div>
                           <span style={{ alignSelf: 'center', fontFamily: 'var(--font-display)', fontSize: 14, color: accent, letterSpacing: '0.06em', padding: '0 2px' }}>VS</span>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 8px', borderRadius: 8, border: `1px solid ${accent}`, background: isFinal ? 'rgba(245,197,24,0.06)' : 'rgba(0,230,118,0.06)', fontSize: 13, fontWeight: 600, color: '#fff', minHeight: 38 }}>
-                            {t.away_label || 'TBD'}
-                          </div>
+                          <div style={boxStyle}>{t.away_label || 'TBD'}</div>
                         </div>
-                        {t.note && (
-                          <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 4, paddingLeft: ties.length > 1 ? 30 : 2 }}>{t.note}</div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );

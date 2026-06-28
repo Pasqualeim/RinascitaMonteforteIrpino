@@ -46,8 +46,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}><UsersIcon size={28}/><span>Squadre</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}><GridIcon size={28}/><span>Gironi</span></button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('fasi')}><GridIcon size={28}/><span>Eliminatorie</span></button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite gironi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('bracket')}><GridIcon size={28}/><span>Qualificazione</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>

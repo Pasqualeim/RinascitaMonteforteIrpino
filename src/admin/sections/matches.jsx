@@ -35,7 +35,9 @@ function italianToIso(str) {
   return `${new Date().getFullYear()}-${month}-${match[1].padStart(2,'0')}`;
 }
 
-export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact }) {
+// scope: 'group' = solo gironi · 'knockout' = solo eliminatorie · 'all' = tutto (default).
+// Stesso identico editor partita (MatchForm) in ogni scope — una regola sola per ogni partita.
+export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact, scope = 'all' }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
@@ -61,7 +63,11 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
   const groupNameSet = new Set(groups.map(g => g.name));
   const groupPresets = groups.map(g => g.name);
   const allPresets = [...groupPresets, ...KNOCKOUT_PRESETS];
-  const defaultPhase = allPresets[0] || 'Girone A';
+  const scopedPresets = scope === 'group' ? groupPresets : scope === 'knockout' ? KNOCKOUT_PRESETS : allPresets;
+  const defaultPhase = scope === 'knockout'
+    ? (KNOCKOUT_PRESETS.includes('Quarti di finale') ? 'Quarti di finale' : KNOCKOUT_PRESETS[0])
+    : (scopedPresets[0] || allPresets[0] || 'Girone A');
+  const sectionTitle = scope === 'group' ? 'Partite gironi' : scope === 'knockout' ? 'Partite eliminatorie' : 'Partite';
 
   if (!tournamentId) {
     return (
@@ -194,7 +200,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
     setBusy(true);
     setErrMsg('');
     try {
-      const allMatches = giornate.flatMap(d => (d.items || []).filter(m => m.id));
+      const allMatches = scopedGiornate.flatMap(d => (d.items || []).filter(m => m.id));
       let deleted = 0, failed = 0;
       for (const m of allMatches) {
         try {
@@ -226,7 +232,8 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
   const giornate = data.matches_giornata || [];
   const groupPhases = giornate.filter(d => groupNameSet.has(d.day));
   const knockoutPhases = giornate.filter(d => KNOCKOUT_SET.has(d.day));
-  const totalMatches = giornate.reduce((s, d) => s + (d.items?.length || 0), 0);
+  const scopedGiornate = scope === 'group' ? groupPhases : scope === 'knockout' ? knockoutPhases : giornate;
+  const totalMatches = scopedGiornate.reduce((s, d) => s + (d.items?.length || 0), 0);
 
   function PhaseSection({ day, items, accent }) {
     const isOpen = !closedPhases.has(day);
@@ -280,7 +287,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
       ) : (
         <div className="adm-section-head">
           <div>
-            <h2 className="adm-section-title" style={{ margin: 0 }}>Partite</h2>
+            <h2 className="adm-section-title" style={{ margin: 0 }}>{sectionTitle}</h2>
             <p className="adm-section-sub" style={{ margin: 0 }}>{totalMatches} partite totali</p>
           </div>
           <div className="adm-section-actions">
@@ -296,10 +303,10 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
 
       <div>
         {totalMatches === 0 && (
-          <div className="adm-card"><div className="adm-empty">Nessuna partita. Generale dal tab Gironi o aggiungi manualmente.</div></div>
+          <div className="adm-card"><div className="adm-empty">{scope === 'knockout' ? 'Nessuna partita di eliminazione. Aggiungi con "+ Nuova" quando conosci le squadre.' : 'Nessuna partita. Genera dal tab Gironi o aggiungi manualmente.'}</div></div>
         )}
 
-        {groupPhases.length > 0 && (
+        {scope !== 'knockout' && groupPhases.length > 0 && (
           <div className="adm-card" style={{ marginBottom: 12 }}>
             <div style={{ padding: '10px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--fg-3)', textTransform: 'uppercase' }}>Fase a gironi</span>
@@ -313,7 +320,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
           </div>
         )}
 
-        {(() => {
+        {scope !== 'group' && (() => {
           const preFinale = knockoutPhases.filter(d => d.day !== 'Finale');
           const finale = knockoutPhases.find(d => d.day === 'Finale');
           return (
@@ -345,7 +352,7 @@ export function MatchesSection({ data, onSave, onRefresh, tournamentId, compact 
         })()}
       </div>
 
-      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={allPresets} defaultPhase={defaultPhase} scorers={data.scorers || []} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
+      {editing && <MatchForm match={editing} teams={teams} groups={groups} allPresets={scopedPresets} defaultPhase={defaultPhase} scorers={data.scorers || []} onSave={saveMatch} onClose={() => { setEditing(null); setSaveError(''); }} busy={busy} saveError={saveError} />}
       {deleting && <Confirm msg="Eliminare questa partita?" onOk={() => deleteMatch(deleting)} onCancel={() => setDeleting(null)} />}
       {deleteAllConfirm && (
         <Confirm
