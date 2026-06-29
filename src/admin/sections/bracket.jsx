@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
-import { MatchesSection } from './matches.jsx';
 
 // Suggerimenti fase — modificabili a mano nel campo (datalist, non vincolante).
 const ROUND_PRESETS = ['Quarti di finale', 'Semifinali', 'Prefinale', 'Finale 3°/4° posto', 'Finale'];
@@ -20,7 +19,7 @@ function groupByRound(ties) {
   return { sorted, order, map };
 }
 
-export function BracketSection({ data, onSave, onRefresh, tournamentId }) {
+export function BracketSection({ data, onRefresh, tournamentId }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -115,8 +114,8 @@ export function BracketSection({ data, onSave, onRefresh, tournamentId }) {
     <div>
       <h2 className="adm-section-title" style={{ margin: 0 }}>Qualificazione</h2>
       <p className="adm-section-sub" style={{ marginTop: 2 }}>
-        In alto il <strong>tabellone posizionale</strong> mostrato sul sito (es. “Prima del Girone A” vs “Terza del Girone B”).
-        In basso le <strong>partite della fase a eliminazione</strong>, con lo stesso editor delle partite dei gironi.
+        Costruisci il <strong>tabellone posizionale</strong> mostrato sul sito (es. “Prima del Girone A” vs “Terza del Girone B”).
+        Le <strong>partite vere</strong> della fase a eliminazione si gestiscono nel tab <strong>“Partite eliminatorie”</strong>, con lo stesso editor dei gironi.
       </p>
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
@@ -182,15 +181,6 @@ export function BracketSection({ data, onSave, onRefresh, tournamentId }) {
         </div>
       )}
 
-      {/* ── Partite della fase a eliminazione (stesso editor dei gironi) ── */}
-      <div style={{ height: 1, background: 'var(--border-1)', margin: '22px 0 14px' }} />
-      <div className="adm-eyebrow">Risultati & calendario</div>
-      <h3 className="adm-section-title" style={{ margin: '2px 0 8px' }}>Partite eliminatorie</h3>
-      <p className="adm-section-sub" style={{ marginTop: 0, fontSize: 12 }}>
-        Stessa scheda “Modifica partita” dei gironi: squadre, stato, punteggio, gol e cartellini (alimentano i marcatori), data e ora.
-      </p>
-      <MatchesSection data={data} onSave={onSave} onRefresh={onRefresh} tournamentId={tournamentId} scope="knockout" compact />
-
       {editing && (
         <TieForm item={editing} onSave={saveTie} onClose={() => setEditing(null)} busy={busy} suggestions={labelSuggestions} />
       )}
@@ -234,7 +224,7 @@ function TieForm({ item, onSave, onClose, busy, suggestions = [] }) {
               {suggestions.map(s => <option key={s} value={s} />)}
             </datalist>
             <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '2px 0 0' }}>
-              Solo etichette di posizione per il sito. I risultati si inseriscono sotto, in “Partite eliminatorie”.
+              Solo etichette di posizione per il sito. I risultati si inseriscono nel tab “Partite eliminatorie”.
             </p>
             <div className="adm-form-actions" style={{ marginTop: 16 }}>
               <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={onClose}>Annulla</button>

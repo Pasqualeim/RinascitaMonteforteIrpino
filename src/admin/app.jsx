@@ -26,7 +26,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','bracket','scorers','teams','events','iscrizioni','honors','discipline'];
+const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','bracket','komatches','scorers','teams','events','iscrizioni','honors','discipline'];
 
 function tabFromHash() {
   const h = window.location.hash.replace('#', '');
@@ -211,6 +211,7 @@ function AdminApp() {
         {tab === 'matches'    && <MatchesSection {...props} scope="group" />}
         {tab === 'standings'  && <StandingsSection {...props} />}
         {tab === 'bracket'    && <BracketSection {...props} />}
+        {tab === 'komatches'  && <MatchesSection {...props} scope="knockout" />}
         {tab === 'scorers'    && <ScorersSection {...props} />}
         {tab === 'teams'      && <TeamsSection {...props} />}
         {tab === 'events'     && <EventsSection {...props} />}

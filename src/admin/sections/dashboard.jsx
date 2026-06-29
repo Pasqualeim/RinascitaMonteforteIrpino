@@ -1,4 +1,4 @@
-import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon, TrophyIcon, CardIcon } from '../shared.jsx';
+import { GridIcon, CalIcon, StarIcon, UsersIcon, BallIcon, TrophyIcon, CardIcon, BracketIcon } from '../shared.jsx';
 
 export function DashboardSection({ data, onSave, onRefresh, editionId, tournamentId, tournamentCategories, setTab }) {
   const liveMatch = data.live_match || {};
@@ -40,15 +40,33 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
         ))}
       </div>
 
-      {/* ── Setup Torneo ── */}
-      <div className="adm-eyebrow" style={{ marginTop: 4 }}>Preparazione pre-torneo</div>
-      <h3 className="adm-section-title" style={{ marginBottom: 10 }}>Setup Torneo</h3>
-      <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
+      {/* ── Gestione torneo, raggruppata per fase ── */}
+      <h3 className="adm-section-title" style={{ marginBottom: 4 }}>Gestione torneo</h3>
+
+      {/* 1 · Preparazione */}
+      <div className="adm-eyebrow" style={{ marginTop: 14 }}>1 · Preparazione</div>
+      <div className="adm-grid-menu" style={{ marginBottom: 18 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('teams')}><UsersIcon size={28}/><span>Squadre</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('gironi')}><GridIcon size={28}/><span>Gironi</span></button>
+      </div>
+
+      {/* 2 · Fase a gironi */}
+      <div className="adm-eyebrow">2 · Fase a gironi</div>
+      <div className="adm-grid-menu" style={{ marginBottom: 18 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite gironi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('bracket')}><GridIcon size={28}/><span>Qualificazione</span></button>
+      </div>
+
+      {/* 3 · Fase a eliminazione */}
+      <div className="adm-eyebrow">3 · Fase a eliminazione</div>
+      <div className="adm-grid-menu" style={{ marginBottom: 18 }}>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('bracket')}><BracketIcon size={28}/><span>Qualificazione</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('komatches')}><CalIcon size={28}/><span>Partite eliminatorie</span></button>
+      </div>
+
+      {/* 4 · Statistiche */}
+      <div className="adm-eyebrow">4 · Statistiche</div>
+      <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('discipline')}><CardIcon size={28}/><span>Cartellini</span></button>
       </div>
