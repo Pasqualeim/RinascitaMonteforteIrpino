@@ -48,7 +48,7 @@ src/
       news.jsx          → CRUD avvisi: titolo, testo, tono, pin
       gironi.jsx        → CRUD gironi: nome, colore
       matches.jsx       → CRUD partite (MatchForm standard). Prop `scope`: 'group'|'knockout'|'all' filtra fasi; tab Partite gironi (scope=group) e tab Partite eliminatorie (scope=knockout) — STESSO editor, sezioni distinte come gironi
-      standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB)
+      standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB) + gestione penalità punti (sconfitta a tavolino)
       bracket.jsx       → CRUD tabellone posizionale qualificazione (incroci fase eliminazione + intro). SOLO organizzazione; le partite vere sono nel tab Partite eliminatorie
       scorers.jsx       → CRUD marcatori con gol
       teams.jsx         → CRUD squadre: nazione, girone, capitano
@@ -101,7 +101,7 @@ dist/                   → Output build (non committare)
 | Live 🔴 | Avvia/termina diretta (con confirm), selezione partita da calendario, timer real-time, fasi (1°T/Intervallo/2°T), punteggio +/−, eventi (⚽🟨🟥), undo |
 | Avvisi | CRUD news/avvisi: titolo, testo, categoria, tono, pin |
 | Partite gironi | Aggiorna risultati, stato (sch/live/ft), orario, campo, fase (etichetta dashboard "Partite gironi"; tab interno `matches`). La fase KO ora si gestisce in Qualificazione |
-| Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB) |
+| Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB). Pannello "⚖️ Penalità": sottrae punti a una squadra (es. −1 a tavolino / mancata presentazione) via `penalty_points` su iscrizione |
 | Qualificazione | **Solo tabellone posizionale** editabile (`knockout_ties`: round, casa/ospite per posizione, riordino, intro) = vista pubblica "Come ci si qualifica". Le partite vere stanno nel tab separato "Partite eliminatorie". Tab `fasi` (SetupSection) resta nel codice ma non linkato |
 | Partite eliminatorie | `MatchesSection scope="knockout"` standalone (tab `komatches`) → STESSO editor "Modifica partita" dei gironi (squadre, stato, punteggio, gol/cartellini→marcatori, data/ora). Specchia esattamente "Partite gironi" (scope=group). Le KO sono vere `matches` (phase=KO) e compaiono in Live/Calendario/Eliminatorie pubblico |
 | Marcatori | CRUD capocannonieri con gol |
@@ -150,7 +150,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | `groups` | `tournament_id` | Gironi dentro una categoria (col. `qualify_count` smallint default 2 = squadre che passano il turno) |
 | `knockout_ties` | `tournament_id` | Tabellone posizionale (solo display pubblico "Come ci si qualifica"): `round`, `sort_order`, `home_label`/`away_label` (es. "Prima del Girone A"). Le partite KE **vere** stanno in `matches` (phase=KO). Colonne match (`home_team_id`/`status`/`home_score`/`note`…) presenti ma **deprecate/non usate**. Intro su `tournaments.bracket_intro` |
 | `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
-| `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria |
+| `team_registrations` | `team_id`, `tournament_id`, `group_id` | Iscrizione squadra a categoria. Col. `penalty_points` smallint default 0 = punti sottratti in classifica (penalità a tavolino) |
 | `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |
 | `match_events` | `match_id` | Goal, cartellini, cambi |
 | `live_match_state` | `tournament_id` UNIQUE | Stato live per categoria (una riga per torneo) |
@@ -231,7 +231,8 @@ Migrazione dati (una-tantum, da Settings admin):
 - **Edizione** = container annuale (es. "Rinascita Cup 2026"), una sola per anno
 - **Categoria/Torneo** = divisione dentro l'edizione (Senior, Over 40, Junior…), con propri premi
 - **Girone** = gruppo dentro una categoria (Girone A, B…)
-- Classifica calcolata live da SQL (`standings_view`) — non più da JS
+- Classifica calcolata live da SQL (`standings_view`) — non più da JS. `pt` netto = vittorie*3 + pareggi − `penalty_points`
+- **Default categoria sito/admin = SENIOR** (il torneo con `sort_order` minore esce primo nel bootstrap → `tournaments[0]`). Ordine attuale: SENIOR=0, OVER 40=1, JUNIOR=2
 
 **Workflow staff (modello relazionale):**
 

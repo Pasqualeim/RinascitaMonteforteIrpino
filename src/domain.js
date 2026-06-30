@@ -115,6 +115,7 @@ export function rmComputeStandings(giornata, teams, groups) {
     groupMap[groupId].rows[team.short] = {
       short: team.short, name: team.name, color: team.color, flag: team.flag || '',
       g: 0, v: 0, n: 0, p: 0, gf: 0, gs: 0, pt: 0, form: [],
+      pen: Math.max(0, parseInt(team.penalty_points, 10) || 0),
     };
   }
 
@@ -144,6 +145,13 @@ export function rmComputeStandings(giornata, teams, groups) {
       homeRow.n += 1; awayRow.n += 1; homeRow.pt += 1; awayRow.pt += 1;
       homeRow.form = [...homeRow.form.slice(-4), 'D'];
       awayRow.form = [...awayRow.form.slice(-4), 'D'];
+    }
+  }
+
+  // Penalità (es. -1 a tavolino) sottratte dai punti calcolati dai risultati FT.
+  for (const group of Object.values(groupMap)) {
+    for (const row of Object.values(group.rows)) {
+      row.pt -= row.pen || 0;
     }
   }
 

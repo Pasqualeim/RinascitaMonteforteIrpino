@@ -80,6 +80,12 @@ export async function competitionHandler(req: Request, base: string, id: string 
       if (body.group_id !== undefined) upd.group_id = body.group_id;
       if (body.captain !== undefined) upd.captain = body.captain;
       if (body.players !== undefined) upd.players = body.players;
+      // Penalità punti (es. -1 per sconfitta a tavolino / mancata presentazione).
+      // Clamp >= 0: i punti vengono SOTTRATTI in standings_view, quindi qui è un valore positivo.
+      if (body.penalty_points !== undefined) {
+        const pen = Math.max(0, parseInt(String(body.penalty_points), 10) || 0);
+        upd.penalty_points = pen;
+      }
       const { data, error } = await db.from("team_registrations").update(upd).eq("id", id).select().single();
       if (error) throw error;
       return ok(req, 200, { ok: true, data });

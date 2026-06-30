@@ -154,7 +154,7 @@ export async function buildBootstrap(editionId: string) {
         id: r.teams.id, name: r.teams.name, short: r.teams.short,
         nation: r.teams.nation, flag: r.teams.flag, color: r.teams.color,
         group_id: r.group_id, captain: r.captain, players: r.players || [],
-        registration_id: r.id,
+        registration_id: r.id, penalty_points: r.penalty_points ?? 0,
         played: s.played ?? 0, won: s.won ?? 0, drawn: s.drawn ?? 0, lost: s.lost ?? 0,
         goals: s.goals ?? 0, goalsAgainst: s.goalsAgainst ?? 0, points: s.points ?? 0,
       };
@@ -174,8 +174,10 @@ export async function buildBootstrap(editionId: string) {
       if (!standingsMap[row.group_id])
         standingsMap[row.group_id] = { id: row.group_id, name: row.group_name, color: row.group_color, qualify_count: groupQualify[row.group_id] ?? 2, rows: [] };
       standingsMap[row.group_id].rows.push({
+        team_id: row.team_id,
         short: row.team_short, name: row.team_name, flag: row.team_flag, color: row.team_color,
-        g: row.g, v: row.v, n: row.n, p: row.p, gf: row.gf, gs: row.gs, gd: row.gd, pt: row.pt, form: [],
+        g: row.g, v: row.v, n: row.n, p: row.p, gf: row.gf, gs: row.gs, gd: row.gd,
+        pen: row.penalty_points ?? 0, pt: row.pt, form: [],
       });
     }
 

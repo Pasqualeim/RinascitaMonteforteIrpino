@@ -421,7 +421,7 @@ function StandingsTable({ rows, group, updatedLabel, qualifyCount = 2 }) {
               )}
               <tr className={i < qc ? 'top' : ''}>
                 <td className="pos">{i + 1}</td>
-                <td className="rm-team-col"><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{r.flag || '🏳️'}</span><span className="rm-team-name">{r.name}</span></div></td>
+                <td className="rm-team-col"><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{r.flag || '🏳️'}</span><span className="rm-team-name">{r.name}</span>{r.pen > 0 && <span title={`${r.pen} ${r.pen === 1 ? 'punto' : 'punti'} di penalizzazione`} style={{ flexShrink: 0, marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#FF6B6B', background: 'rgba(255,61,61,0.12)', borderRadius: 4, padding: '1px 5px' }}>−{r.pen}</span>}</div></td>
                 <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
                 <td>{(() => { const dr = r.gd ?? ((r.gf ?? 0) - (r.gs ?? 0)); return dr > 0 ? `+${dr}` : dr; })()}</td>
                 <td><span className="rm-pts">{r.pt}</span></td>
