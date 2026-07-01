@@ -1,5 +1,63 @@
 import { db } from "./db.ts";
 
+// World-Cup style tiebreak: teams level on points are re-ordered using a mini
+// classifica built only from FT matches played directly between the tied teams
+// (h2h points → h2h goal difference → h2h goals scored), falling back to the
+// overall goal difference/goals scored/name when the head-to-head is itself even
+// (e.g. tied teams never played each other, or a 3-way cycle).
+function applyHeadToHeadTiebreak(rows: any[], groupMatches: any[]) {
+  const sortedByPt = [...rows].sort((a, b) => b.pt - a.pt);
+  const clusters: any[][] = [];
+  let i = 0;
+  while (i < sortedByPt.length) {
+    let j = i + 1;
+    while (j < sortedByPt.length && sortedByPt[j].pt === sortedByPt[i].pt) j++;
+    clusters.push(sortedByPt.slice(i, j));
+    i = j;
+  }
+
+  const result: any[] = [];
+  for (const cluster of clusters) {
+    if (cluster.length < 2) { result.push(...cluster); continue; }
+    const ids = new Set(cluster.map((r) => r.team_id));
+    const h2h: Record<string, { pt: number; gf: number; gs: number }> = {};
+    for (const r of cluster) h2h[r.team_id] = { pt: 0, gf: 0, gs: 0 };
+    for (const m of groupMatches) {
+      if (!ids.has(m.home_team_id) || !ids.has(m.away_team_id)) continue;
+      const hs = m.home_score ?? 0, as = m.away_score ?? 0;
+      h2h[m.home_team_id].gf += hs; h2h[m.home_team_id].gs += as;
+      h2h[m.away_team_id].gf += as; h2h[m.away_team_id].gs += hs;
+      if (hs > as) h2h[m.home_team_id].pt += 3;
+      else if (hs < as) h2h[m.away_team_id].pt += 3;
+      else { h2h[m.home_team_id].pt += 1; h2h[m.away_team_id].pt += 1; }
+    }
+    const sortedCluster = [...cluster].sort((a, b) => {
+      const ha = h2h[a.team_id], hb = h2h[b.team_id];
+      if (hb.pt !== ha.pt) return hb.pt - ha.pt;
+      const gdA = ha.gf - ha.gs, gdB = hb.gf - hb.gs;
+      if (gdB !== gdA) return gdB - gdA;
+      if (hb.gf !== ha.gf) return hb.gf - ha.gf;
+      const ogdA = (a.gf ?? 0) - (a.gs ?? 0), ogdB = (b.gf ?? 0) - (b.gs ?? 0);
+      if (ogdB !== ogdA) return ogdB - ogdA;
+      if ((b.gf ?? 0) !== (a.gf ?? 0)) return (b.gf ?? 0) - (a.gf ?? 0);
+      return String(a.name).localeCompare(String(b.name));
+    });
+    result.push(...sortedCluster);
+  }
+  return result;
+}
+
+// Override manuale staff (posizione fissata a mano dal tab Classifica): le righe
+// con rank_override impostato vanno per prime, in quell'ordine; le altre restano
+// nell'ordine calcolato automaticamente e chiudono la lista.
+function applyManualOrder(rows: any[]) {
+  const withOverride = rows.filter((r) => r.rank_override != null);
+  if (withOverride.length === 0) return rows;
+  const sortedOverride = [...withOverride].sort((a, b) => a.rank_override - b.rank_override);
+  const withoutOverride = rows.filter((r) => r.rank_override == null);
+  return [...sortedOverride, ...withoutOverride];
+}
+
 export async function buildBootstrap(editionId: string) {
   const [editionRes, tourRes, newsRes, eventsRes, honorsRes, sponsorsRes, stripRes] = await Promise.all([
     db.from("editions").select("*").eq("id", editionId).single(),
@@ -155,6 +213,7 @@ export async function buildBootstrap(editionId: string) {
         nation: r.teams.nation, flag: r.teams.flag, color: r.teams.color,
         group_id: r.group_id, captain: r.captain, players: r.players || [],
         registration_id: r.id, penalty_points: r.penalty_points ?? 0,
+        rank_override: r.rank_override ?? null,
         played: s.played ?? 0, won: s.won ?? 0, drawn: s.drawn ?? 0, lost: s.lost ?? 0,
         goals: s.goals ?? 0, goalsAgainst: s.goalsAgainst ?? 0, points: s.points ?? 0,
       };
@@ -169,6 +228,9 @@ export async function buildBootstrap(editionId: string) {
       groupOrder[g.id] = g.sort_order ?? i;
     });
 
+    const regByTeamId: Record<string, any> = {};
+    for (const r of regs) regByTeamId[r.team_id] = r;
+
     const standingsMap: Record<string, any> = {};
     for (const row of standingsRaw) {
       if (!standingsMap[row.group_id])
@@ -178,7 +240,12 @@ export async function buildBootstrap(editionId: string) {
         short: row.team_short, name: row.team_name, flag: row.team_flag, color: row.team_color,
         g: row.g, v: row.v, n: row.n, p: row.p, gf: row.gf, gs: row.gs, gd: row.gd,
         pen: row.penalty_points ?? 0, pt: row.pt, form: [],
+        rank_override: regByTeamId[row.team_id]?.rank_override ?? null,
       });
+    }
+    for (const groupId of Object.keys(standingsMap)) {
+      const groupMatches = matches.filter((m: any) => m.group_id === groupId && m.status === "ft");
+      standingsMap[groupId].rows = applyManualOrder(applyHeadToHeadTiebreak(standingsMap[groupId].rows, groupMatches));
     }
 
     const liveMatch = live ? {

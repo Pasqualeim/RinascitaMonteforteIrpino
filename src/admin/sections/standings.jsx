@@ -15,7 +15,13 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
   const [selIdx, setSelIdx] = useState(0);
   const [penOpen, setPenOpen] = useState(false);
   const [busyShort, setBusyShort] = useState(null);
+  const [busyManual, setBusyManual] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+  // Bozza locale di riordino: null = nessuna modifica in corso; array = ordine
+  // proposto, ancora solo nel browser finché lo staff non conferma il salvataggio.
+  const [draftRows, setDraftRows] = useState(null);
+  const [saveConfirm, setSaveConfirm] = useState(false);
+  const [resetConfirm, setResetConfirm] = useState(false);
 
   if (standings_groups.length === 0) {
     return (
@@ -51,6 +57,66 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
     }
   }
 
+  // Ordine manuale già salvato: attivo quando almeno una squadra del girone ha rank_override impostato.
+  const manualActive = current.rows.some(r => r.rank_override != null);
+  const isEditing = draftRows !== null;
+  const rows = isEditing ? draftRows : current.rows;
+
+  function startEditing() {
+    setDraftRows(current.rows.map(r => ({ ...r })));
+    setSaveConfirm(false);
+    setErrMsg('');
+  }
+
+  function cancelEditing() {
+    setDraftRows(null);
+    setSaveConfirm(false);
+  }
+
+  function moveRow(i, dir) {
+    const j = i + dir;
+    if (j < 0 || j >= draftRows.length) return;
+    const next = draftRows.slice();
+    [next[i], next[j]] = [next[j], next[i]];
+    setDraftRows(next);
+  }
+
+  async function confirmSaveOrder() {
+    setBusyManual(true);
+    setErrMsg('');
+    try {
+      const updates = draftRows
+        .map((r, i) => ({ team: teamByShort[r.short], rank: i + 1 }))
+        .filter(u => u.team?.registration_id);
+      await Promise.all(updates.map(u => rmAdminDomain.updateRegistration(u.team.registration_id, { rank_override: u.rank })));
+      setDraftRows(null);
+      setSaveConfirm(false);
+      await onRefresh?.('Ordine salvato — visibile ora su tutto il sito');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore salvataggio ordine');
+    } finally {
+      setBusyManual(false);
+    }
+  }
+
+  async function confirmResetOrder() {
+    setBusyManual(true);
+    setErrMsg('');
+    try {
+      const updates = current.rows
+        .filter(r => r.rank_override != null)
+        .map(r => teamByShort[r.short])
+        .filter(t => t?.registration_id);
+      await Promise.all(updates.map(t => rmAdminDomain.updateRegistration(t.registration_id, { rank_override: null })));
+      setResetConfirm(false);
+      await onRefresh?.('Classifica automatica ripristinata su tutto il sito');
+    } catch (err) {
+      setErrMsg(err?.message || 'Errore ripristino ordine automatico');
+    } finally {
+      setBusyManual(false);
+    }
+  }
+
   return (
     <div>
       <h2 className="adm-section-title">Classifica</h2>
@@ -58,14 +124,64 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
       {standings_groups.length > 1 && (
         <div className="rm-tabs" style={{ marginBottom: 14 }}>
           {standings_groups.map((g, i) => (
-            <button key={g.id} className={`rm-tab ${selIdx === i ? 'on' : ''}`} onClick={() => setSelIdx(i)}>{g.name}</button>
+            <button key={g.id} className={`rm-tab ${selIdx === i ? 'on' : ''}`} onClick={() => { if (isEditing) return; setSelIdx(i); setResetConfirm(false); }} disabled={isEditing && selIdx !== i} style={isEditing && selIdx !== i ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>{g.name}</button>
           ))}
         </div>
       )}
 
+      {/* ── Barra ordine classifica ── */}
+      {!isEditing ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 11, color: manualActive ? 'var(--brand-gold)' : 'var(--fg-3)', fontWeight: 600 }}>
+            {manualActive ? '✋ Ordine manuale attivo' : 'Ordine automatico (calcolato)'}
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="adm-btn adm-btn-sm adm-btn-secondary" onClick={startEditing} disabled={busyManual || current.rows.length < 2}>✏️ Modifica ordine</button>
+            {manualActive && !resetConfirm && (
+              <button className="adm-btn adm-btn-sm adm-btn-ghost" onClick={() => setResetConfirm(true)} disabled={busyManual}>↩ Ripristina automatico</button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: 'var(--brand-gold)', fontWeight: 700 }}>✏️ Modifica ordine — {current.name}</span>
+            {!saveConfirm && (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="adm-btn adm-btn-sm adm-btn-ghost" onClick={cancelEditing} disabled={busyManual}>Annulla</button>
+                <button className="adm-btn adm-btn-sm adm-btn-primary" onClick={() => setSaveConfirm(true)} disabled={busyManual}>💾 Salva ordine</button>
+              </div>
+            )}
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '0 0 8px' }}>Usa le frecce ▲▼ per spostare una squadra. Le modifiche restano solo qui finché non premi <strong style={{ color: '#fff' }}>Salva ordine</strong>.</p>
+          {saveConfirm && (
+            <div style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ fontSize: 13, color: 'var(--brand-gold)', fontWeight: 600, marginBottom: 8 }}>⚠️ Salvando, questo ordine sostituisce subito la classifica calcolata — visibile ovunque, anche nella pagina pubblica del sito.</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setSaveConfirm(false)} disabled={busyManual}>Annulla</button>
+                <button className="adm-btn adm-btn-primary adm-btn-sm" onClick={confirmSaveOrder} disabled={busyManual}>{busyManual ? 'Salvataggio…' : '✔ Conferma e salva'}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {resetConfirm && (
+        <div style={{ background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.35)', borderRadius: 8, padding: '12px 14px', marginBottom: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--brand-gold)', fontWeight: 600, marginBottom: 8 }}>⚠️ La classifica di {current.name} tornerà subito al calcolo automatico su tutto il sito, anche nella pagina pubblica.</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="adm-btn adm-btn-ghost adm-btn-sm" onClick={() => setResetConfirm(false)} disabled={busyManual}>Annulla</button>
+            <button className="adm-btn adm-btn-primary adm-btn-sm" onClick={confirmResetOrder} disabled={busyManual}>{busyManual ? 'Ripristino…' : '✔ Conferma ripristino'}</button>
+          </div>
+        </div>
+      )}
+
+      {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
+
       <div className="adm-card" style={{ overflow: 'hidden' }}>
         {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 28px 28px 28px 28px 32px', gap: '0 8px', padding: '8px 14px', borderBottom: '1px solid var(--border-1)', fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isEditing ? '40px 28px 1fr 28px 28px 28px 28px 32px' : '28px 1fr 28px 28px 28px 28px 32px', gap: '0 8px', padding: '8px 14px', borderBottom: '1px solid var(--border-1)', fontSize: 10, color: 'var(--fg-3)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {isEditing && <span/>}
           <span>#</span>
           <span>Squadra</span>
           <span style={{ textAlign: 'center' }}>G</span>
@@ -75,10 +191,10 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
           <span style={{ textAlign: 'center' }}>Pt</span>
         </div>
 
-        {current.rows.length === 0 ? (
+        {rows.length === 0 ? (
           <div className="adm-empty">Nessuna partita FT. I risultati appariranno automaticamente.</div>
         ) : (
-          current.rows.map((r, i) => {
+          rows.map((r, i) => {
             const posColor = POS_COLOR[i] || 'var(--fg-3)';
             const isQualifying = i < advance;
             const dr = r.gf - r.gs;
@@ -91,11 +207,17 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
                   </div>
                 )}
                 <div style={{
-                  display: 'grid', gridTemplateColumns: '28px 1fr 28px 28px 28px 28px 32px', gap: '0 8px',
+                  display: 'grid', gridTemplateColumns: isEditing ? '40px 28px 1fr 28px 28px 28px 28px 32px' : '28px 1fr 28px 28px 28px 28px 32px', gap: '0 8px',
                   padding: '10px 14px', alignItems: 'center',
                   borderBottom: '1px solid var(--border-1)',
-                  background: isQualifying ? 'rgba(0,230,118,0.02)' : 'transparent',
+                  background: isEditing ? 'rgba(245,197,24,0.03)' : (isQualifying ? 'rgba(0,230,118,0.02)' : 'transparent'),
                 }}>
+                  {isEditing && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <button className="adm-btn adm-btn-ghost adm-btn-icon" style={{ width: 22, height: 18, fontSize: 11, padding: 0 }} onClick={() => moveRow(i, -1)} disabled={busyManual || i === 0} title="Sposta su">▲</button>
+                      <button className="adm-btn adm-btn-ghost adm-btn-icon" style={{ width: 22, height: 18, fontSize: 11, padding: 0 }} onClick={() => moveRow(i, 1)} disabled={busyManual || i === rows.length - 1} title="Sposta giù">▼</button>
+                    </div>
+                  )}
                   <span style={{ fontFamily: 'var(--font-display)', fontSize: 18, color: posColor, lineHeight: 1 }}>{i + 1}</span>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -132,7 +254,7 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
         )}
       </div>
       <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 8, paddingLeft: 4 }}>
-        G=giocate · V=vinte · P=perse · DR=diff. reti · Pt=punti · Calcolata automaticamente dai risultati FT
+        G=giocate · V=vinte · P=perse · DR=diff. reti · Pt=punti · {isEditing ? 'Bozza non salvata' : manualActive ? 'Ordine impostato manualmente dallo staff' : 'Calcolata automaticamente dai risultati FT'}
       </div>
 
       {/* ── Penalità (sconfitta a tavolino / mancata presentazione) ── */}
@@ -151,7 +273,6 @@ export function StandingsSection({ data, onRefresh, teamsPerGroupAdvance }) {
             <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: '0 0 12px' }}>
               Sottrai punti in classifica a una squadra (es. <strong style={{ color: '#FF6B6B' }}>−1</strong> per sconfitta a tavolino o mancata presentazione). La classifica si aggiorna automaticamente.
             </p>
-            {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {current.rows.map(r => {
                 const pen = r.pen || 0;

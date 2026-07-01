@@ -86,6 +86,10 @@ export async function competitionHandler(req: Request, base: string, id: string 
         const pen = Math.max(0, parseInt(String(body.penalty_points), 10) || 0);
         upd.penalty_points = pen;
       }
+      // Override manuale posizione in classifica (staff, tab Classifica). null = torna automatico.
+      if (body.rank_override !== undefined) {
+        upd.rank_override = body.rank_override === null ? null : parseInt(String(body.rank_override), 10) || null;
+      }
       const { data, error } = await db.from("team_registrations").update(upd).eq("id", id).select().single();
       if (error) throw error;
       return ok(req, 200, { ok: true, data });

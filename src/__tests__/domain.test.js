@@ -182,7 +182,7 @@ describe('rmComputeStandings', () => {
     expect(ita.n).toBe(1);
   });
 
-  it('sorts by points then goal difference', () => {
+  it('sorts by points, then head-to-head result before overall goal difference', () => {
     const giornata = [{
       day: 'G1',
       items: [
@@ -193,9 +193,10 @@ describe('rmComputeStandings', () => {
     const result = rmComputeStandings(giornata, TEAMS, GROUPS);
     const gA = result.standings_groups.find(g => g.id === 'g1');
     // ITA: 3pts (1W) + 0pts (1L) = 3pts; BRA: 3pts; ESP: 0pts
-    // ITA GD = 3-0 + 1-2 = +2; BRA GD = 2-1 = +1
-    expect(gA.rows[0].short).toBe('ITA');
-    expect(gA.rows[1].short).toBe('BRA');
+    // Overall GD: ITA +2, BRA +1 — but BRA beat ITA head-to-head (2-1), so the
+    // World-Cup style tiebreak ranks BRA above ITA despite the worse overall GD.
+    expect(gA.rows[0].short).toBe('BRA');
+    expect(gA.rows[1].short).toBe('ITA');
     expect(gA.rows[2].short).toBe('ESP');
   });
 
