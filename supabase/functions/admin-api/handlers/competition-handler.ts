@@ -187,9 +187,10 @@ export async function competitionHandler(req: Request, base: string, id: string 
   // Scorers
   if (base === "/scorers") {
     if (method === "POST") {
-      const { tournament_id, team_id, player_name, goals, sort_order } = body;
+      const { tournament_id, team_id, player_name, goals, sort_order, phase } = body;
       if (!tournament_id || !player_name) return ok(req, 400, { error: "tournament_id e player_name obbligatori" });
-      const { data, error } = await db.from("scorers").insert({ tournament_id, team_id: team_id || null, player_name, goals: goals ?? 0, sort_order: sort_order ?? 0 }).select().single();
+      const ph = phase === "girone" ? "girone" : "ko";
+      const { data, error } = await db.from("scorers").insert({ tournament_id, team_id: team_id || null, player_name, goals: goals ?? 0, sort_order: sort_order ?? 0, phase: ph }).select().single();
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
     }
@@ -199,6 +200,7 @@ export async function competitionHandler(req: Request, base: string, id: string 
       if (body.team_id !== undefined) upd.team_id = body.team_id;
       if (body.goals !== undefined) upd.goals = body.goals;
       if (body.sort_order !== undefined) upd.sort_order = body.sort_order;
+      if (body.phase !== undefined) upd.phase = body.phase === "girone" ? "girone" : "ko";
       const { data, error } = await db.from("scorers").update(upd).eq("id", id).select().single();
       if (error) throw error;
       return ok(req, 200, { ok: true, data });

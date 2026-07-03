@@ -124,18 +124,23 @@ export async function buildBootstrap(editionId: string) {
     const goalEvents  = goalEventsRes.data || [];
     const standingsRaw = standingsRes.data || [];
 
-    // Build auto-scorers from match_events goals.
+    // Build auto-scorers from match_events goals, split gironi vs eliminatorie (decisione
+    // staff: i gol dei gironi non contano per la classifica marcatori ufficiale — il
+    // conteggio inizia solo dalle fasi eliminatorie). matches.group_id è il segnale
+    // affidabile: non nullo = partita di girone, nullo = eliminatoria.
+    //
     // NOTE: goalEvents already excludes own goals (event_type === "goal" only), so
     // an autogol never counts as a scorer. match_events for a match are written only
     // when the match ends (see admin live.jsx doTerminate), so the marcatori list
     // does NOT change while a match is live — this is intentional.
     //
-    // Goals are aggregated by PLAYER NAME only (not name+team). A player keeps his
-    // running goal tally when he changes team between phases (es. comprato da un'altra
-    // squadra dopo i gironi): i suoi gol restano agganciati al nome e continuano a
-    // sommarsi. The team/flag shown next to him is his CURRENT team — taken from the
-    // roster he's now registered in (team_registrations.players); if he isn't in any
-    // current roster, falls back to the team of his most recent goal.
+    // Within each bucket, goals are aggregated by PLAYER NAME only (not name+team), so a
+    // player keeps his running tally within that bucket if his goal-event team changes
+    // (es. comprato da un'altra squadra dopo i gironi). The eliminatorie bucket shows his
+    // CURRENT team (from team_registrations.players — updated by staff when they move a
+    // player), so a transfer takes effect immediately. The gironi bucket instead shows the
+    // team recorded on the goal itself (frozen historical), since those goals happened
+    // before any transfer and the list is purely informational.
     const nameKey = (s: string) => (s || "").trim().toLowerCase();
 
     // Chronological rank per match (matches already ordered by date/time/sort above).
@@ -153,49 +158,66 @@ export async function buildBootstrap(editionId: string) {
       }
     }
 
-    const autoMap: Record<string, {
-      name: string; goals: number;
-      lastTeamId: string; lastShort: string; lastFlag: string; lastRank: number;
-    }> = {};
-    for (const ev of goalEvents) {
-      if (!ev.player_name) continue;
-      const key = nameKey(ev.player_name);
-      const short = (ev as any).teams?.short || "";
-      const flag = (ev as any).teams?.flag || "";
-      const rank = (matchOrder[ev.match_id] ?? 0) * 1000 + (ev.minute ?? 0);
-      if (!autoMap[key]) autoMap[key] = { name: ev.player_name, goals: 0, lastTeamId: ev.team_id, lastShort: short, lastFlag: flag, lastRank: -1 };
-      autoMap[key].goals++;
-      if (rank >= autoMap[key].lastRank) {
-        autoMap[key].lastRank = rank;
-        autoMap[key].lastTeamId = ev.team_id;
-        autoMap[key].lastShort = short;
-        autoMap[key].lastFlag = flag;
+    const matchIsGroupStage: Record<string, boolean> = {};
+    for (const m of matches) matchIsGroupStage[m.id] = m.group_id != null;
+
+    function buildScorersList(events: any[], manualRows: any[], useRosterOverride: boolean) {
+      const autoMap: Record<string, {
+        name: string; goals: number;
+        lastTeamId: string; lastShort: string; lastFlag: string; lastRank: number;
+      }> = {};
+      for (const ev of events) {
+        if (!ev.player_name) continue;
+        const key = nameKey(ev.player_name);
+        const short = (ev as any).teams?.short || "";
+        const flag = (ev as any).teams?.flag || "";
+        const rank = (matchOrder[ev.match_id] ?? 0) * 1000 + (ev.minute ?? 0);
+        if (!autoMap[key]) autoMap[key] = { name: ev.player_name, goals: 0, lastTeamId: ev.team_id, lastShort: short, lastFlag: flag, lastRank: -1 };
+        autoMap[key].goals++;
+        if (rank >= autoMap[key].lastRank) {
+          autoMap[key].lastRank = rank;
+          autoMap[key].lastTeamId = ev.team_id;
+          autoMap[key].lastShort = short;
+          autoMap[key].lastFlag = flag;
+        }
       }
+
+      // Eliminatorie: current team wins (the one matching his latest goal when in several
+      // rosters, else the single/last roster); otherwise the team of his most recent goal.
+      // Gironi: always the team of his most recent (group-stage) goal — never overridden by
+      // a later roster change, so the list stays historically accurate.
+      const resolveTeam = (key: string, a: { lastTeamId: string; lastShort: string; lastFlag: string }) => {
+        if (useRosterOverride) {
+          const rosters = rosterTeams[key];
+          if (rosters && rosters.length) {
+            const pick = rosters.find(rt => rt.team_id === a.lastTeamId) || rosters[rosters.length - 1];
+            return { team: pick.short, flag: pick.flag };
+          }
+        }
+        return { team: a.lastShort, flag: a.lastFlag };
+      };
+
+      // Merge: manual overrides auto (staff correction), auto fills new players
+      const manualKeys = new Set(manualRows.map((s: any) => nameKey(s.player_name)));
+      const autoOnlyScorers = Object.entries(autoMap)
+        .filter(([key]) => !manualKeys.has(key))
+        .map(([key, a]) => {
+          const t = resolveTeam(key, a);
+          return { id: null, name: a.name, team: t.team, flag: t.flag, goals: a.goals };
+        });
+      return [
+        ...manualRows.map((s: any) => ({ id: s.id, name: s.player_name, team: s.teams?.short || "", flag: s.teams?.flag || "", goals: s.goals })),
+        ...autoOnlyScorers,
+      ].sort((a, b) => b.goals - a.goals);
     }
 
-    // Current team wins (the one matching his latest goal when in several rosters,
-    // else the single/last roster); otherwise the team of his most recent goal.
-    const resolveTeam = (key: string, a: { lastTeamId: string; lastShort: string; lastFlag: string }) => {
-      const rosters = rosterTeams[key];
-      if (rosters && rosters.length) {
-        const pick = rosters.find(rt => rt.team_id === a.lastTeamId) || rosters[rosters.length - 1];
-        return { team: pick.short, flag: pick.flag };
-      }
-      return { team: a.lastShort, flag: a.lastFlag };
-    };
+    const goalEventsGirone = goalEvents.filter((ev: any) => matchIsGroupStage[ev.match_id]);
+    const goalEventsKo = goalEvents.filter((ev: any) => !matchIsGroupStage[ev.match_id]);
+    const manualScorersGirone = manualScorers.filter((s: any) => s.phase === "girone");
+    const manualScorersKo = manualScorers.filter((s: any) => s.phase !== "girone");
 
-    // Merge: manual overrides auto (staff correction), auto fills new players
-    const manualKeys = new Set(manualScorers.map((s: any) => nameKey(s.player_name)));
-    const autoOnlyScorers = Object.entries(autoMap)
-      .filter(([key]) => !manualKeys.has(key))
-      .map(([key, a]) => {
-        const t = resolveTeam(key, a);
-        return { id: null, name: a.name, team: t.team, flag: t.flag, goals: a.goals };
-      });
-    const mergedScorers = [
-      ...manualScorers.map((s: any) => ({ id: s.id, name: s.player_name, team: s.teams?.short || "", flag: s.teams?.flag || "", goals: s.goals })),
-      ...autoOnlyScorers,
-    ].sort((a, b) => b.goals - a.goals);
+    const mergedScorersGirone = buildScorersList(goalEventsGirone, manualScorersGirone, false);
+    const mergedScorersKo = buildScorersList(goalEventsKo, manualScorersKo, true);
 
     // Per-team aggregate stats from standings_view (counts only status='ft' matches).
     const statsByTeam: Record<string, any> = {};
@@ -315,7 +337,10 @@ export async function buildBootstrap(editionId: string) {
       live_match: liveMatch,
       matches,
       matches_giornata: Object.values(phaseMap),
-      scorers: mergedScorers,
+      // scorers = classifica marcatori UFFICIALE (solo gol da fasi eliminatorie).
+      // scorers_girone = lista informativa gol fase a gironi, non ufficiale/non conta.
+      scorers: mergedScorersKo,
+      scorers_girone: mergedScorersGirone,
     };
   }));
 
@@ -335,6 +360,7 @@ export async function buildBootstrap(editionId: string) {
     matches:          first?.matches || [],
     matches_giornata: first?.matches_giornata || [],
     scorers:          first?.scorers || [],
+    scorers_girone:   first?.scorers_girone || [],
     bracket:          first?.bracket || [],
     bracket_intro:    first?.bracket_intro ?? null,
     news:    (newsRes.data    || []).map((n: any) => ({ id: n.id, title: n.title, body: n.body, category: n.category, tone: n.tone, pinned: n.pinned, date: n.created_at })),

@@ -55,6 +55,7 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <div className="adm-grid-menu" style={{ marginBottom: 18 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('matches')}><CalIcon size={28}/><span>Partite gironi</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('standings')}><TrophyIcon size={28}/><span>Classifica</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('scorersgirone')}><BallIcon size={28}/><span>Marcatori gironi</span></button>
       </div>
 
       {/* 3 · Fase a eliminazione */}
@@ -62,12 +63,12 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
       <div className="adm-grid-menu" style={{ marginBottom: 18 }}>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('bracket')}><BracketIcon size={28}/><span>Qualificazione</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('komatches')}><CalIcon size={28}/><span>Partite eliminatorie</span></button>
+        <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori eliminatorie</span></button>
       </div>
 
       {/* 4 · Statistiche */}
       <div className="adm-eyebrow">4 · Statistiche</div>
       <div className="adm-grid-menu" style={{ marginBottom: 24 }}>
-        <button type="button" className="adm-grid-btn" onClick={() => setTab('scorers')}><BallIcon size={28}/><span>Marcatori</span></button>
         <button type="button" className="adm-grid-btn" onClick={() => setTab('discipline')}><CardIcon size={28}/><span>Cartellini</span></button>
       </div>
 

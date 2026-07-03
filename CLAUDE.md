@@ -27,6 +27,7 @@ src/
       calendar.jsx      → CalendarScreen
       table.jsx         → TableScreen
       teams.jsx         → TeamsScreen
+      scorers.jsx       → ScorersScreen: tab Eliminatorie (ufficiale, `scorers`) / Gironi (non ufficiale, `scorers_girone`)
       secondary.jsx     → EventsScreen + NewsScreen + HonorsScreen
   lib/
     api.js              → Chiamate HTTP verso admin-api (fetch wrapper autenticato)
@@ -50,7 +51,7 @@ src/
       matches.jsx       → CRUD partite (MatchForm standard). Prop `scope`: 'group'|'knockout'|'all' filtra fasi; tab Partite gironi (scope=group) e tab Partite eliminatorie (scope=knockout) — STESSO editor, sezioni distinte come gironi
       standings.jsx     → Classifica per girone (tab dinamici, calcolata da DB) + gestione penalità punti (sconfitta a tavolino)
       bracket.jsx       → CRUD tabellone posizionale qualificazione (incroci fase eliminazione + intro). SOLO organizzazione; le partite vere sono nel tab Partite eliminatorie
-      scorers.jsx       → CRUD marcatori con gol
+      scorers.jsx       → CRUD marcatori con gol. Prop `scope`: 'ko' (ufficiale, tab Marcatori eliminatorie) | 'girone' (non ufficiale, tab Marcatori gironi) — stesso editor, liste/tabelle DB separate (`scorers`/`scorers_girone`)
       teams.jsx         → CRUD squadre: nazione, girone, capitano
       content.jsx       → CRUD eventi, albo d'oro, sponsor
       settings.jsx      → Credenziali staff, reset dati, edizioni+categorie, migrazione DB
@@ -65,10 +66,11 @@ dist/                   → Output build (non committare)
 **Utenti:** solo visualizzazione. Nessun form iscrizione.
 
 **Sezioni:**
-- `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori, bacheca, premi, sponsor
+- `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori (preview ufficiale), bacheca, premi, sponsor
 - `live` — Tabellone diretta + risultati oggi
 - `calendar` — Calendario partite con filtri dinamici per fase/girone
-- `table` — Classifica per girone (tab dinamici, auto-calcolati) + sezione "Come ci si qualifica" (tabellone qualificazione da `tournament.bracket`) + eliminatorie + marcatori
+- `table` — Classifica per girone (tab dinamici, auto-calcolati) + sezione "Come ci si qualifica" (tabellone qualificazione da `tournament.bracket`) + eliminatorie + marcatori (preview ufficiale)
+- `scorers` — Marcatori completi, tab Eliminatorie (ufficiale) / Gironi (non ufficiale, non conta)
 - `teams` — Squadre filtrabili per girone, con nazioni FIFA 2026
 - `events` — Timeline eventi
 - `news` — Bacheca avvisi
@@ -104,7 +106,8 @@ dist/                   → Output build (non committare)
 | Classifica | G/V/N/P/GF/GS/Pt per ogni squadra, per girone (tab dinamici, calcolata da DB, tiebreak scontri diretti). Pannello "⚖️ Penalità": sottrae punti a una squadra (es. −1 a tavolino / mancata presentazione) via `penalty_points` su iscrizione. Pulsante "✋ Modifica manuale": fissa a mano l'ordine del girone (frecce ▲▼ per riga) via `rank_override` su iscrizione — usare solo per casi che l'algoritmo non risolve; "↩ Torna automatico" rimuove l'override |
 | Qualificazione | **Solo tabellone posizionale** editabile (`knockout_ties`: round, casa/ospite per posizione, riordino, intro) = vista pubblica "Come ci si qualifica". Le partite vere stanno nel tab separato "Partite eliminatorie". Tab `fasi` (SetupSection) resta nel codice ma non linkato |
 | Partite eliminatorie | `MatchesSection scope="knockout"` standalone (tab `komatches`) → STESSO editor "Modifica partita" dei gironi (squadre, stato, punteggio, gol/cartellini→marcatori, data/ora). Specchia esattamente "Partite gironi" (scope=group). Le KO sono vere `matches` (phase=KO) e compaiono in Live/Calendario/Eliminatorie pubblico |
-| Marcatori | CRUD capocannonieri con gol |
+| Marcatori gironi | `ScorersSection scope="girone"` (tab `scorersgirone`) — CRUD marcatori fase a gironi, **non ufficiale, non conta** per la classifica marcatori (decisione staff). Squadra mostrata = quella al momento del gol (congelata) |
+| Marcatori eliminatorie | `ScorersSection scope="ko"` (tab `scorers`) — CRUD marcatori **ufficiali**, solo gol da fasi eliminatorie. Squadra mostrata = rosa attuale (segue i trasferimenti: staff sposta il giocatore in Squadre → il marcatore lo segue in automatico) |
 | Squadre | Modifica info: nazione FIFA 2026 (picker con flag), girone, capitano, statistiche |
 | Eventi | CRUD timeline eventi (partita/cerimonia/festa) |
 | Albo d'oro | CRUD edizioni passate |
@@ -154,7 +157,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | `matches` | `tournament_id`, `group_id` | Partite con home/away/score/status/phase |
 | `match_events` | `match_id` | Goal, cartellini, cambi |
 | `live_match_state` | `tournament_id` UNIQUE | Stato live per categoria (una riga per torneo) |
-| `scorers` | `tournament_id` | Marcatori per categoria |
+| `scorers` | `tournament_id` | Marcatori manuali per categoria. Col. `phase` text default `'ko'` (`'girone'`\|`'ko'`) = a quale lista appartiene la riga manuale — non ufficiale/gironi o ufficiale/eliminatorie. Righe auto-derivate da `match_events` (non in questa tabella) sono a loro volta bucketizzate per fase in `bootstrap.ts` via `matches.group_id` (non nullo = girone, null = KO) |
 | `news` | `edition_id` | Avvisi condivisi tra categorie |
 | `edition_events` | `edition_id` | Timeline eventi condivisi |
 | `honors` | `edition_id`, `tournament_id` | Albo d'oro |
@@ -180,7 +183,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | POST/PUT/DELETE | `/matches[/:id]` | Sì | CRUD partite (tournament_id) |
 | POST/DELETE | `/match-events[/:id]` | Sì | CRUD eventi partita |
 | PUT | `/live` | Sì | Aggiorna stato live (tournament_id) |
-| POST/PUT/DELETE | `/scorers[/:id]` | Sì | CRUD marcatori (tournament_id) |
+| POST/PUT/DELETE | `/scorers[/:id]` | Sì | CRUD marcatori (tournament_id, body opzionale `phase`: `'girone'`\|`'ko'`, default `'ko'`) |
 | POST/PUT/DELETE | `/knockout-ties[/:id]` | Sì | CRUD incroci tabellone qualificazione (tournament_id) |
 | POST/PUT/DELETE | `/news[/:id]` | Sì | CRUD news (edition_id) |
 | POST/PUT/DELETE | `/events[/:id]` | Sì | CRUD eventi (edition_id) |
@@ -198,11 +201,13 @@ Migrazione dati (una-tantum, da Settings admin):
       id, name, slug, sort_order, prize_first, prize_second, prize_third,
       bracket_intro, bracket,   // tabellone qualificazione (incroci editabili)
       groups, teams, standings_groups, live_match,
-      matches, matches_giornata, scorers
+      matches, matches_giornata,
+      scorers,          // classifica marcatori UFFICIALE — solo gol da fasi eliminatorie
+      scorers_girone,   // lista informativa gol fase a gironi — NON ufficiale, non conta
     }
   ],
   // Legacy compat (primo torneo esposto flat per admin/public esistente):
-  groups, teams, standings_groups, live_match, matches, matches_giornata, scorers,
+  groups, teams, standings_groups, live_match, matches, matches_giornata, scorers, scorers_girone,
   // Condivisi edizione:
   news, events, honors, sponsors, strip_items, updated_at
 }

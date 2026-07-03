@@ -66,6 +66,7 @@ export const DEFAULT_LIVE_MATCH       = { active: false, home: null, away: null,
 export const DEFAULT_MATCHES_TODAY    = [];
 export const DEFAULT_MATCHES_GIORNATA = [];
 export const DEFAULT_SCORERS          = [];
+export const DEFAULT_SCORERS_GIRONE   = [];
 export const DEFAULT_NEWS             = [];
 export const DEFAULT_EVENTS           = [];
 export const DEFAULT_HONORS           = [];

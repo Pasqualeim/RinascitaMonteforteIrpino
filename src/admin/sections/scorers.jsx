@@ -2,19 +2,27 @@ import { useState } from 'react';
 import { rmAdminDomain } from '../../lib/crud.js';
 import { EditIcon, TrashIcon, Confirm } from '../shared.jsx';
 
-export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
+// scope: 'ko' = marcatori ufficiali, solo gol da fasi eliminatorie (default) · 'girone' =
+// lista informativa gol fase a gironi, NON conta per la classifica ufficiale. Liste separate
+// perché lo staff ha deciso che il conteggio marcatori inizia dalle eliminatorie: i gol dei
+// gironi restano visibili ma a parte.
+export function ScorersSection({ data, onSave, onRefresh, tournamentId, scope = 'ko' }) {
   const [editing, setEditing] = useState(null);
   const [deleting, setDeleting] = useState(null);
   const [busy, setBusy] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
-  const scorers = data.scorers || [];
+  const scorers = (scope === 'girone' ? data.scorers_girone : data.scorers) || [];
   const teams = data.teams || [];
+  const sectionTitle = scope === 'girone' ? 'Marcatori gironi' : 'Marcatori eliminatorie';
+  const sectionSub = scope === 'girone'
+    ? 'I gol segnati durante la fase a gironi non sono validi ai fini della classifica marcatori. Il conteggio inizia esclusivamente dalle fasi eliminatorie.'
+    : 'Capocannonieri ufficiali del torneo (dalle fasi eliminatorie), ordinati per gol.';
 
   if (!tournamentId) {
     return (
       <div>
-        <h2 className="adm-section-title">Marcatori</h2>
+        <h2 className="adm-section-title">{sectionTitle}</h2>
         <div className="adm-card"><div className="adm-empty">Nessuna categoria selezionata.</div></div>
       </div>
     );
@@ -35,9 +43,9 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
       }
       const goals = parseInt(item.goals) || 0;
       if (item.id) {
-        await rmAdminDomain.updateScorer(item.id, { player_name: item.name, team_id, goals });
+        await rmAdminDomain.updateScorer(item.id, { player_name: item.name, team_id, goals, phase: scope });
       } else {
-        await rmAdminDomain.createScorer({ tournament_id: tournamentId, team_id, player_name: item.name, goals, sort_order: 0 });
+        await rmAdminDomain.createScorer({ tournament_id: tournamentId, team_id, player_name: item.name, goals, sort_order: 0, phase: scope });
       }
       setEditing(null);
       await onRefresh('Marcatori aggiornati');
@@ -64,8 +72,8 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
 
   return (
     <div>
-      <h2 className="adm-section-title">Marcatori</h2>
-      <p className="adm-section-sub">Capocannonieri del torneo (ordinati per gol).</p>
+      <h2 className="adm-section-title">{sectionTitle}</h2>
+      <p className="adm-section-sub">{sectionSub}</p>
 
       {errMsg && <div style={{ color: '#FF3D3D', fontSize: 13, padding: '8px 12px', background: 'rgba(255,61,61,0.1)', borderRadius: 6, marginBottom: 12 }}>{errMsg}</div>}
 
@@ -77,7 +85,7 @@ export function ScorersSection({ data, onSave, onRefresh, tournamentId }) {
         {scorers.map((s, i) => (
           <div key={s.id || i} className="adm-item-row">
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: 'var(--brand-green)', width: 26 }}>{i + 1}</div>
-            <div className="adm-crest" style={{ borderColor: s.color, color: s.color }}>{s.short}</div>
+            <div className="adm-crest" style={{ borderColor: s.color, color: s.color, fontSize: s.flag ? 18 : 11 }}>{s.flag || s.short}</div>
             <div className="adm-item-row-body">
               <div className="adm-item-title">{s.name}</div>
               <div className="adm-item-meta">{s.team}</div>

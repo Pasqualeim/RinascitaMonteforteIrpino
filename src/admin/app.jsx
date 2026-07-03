@@ -26,7 +26,7 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'settings', label: 'Impostazioni' },
 ];
 
-const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','bracket','komatches','scorers','teams','events','iscrizioni','honors','discipline'];
+const VALID_TABS = ['dashboard','live','news','settings','gironi','fasi','matches','standings','bracket','komatches','scorers','scorersgirone','teams','events','iscrizioni','honors','discipline'];
 
 function tabFromHash() {
   const h = window.location.hash.replace('#', '');
@@ -88,6 +88,7 @@ function AdminApp() {
       matches:          tournament.matches           || [],
       matches_giornata: tournament.matches_giornata  || [],
       scorers:          tournament.scorers           || [],
+      scorers_girone:   tournament.scorers_girone     || [],
       bracket:          tournament.bracket           || [],
       bracket_intro:    tournament.bracket_intro     ?? null,
     })));
@@ -212,7 +213,8 @@ function AdminApp() {
         {tab === 'standings'  && <StandingsSection {...props} />}
         {tab === 'bracket'    && <BracketSection {...props} />}
         {tab === 'komatches'  && <MatchesSection {...props} scope="knockout" />}
-        {tab === 'scorers'    && <ScorersSection {...props} />}
+        {tab === 'scorers'       && <ScorersSection {...props} scope="ko" />}
+        {tab === 'scorersgirone' && <ScorersSection {...props} scope="girone" />}
         {tab === 'teams'      && <TeamsSection {...props} />}
         {tab === 'events'     && <EventsSection {...props} />}
         {tab === 'iscrizioni' && <IscrizioniSection {...props} />}

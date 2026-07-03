@@ -54,6 +54,16 @@ function StandingsCarousel({ groups, onNav }) {
   );
 }
 
+const KO_ORDER = ['Sedicesimi di finale', 'Ottavi di finale', 'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
+const KO_PHRASE = {
+  'Sedicesimi di finale': 'ai sedicesimi di finale',
+  'Ottavi di finale': 'agli ottavi di finale',
+  'Quarti di finale': 'ai quarti di finale',
+  'Semifinali': 'alle semifinali',
+  'Finale 3°/4° posto': 'alla finale 3°/4° posto',
+  'Finale': 'alla finalissima',
+};
+
 function fmtDateIt(iso) {
   if (!iso) return '';
   const dt = new Date(iso);
@@ -77,6 +87,14 @@ export function HomeScreen({ onNav, data, tournament }) {
   const sponsors        = d.sponsors         || DEFAULT_SPONSORS;
   const teams           = tournament?.teams  || d.teams            || [];
   const groups          = tournament?.groups || d.groups           || [];
+
+  // Fase a gironi conclusa → banner "si va ai quarti" (o alla fase KO successiva) in home.
+  const groupStageItems = matchesGiornata.flatMap(g => g.items || []).filter(m => m && m.group_id);
+  const groupPhaseOver = groupStageItems.length > 0 && groupStageItems.every(m => m.status === 'ft');
+  const nextPhase = KO_ORDER
+    .map(day => matchesGiornata.find(g => g.day === day))
+    .find(g => g && (g.items || []).some(m => m && (m.home || m.away || m.date)));
+  const nextPhaseLabel = nextPhase ? (KO_PHRASE[nextPhase.day] || `alla fase ${nextPhase.day}`) : 'alla fase eliminatoria';
 
   // Edition metadata — dynamic from bootstrap, hardcoded defaults as fallback
   const edition          = d.edition || {};
@@ -120,6 +138,28 @@ export function HomeScreen({ onNav, data, tournament }) {
           <Countdown to={kickoff} label={kickoffLabel}/>
         </div>
       </section>
+
+      {groupPhaseOver && (
+        <section className="rm-section" style={{ paddingTop: 0 }}>
+          <button
+            type="button"
+            onClick={() => onNav('calendar')}
+            style={{
+              width: '100%', textAlign: 'left', cursor: 'pointer',
+              background: 'rgba(0,230,118,0.06)', border: '1px solid var(--border-card)',
+              borderRadius: 12, padding: '14px 16px', color: '#fff',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}
+          >
+            <span style={{ fontSize: 22, lineHeight: 1 }}>🏆</span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>Fase a gironi conclusa</span>
+              <span style={{ display: 'block', fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>Si va {nextPhaseLabel} — scopri il calendario</span>
+            </span>
+            <ArrowIcon size={15}/>
+          </button>
+        </section>
+      )}
 
       {liveMatch?.active && (
         <section className="rm-section">

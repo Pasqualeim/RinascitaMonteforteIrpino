@@ -98,11 +98,19 @@ export function CalendarScreen({ data, tournament }) {
     [rawGiornata]
   );
 
-  const allTabs = useMemo(() => [
-    { id: 'all', label: 'Tutte' },
-    ...groupPhases.map(g => ({ id: g.day, label: g.day })),
-    ...knockoutPhases.map(g => ({ id: g.day, label: TAB_SHORT[g.day] || g.day })),
-  ], [groupPhases, knockoutPhases]);
+  // Gironi conclusi (tutte le partite di girone giocate) → i quarti/eliminatorie sono
+  // ora la fase rilevante: i loro filtri vengono prima di quelli dei gironi.
+  const groupPhaseOver = useMemo(() => {
+    const items = groupPhases.flatMap(g => g.items || []);
+    return items.length > 0 && items.every(m => m.status === 'ft');
+  }, [groupPhases]);
+
+  const allTabs = useMemo(() => {
+    const groupTabs = groupPhases.map(g => ({ id: g.day, label: g.day }));
+    const koTabs = knockoutPhases.map(g => ({ id: g.day, label: TAB_SHORT[g.day] || g.day }));
+    const phaseTabs = groupPhaseOver ? [...koTabs, ...groupTabs] : [...groupTabs, ...koTabs];
+    return [{ id: 'all', label: 'Tutte' }, ...phaseTabs];
+  }, [groupPhases, knockoutPhases, groupPhaseOver]);
 
   const [selPhase, setSelPhase] = useState('all');
   const [selectedMatch, setSelectedMatch] = useState(null);

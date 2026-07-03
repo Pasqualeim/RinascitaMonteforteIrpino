@@ -3,7 +3,13 @@ import { DEFAULT_SCORERS } from '../../data.js';
 import { EmptyState, TopScorers } from '../../components.jsx';
 
 export function ScorersScreen({ data, tournament }) {
-  const scorers = tournament?.scorers || data?.scorers || DEFAULT_SCORERS;
+  const scorersKo = tournament?.scorers || data?.scorers || DEFAULT_SCORERS;
+  const scorersGirone = tournament?.scorers_girone || data?.scorers_girone || [];
+
+  // 'ko' = classifica marcatori ufficiale (solo gol da fasi eliminatorie) · 'girone' =
+  // lista informativa gol fase a gironi, non ufficiale.
+  const [phase, setPhase] = useState('ko');
+  const scorers = phase === 'girone' ? scorersGirone : scorersKo;
   // Keep each player's real ranking (list is already sorted by goals desc) so a
   // search result still shows the true position, not its index within the filtered list.
   const ranked = scorers.map((s, i) => ({ ...s, _pos: i + 1 }));
@@ -26,6 +32,17 @@ export function ScorersScreen({ data, tournament }) {
             <h3 className="rm-section-title">Marcatori</h3>
           </div>
         </div>
+
+        <div className="rm-tabs">
+          <button className={`rm-tab ${phase === 'ko' ? 'on' : ''}`} onClick={() => { setPhase('ko'); setQuery(''); }}>Eliminatorie</button>
+          <button className={`rm-tab ${phase === 'girone' ? 'on' : ''}`} onClick={() => { setPhase('girone'); setQuery(''); }}>Gironi</button>
+        </div>
+
+        {phase === 'girone' && (
+          <p style={{ fontSize: 12, color: 'var(--fg-3)', lineHeight: 1.5, margin: '0 0 14px' }}>
+            I gol segnati durante la fase a gironi non saranno validi ai fini della classifica marcatori. Il conteggio inizierà esclusivamente dalle fasi eliminatorie.
+          </p>
+        )}
 
         {scorers.length > 0 && (
           <div className="rm-cal-search">
