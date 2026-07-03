@@ -9,6 +9,11 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
   const allMatches   = (data.matches_giornata || []).flatMap(g => g.items || []);
   const matchesTotal = allMatches.length;
   const matchesFt    = allMatches.filter(m => m.status === 'ft').length;
+  // Breakdown per fase — colpo d'occhio su gironi vs eliminatorie senza dover aprire i tab.
+  const groupMatches   = allMatches.filter(m => m.group_id);
+  const knockoutMatches = allMatches.filter(m => !m.group_id);
+  const groupFt     = groupMatches.filter(m => m.status === 'ft').length;
+  const knockoutFt  = knockoutMatches.filter(m => m.status === 'ft').length;
 
   return (
     <div>
@@ -38,6 +43,37 @@ export function DashboardSection({ data, onSave, onRefresh, editionId, tournamen
             <div style={{ fontSize: 11, color: 'var(--fg-3)', marginTop: 3 }}>{s.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Avanzamento per fase — barra di progresso, colpo d'occhio senza aprire i tab */}
+      <div className="adm-card" style={{ marginBottom: 20 }}>
+        {[
+          { key: 'girone', label: 'Fase a gironi', ft: groupFt, total: groupMatches.length, tab: 'matches' },
+          { key: 'ko', label: 'Fase eliminatoria', ft: knockoutFt, total: knockoutMatches.length, tab: 'komatches' },
+        ].map((p, i) => {
+          const pct = p.total > 0 ? Math.round((p.ft / p.total) * 100) : 0;
+          const done = p.total > 0 && p.ft === p.total;
+          const statusLabel = p.total === 0 ? 'Nessuna partita' : done ? '✓ Completata' : p.ft === 0 ? 'In programma' : 'In corso';
+          const statusColor = done ? 'var(--brand-green)' : p.total === 0 ? 'var(--fg-3)' : 'var(--fg-2)';
+          return (
+            <div
+              key={p.key}
+              onClick={() => setTab(p.tab)}
+              style={{ padding: '13px 16px', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 9 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{p.label}</span>
+                <span style={{ fontSize: 11, color: statusColor, fontWeight: 600, flexShrink: 0 }}>{statusLabel}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, height: 6, borderRadius: 999, background: 'var(--border-1)', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: 'var(--brand-green)', borderRadius: 999, transition: 'width 300ms ease' }} />
+                </div>
+                <span style={{ fontSize: 12, color: 'var(--fg-3)', fontFamily: 'var(--font-display)', flexShrink: 0, minWidth: 38, textAlign: 'right' }}>{p.ft}/{p.total}</span>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* ── Gestione torneo, raggruppata per fase ── */}
