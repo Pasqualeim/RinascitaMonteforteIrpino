@@ -370,6 +370,7 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 
 .rm-eyebrow { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 700; color: var(--brand-green); }
 .rm-eyebrow.muted { color: var(--fg-3); }
+.rm-eyebrow--ko { color: var(--brand-gold); }
 
 /* ── Sections ──────────────────────────────────────────────── */
 .rm-section { padding: 32px 16px; border-top: 1px solid var(--border-subtle); width: 100%; max-width: 100%; overflow: hidden; }
@@ -471,6 +472,11 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   margin-left: auto; font-size: 9.5px; letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--fg-2); background: var(--bg-surface); border: 1px solid var(--border-1);
   border-radius: 999px; padding: 2px 9px; white-space: nowrap; font-family: var(--font-display);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.rm-match-tag--ko {
+  color: var(--brand-gold); background: rgba(245,197,24,0.1); border-color: rgba(245,197,24,0.35);
+  font-weight: 700;
 }
 /* Top-3 teaser: show a 4th scorer fading out so the list reads as "continues" —
    the bottom half-fade hints there are more, tap goes to the full Marcatori screen. */

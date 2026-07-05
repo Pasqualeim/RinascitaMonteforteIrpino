@@ -55,6 +55,13 @@ function StandingsCarousel({ groups, onNav }) {
 }
 
 const KO_ORDER = ['Sedicesimi di finale', 'Ottavi di finale', 'Quarti di finale', 'Semifinali', 'Finale 3°/4° posto', 'Finale'];
+const KO_SET = new Set(KO_ORDER);
+const KO_SHORT = {
+  'Sedicesimi di finale': 'Sedicesimi',
+  'Ottavi di finale': 'Ottavi',
+  'Quarti di finale': 'Quarti',
+  'Finale 3°/4° posto': '3°/4° Posto',
+};
 const KO_PHRASE = {
   'Sedicesimi di finale': 'ai sedicesimi di finale',
   'Ottavi di finale': 'agli ottavi di finale',
@@ -95,6 +102,13 @@ export function HomeScreen({ onNav, data, tournament }) {
     .map(day => matchesGiornata.find(g => g.day === day))
     .find(g => g && (g.items || []).some(m => m && (m.home || m.away || m.date)));
   const nextPhaseLabel = nextPhase ? (KO_PHRASE[nextPhase.day] || `alla fase ${nextPhase.day}`) : 'alla fase eliminatoria';
+
+  // Partite di oggi in fase eliminatoria → sezione in risalto (eyebrow/titolo oro + badge per riga)
+  const todayKoPhases = KO_ORDER.filter(phase => matchesToday.some(m => m.phase === phase));
+  const isKoToday = todayKoPhases.length > 0;
+  const todayTitle = todayKoPhases.length === 1 ? todayKoPhases[0]
+    : todayKoPhases.length > 1 ? todayKoPhases.join(' · ')
+    : 'Partite di oggi';
 
   // Edition metadata — dynamic from bootstrap, hardcoded defaults as fallback
   const edition          = d.edition || {};
@@ -177,14 +191,25 @@ export function HomeScreen({ onNav, data, tournament }) {
       <section className="rm-section">
         <div className="rm-section-head">
           <div>
-            <span className="rm-eyebrow">Oggi al campo</span>
-            <h3 className="rm-section-title">Partite di oggi</h3>
+            <span className={`rm-eyebrow${isKoToday ? ' rm-eyebrow--ko' : ''}`}>{isKoToday ? '🏆 Fase eliminatoria' : 'Oggi al campo'}</span>
+            <h3 className="rm-section-title">{todayTitle}</h3>
           </div>
           <button className="rm-section-link" onClick={() => onNav('calendar')}>Tutto il calendario <ArrowIcon size={13}/></button>
         </div>
         {matchesToday.length === 0
           ? <EmptyState icon="📅" title="Nessuna partita oggi" sub="Le partite verranno pubblicate dallo staff."/>
-          : <div className="rm-match-list">{matchesToday.map((m, i) => <MatchRow key={m.id || i} {...m} onClick={() => setSelectedMatch(m)}/>)}</div>
+          : <div className="rm-match-list">{matchesToday.map((m, i) => {
+              const isKo = KO_SET.has(m.phase);
+              return (
+                <MatchRow
+                  key={m.id || i}
+                  {...m}
+                  tag={isKo ? (KO_SHORT[m.phase] || m.phase) : undefined}
+                  tagVariant={isKo ? 'ko' : undefined}
+                  onClick={() => setSelectedMatch(m)}
+                />
+              );
+            })}</div>
         }
       </section>
 
