@@ -43,13 +43,12 @@ function EmptyState({ icon, title, sub }) {
 function Header({ current, onNav, hasLive }) {
   const items = [
     { id: 'home',     label: 'Home' },
-    { id: 'live',     label: 'Live' },
     { id: 'calendar', label: 'Calendario' },
-    { id: 'table',    label: 'Classifica' },
+    { id: 'table',    label: 'Torneo' },
     { id: 'teams',    label: 'Squadre' },
-    { id: 'scorers',  label: 'Marcatori' },
     { id: 'events',   label: 'Regolamento' },
     { id: 'news',     label: 'Avvisi' },
+    { id: 'honors',   label: "Albo d'oro" },
   ];
   return (
     <header className="rm-header">
@@ -66,10 +65,14 @@ function Header({ current, onNav, hasLive }) {
             className={`rm-nav-item ${current === i.id ? 'on' : ''}`}
             onClick={() => onNav(i.id)}>
             {i.label}
-            {i.id === 'live' && hasLive && <span className="rm-nav-live-dot"/>}
           </button>
         ))}
       </nav>
+      {hasLive && (
+        <button className="rm-header-live" onClick={() => onNav('home')} aria-label="Partita in diretta — vai alla diretta">
+          <span className="dot"/>LIVE
+        </button>
+      )}
     </header>
   );
 }
@@ -83,21 +86,21 @@ function BottomNav({ current, onNav, hasLive }) {
   }, [current]);
 
   const primary = [
-    { id: 'home',     label: 'Home',      icon: HomeIcon },
-    { id: 'live',     label: 'Live',      icon: ZapIcon,  live: true },
+    { id: 'home',     label: 'Home',      icon: HomeIcon, live: true },
     { id: 'calendar', label: 'Calendario', icon: CalIcon },
-    { id: 'table',    label: 'Classifica', icon: TrophyIcon },
+    { id: 'table',    label: 'Torneo',     icon: TrophyIcon },
+    { id: 'teams',    label: 'Squadre',    icon: UsersIcon },
   ];
 
   const more = [
-    { id: 'teams',         label: 'Squadre',      icon: UsersIcon },
     { id: 'scorers',       label: 'Marcatori',    icon: BallIcon },
     { id: 'events',        label: 'Regolamento',  icon: NewspaperIcon },
     { id: 'news',          label: 'Avvisi',       icon: BellIcon },
+    { id: 'honors',        label: "Albo d'oro",   icon: StarIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
   ];
 
-  const isMoreActive = drawerOpen || ['teams','scorers','events','news'].includes(current);
+  const isMoreActive = drawerOpen || ['scorers','events','news','honors','registrations'].includes(current);
 
   function navTo(id) {
     if (id === '_staff') { window.location.href = 'admin.html'; return; }
@@ -333,7 +336,7 @@ function LiveBoard({ match }) {
       Nessuna partita in diretta
     </div>
   );
-  const { home, away, hs, as: as_, pitch, events = [], phase } = match;
+  const { home, away, hs, as: as_, events = [], phase } = match;
   if (!home || !away) return null;
 
   const phaseLabel = phase === 'half_time' ? 'Intervallo'
@@ -351,7 +354,6 @@ function LiveBoard({ match }) {
           <span className="dot"></span>
           {isHalfTime ? 'Intervallo' : `In diretta · ${displayMinute}'`}
         </span>
-        {pitch && <span className="rm-live-pitch">{pitch}</span>}
       </div>
       <div className="rm-live-board">
         <div className="rm-live-team">

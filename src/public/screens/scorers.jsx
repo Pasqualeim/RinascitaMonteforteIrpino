@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { DEFAULT_SCORERS } from '../../data.js';
 import { EmptyState, TopScorers } from '../../components.jsx';
 
-export function ScorersScreen({ data, tournament }) {
+// `embedded`: renderizzata dentro la pagina Torneo (tab Marcatori) — niente
+// wrapper di sezione né titolo proprio. Senza prop resta una schermata autonoma.
+export function ScorersScreen({ data, tournament, embedded }) {
   const scorersKo = tournament?.scorers || data?.scorers || DEFAULT_SCORERS;
   const scorersGirone = tournament?.scorers_girone || data?.scorers_girone || [];
 
@@ -23,16 +25,8 @@ export function ScorersScreen({ data, tournament }) {
     ? ranked.filter(s => (s.name || '').toLowerCase().includes(q) && (s.name || '').toLowerCase() !== q).slice(0, 8)
     : [];
 
-  return (
-    <div data-screen-label="scorers">
-      <section className="rm-section">
-        <div className="rm-section-head">
-          <div>
-            <span className="rm-eyebrow">{tournament?.name || 'Capocannonieri'}</span>
-            <h3 className="rm-section-title">Marcatori</h3>
-          </div>
-        </div>
-
+  const inner = (
+    <>
         <div className="rm-tabs">
           <button className={`rm-tab ${phase === 'ko' ? 'on' : ''}`} onClick={() => { setPhase('ko'); setQuery(''); }}>Eliminatorie</button>
           <button className={`rm-tab ${phase === 'girone' ? 'on' : ''}`} onClick={() => { setPhase('girone'); setQuery(''); }}>Gironi</button>
@@ -81,6 +75,21 @@ export function ScorersScreen({ data, tournament }) {
         {searching && filtered.length === 0
           ? <EmptyState icon="🔍" title="Nessun giocatore trovato" sub={`Nessun risultato per «${query.trim()}». Controlla il nome.`} />
           : <TopScorers list={filtered}/>}
+    </>
+  );
+
+  if (embedded) return inner;
+
+  return (
+    <div data-screen-label="scorers">
+      <section className="rm-section">
+        <div className="rm-section-head">
+          <div>
+            <span className="rm-eyebrow">{tournament?.name || 'Capocannonieri'}</span>
+            <h3 className="rm-section-title">Marcatori</h3>
+          </div>
+        </div>
+        {inner}
       </section>
     </div>
   );

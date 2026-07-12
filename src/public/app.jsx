@@ -4,16 +4,16 @@ import { rmGetAllData, rmLoadData, rmMergeDefaults } from '../data.js';
 import { rmDeriveMatchesToday } from '../domain.js';
 import { StatusStrip, Header, Footer, BottomNav } from '../components.jsx';
 import { HomeScreen } from './screens/home.jsx';
-import { LiveScreen } from './screens/live.jsx';
 import { CalendarScreen } from './screens/calendar.jsx';
 import { TableScreen } from './screens/table.jsx';
 import { TeamsScreen } from './screens/teams.jsx';
-import { EventsScreen, NewsScreen } from './screens/secondary.jsx';
+import { EventsScreen, NewsScreen, HonorsScreen } from './screens/secondary.jsx';
 import { RegistrationsScreen } from './screens/registrations.jsx';
-import { ScorersScreen } from './screens/scorers.jsx';
 import '../styles.css';
 
-const VALID_SCREENS = ['home','live','calendar','table','teams','scorers','registrations','events','news'];
+// 'live' e 'scorers' restano validi come deep-link: 'live' apre la Home (la
+// diretta è il primo blocco), 'scorers' apre Torneo sul tab Marcatori.
+const VALID_SCREENS = ['home','live','calendar','table','teams','scorers','registrations','events','news','honors'];
 
 function App() {
   const [screen, setScreen] = useState(() => {
@@ -71,7 +71,7 @@ function App() {
 
   const hasLive = !!(activeTournament?.live_match?.active || data?.live_match?.active);
 
-  // Stato per categoria: live > oggi > niente (calcolo unico, riusato in pill + riga)
+  // Stato per categoria: live > oggi > niente (indicatore sulla pill)
   const catStatuses = useMemo(() => {
     const list = data?.tournaments || [];
     return list.map(t => {
@@ -81,8 +81,6 @@ function App() {
     });
   }, [data?.tournaments]);
   const statusOf = (id) => catStatuses.find(c => c.id === id)?.status || '';
-  const liveNames  = (data?.tournaments || []).filter(t => statusOf(t.id) === 'live').map(t => t.name);
-  const todayNames = (data?.tournaments || []).filter(t => statusOf(t.id) === 'today').map(t => t.name);
 
   return (
     <div className="rm-app">
@@ -90,7 +88,6 @@ function App() {
       <Header current={screen} onNav={setScreen} hasLive={hasLive}/>
       {(data?.tournaments?.length > 1) && (
         <div className={`rm-cat-bar ${catCompact ? 'compact' : ''}`}>
-          <span className="rm-cat-label">🏆 Categoria</span>
           <div className="rm-cat-switch" role="tablist" aria-label="Seleziona categoria torneo">
             {data.tournaments.map(t => {
               const status = statusOf(t.id);
@@ -111,33 +108,18 @@ function App() {
               );
             })}
           </div>
-          {(liveNames.length > 0 || todayNames.length > 0) && (
-            <p className="rm-cat-hint">
-              {liveNames.length > 0 && (
-                <span className="rm-cat-hint-seg live">
-                  <span className="rm-cat-dot live" aria-hidden="true"></span>
-                  In diretta ora: {liveNames.join(', ')}
-                </span>
-              )}
-              {todayNames.length > 0 && (
-                <span className="rm-cat-hint-seg today">
-                  <span className="rm-cat-dot today" aria-hidden="true"></span>
-                  Oggi in campo: {todayNames.join(', ')}
-                </span>
-              )}
-            </p>
-          )}
         </div>
       )}
-      {screen === 'home'     && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}
-      {screen === 'live'     && <LiveScreen                       data={data} tournament={activeTournament}/>}
+      {(screen === 'home' || screen === 'live')
+                             && <HomeScreen     onNav={setScreen} data={data} tournament={activeTournament}/>}
       {screen === 'calendar' && <CalendarScreen                   data={data} tournament={activeTournament}/>}
       {screen === 'table'    && <TableScreen        onNav={setScreen} data={data} tournament={activeTournament}/>}
+      {screen === 'scorers'  && <TableScreen        onNav={setScreen} data={data} tournament={activeTournament} initialTab="marcatori"/>}
       {screen === 'teams'    && <TeamsScreen                      data={data} tournament={activeTournament}/>}
-      {screen === 'scorers'  && <ScorersScreen                    data={data} tournament={activeTournament}/>}
       {screen === 'registrations' && <RegistrationsScreen          data={data}/>}
       {screen === 'events'   && <EventsScreen                     data={data}/>}
       {screen === 'news'     && <NewsScreen                       data={data}/>}
+      {screen === 'honors'   && <HonorsScreen                     data={data}/>}
       <Footer/>
       <BottomNav current={screen} onNav={setScreen} hasLive={hasLive}/>
     </div>

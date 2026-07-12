@@ -22,12 +22,12 @@ src/
   public/
     app.jsx             → Entry React pubblico: App + ErrorBoundary + VALID_SCREENS
     screens/
-      home.jsx          → HomeScreen
-      live.jsx          → LiveScreen
+      home.jsx          → HomeScreen adattiva: now card (live/prossima partita), hero solo pre-torneo
+      live.jsx          → LiveScreen (legacy, NON più routata: #live renderizza HomeScreen)
       calendar.jsx      → CalendarScreen
-      table.jsx         → TableScreen
+      table.jsx         → TableScreen "Torneo": tab Classifica / Tabellone / Marcatori (prop `initialTab`)
       teams.jsx         → TeamsScreen
-      scorers.jsx       → ScorersScreen: tab Eliminatorie (ufficiale, `scorers`) / Gironi (non ufficiale, `scorers_girone`)
+      scorers.jsx       → ScorersScreen: tab Eliminatorie (ufficiale, `scorers`) / Gironi (non ufficiale, `scorers_girone`); prop `embedded` per l'uso dentro TableScreen
       secondary.jsx     → EventsScreen + NewsScreen + HonorsScreen
   lib/
     api.js              → Chiamate HTTP verso admin-api (fetch wrapper autenticato)
@@ -66,20 +66,22 @@ dist/                   → Output build (non committare)
 **Utenti:** solo visualizzazione. Nessun form iscrizione.
 
 **Sezioni:**
-- `home` — Hero, countdown, partita live, partite oggi, classifica per-girone, marcatori (preview ufficiale), bacheca, premi, sponsor
-- `live` — Tabellone diretta + risultati oggi
+- `home` — Adattiva allo stato torneo: pre-torneo = hero + countdown; a torneo in corso = masthead compatto + **now card** (diretta live se attiva, altrimenti prossima partita con calcio d'inizio, tag oro se fase KO), poi partite oggi, classifica per-girone (SOLO a gironi in corso — conclusi vive in Torneo), marcatori (preview ufficiale), bacheca (2 avvisi), premi. **Giorno della finale** (match `phase='Finale'` con data odierna): hero oro "Finalissima" pre-match → eyebrow oro sulla diretta durante → **banner Campione** dopo il FT (proclama il vincitore da hs/as; a pari punteggio mostra solo il risultato; include 3° posto se giocato). Nota: il campo di gioco NON viene mostrato (campo unico)
+- `live` — deep-link legacy: renderizza la Home (la diretta è il primo blocco)
 - `calendar` — Calendario partite con filtri dinamici per fase/girone
-- `table` — Classifica per girone (tab dinamici, auto-calcolati) + sezione "Come ci si qualifica" (tabellone qualificazione da `tournament.bracket`) + eliminatorie + marcatori (preview ufficiale)
-- `scorers` — Marcatori completi, tab Eliminatorie (ufficiale) / Gironi (non ufficiale, non conta)
+- `table` — Pagina "Torneo" con tab interni: **Classifica** (per girone, auto-calcolata) · **Tabellone** ("Come ci si qualifica" da `tournament.bracket` + risultati eliminatorie) · **Marcatori** (ScorersScreen embedded)
+- `scorers` — deep-link: apre `table` con tab Marcatori attivo. `ScorersScreen` resta autonomo (prop `embedded` per l'uso dentro Torneo), tab Eliminatorie (ufficiale) / Gironi (non ufficiale, non conta)
 - `teams` — Squadre filtrabili per girone, con nazioni FIFA 2026
-- `events` — Timeline eventi
+- `events` — Regolamento
 - `news` — Bacheca avvisi
-- `honors` — Albo d'oro edizioni passate
+- `honors` — Albo d'oro edizioni passate (in VALID_SCREENS, raggiungibile da nav/drawer)
+- `registrations` — Quote e stato iscrizioni per categoria
 
 **Navigazione:**
-- Mobile: bottom nav fisso (Home | Live | Calendario | Classifica | Altro)
-- "Altro" apre drawer con Squadre/Eventi/Avvisi/Albo d'oro
-- Desktop (≥900px): nav orizzontale in header, bottom nav nascosta
+- Mobile: bottom nav fisso (Home | Calendario | Torneo | Squadre | Altro); dot live su Home + badge LIVE rosso nell'header quando c'è diretta
+- "Altro" apre drawer con Marcatori/Regolamento/Avvisi/Albo d'oro/Area staff (Iscrizioni rimossa dal drawer a torneo in corso; schermata `registrations` resta routata per deep-link)
+- Desktop (≥900px): nav orizzontale in header (Home, Calendario, Torneo, Squadre, Regolamento, Avvisi, Albo d'oro), bottom nav nascosta
+- Barra categorie sticky sotto l'header (solo pill, con tag oggi/live per categoria) quando l'edizione ha più categorie (es. Senior/Over 40/Junior) — dinamica su `data.tournaments`
 
 **Data refresh:** ogni 30 secondi rilegge localStorage → mostra dati aggiornati da admin.
 
