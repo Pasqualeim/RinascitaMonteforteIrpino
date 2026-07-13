@@ -10,19 +10,14 @@ Sito ufficiale per il torneo di calcio amatoriale **"Rinascita Monteforte Cup"**
 
 Il progetto pubblica in tempo quasi reale calendario, risultati, classifiche, live match, marcatori, avvisi, sponsor e contenuti editoriali del torneo, mantenendo un frontend completamente client-side con persistenza dati su Supabase (modello relazionale + fallback legacy).
 
-> **Demo live:** _<inserire URL Netlify>_ · **Pannello staff:** _<URL>/admin.html_
+> 🔗 **Sito live:** **[rinascitamonteforteirpino.netlify.app](https://rinascitamonteforteirpino.netlify.app)** · **Pannello staff:** [`/admin.html`](https://rinascitamonteforteirpino.netlify.app/admin.html)
 
 ## Anteprima
 
-<!--
-Aggiungere qui gli screenshot reali (consigliato: cartella docs/screenshots/).
-Esempio:
-| Home pubblica | Live match | Classifica | Pannello admin |
-|---|---|---|---|
-| ![Home](docs/screenshots/home.png) | ![Live](docs/screenshots/live.png) | ![Classifica](docs/screenshots/classifica.png) | ![Admin](docs/screenshots/admin.png) |
--->
+![Walkthrough del sito Rinascita Monteforte Cup](docs/screenshots/demo.gif)
 
-_Screenshot in arrivo — vedi commento nel sorgente._
+> Sito pubblico in azione: **Home** (campione del torneo e capocannonieri) → **Torneo** (classifiche per girone) → **Calendario** → **Squadre**.
+> 🔗 Provalo dal vivo su **[rinascitamonteforteirpino.netlify.app](https://rinascitamonteforteirpino.netlify.app)**.
 
 ## Indice
 
