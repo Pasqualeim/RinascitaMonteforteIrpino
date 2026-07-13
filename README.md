@@ -1,13 +1,33 @@
 # Rinascita Monteforte Cup
 
-Sito ufficiale statico per il torneo amatoriale "Rinascita Monteforte Cup" di Monteforte Irpino, con una parte pubblica per gli utenti e un pannello admin riservato allo staff organizzativo.
+[![CI](https://github.com/Pasqualeim/RinascitaMonteforteIrpino/actions/workflows/ci.yml/badge.svg)](https://github.com/Pasqualeim/RinascitaMonteforteIrpino/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vite.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Edge_Functions-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 
-Il progetto e' pensato per pubblicare rapidamente calendario, risultati, classifica, live match, avvisi, sponsor e contenuti editoriali del torneo, mantenendo un frontend completamente client-side e una persistenza dati appoggiata a Supabase.
+Sito ufficiale per il torneo di calcio amatoriale **"Rinascita Monteforte Cup"** (Monteforte Irpino, AV), con una parte pubblica per i tifosi e un pannello admin riservato allo staff organizzativo.
+
+Il progetto pubblica in tempo quasi reale calendario, risultati, classifiche, live match, marcatori, avvisi, sponsor e contenuti editoriali del torneo, mantenendo un frontend completamente client-side con persistenza dati su Supabase (modello relazionale + fallback legacy).
+
+> **Demo live:** _<inserire URL Netlify>_ · **Pannello staff:** _<URL>/admin.html_
+
+## Anteprima
+
+<!--
+Aggiungere qui gli screenshot reali (consigliato: cartella docs/screenshots/).
+Esempio:
+| Home pubblica | Live match | Classifica | Pannello admin |
+|---|---|---|---|
+| ![Home](docs/screenshots/home.png) | ![Live](docs/screenshots/live.png) | ![Classifica](docs/screenshots/classifica.png) | ![Admin](docs/screenshots/admin.png) |
+-->
+
+_Screenshot in arrivo — vedi commento nel sorgente._
 
 ## Indice
 
 - [Panoramica](#panoramica)
-- [Funzionalita](#funzionalita)
+- [Funzionalità](#funzionalità)
 - [Stack tecnologico](#stack-tecnologico)
 - [Architettura applicativa](#architettura-applicativa)
 - [Struttura del progetto](#struttura-del-progetto)
@@ -17,491 +37,247 @@ Il progetto e' pensato per pubblicare rapidamente calendario, risultati, classif
 - [Variabili d'ambiente](#variabili-dambiente)
 - [Avvio locale](#avvio-locale)
 - [Build, preview e deploy](#build-preview-e-deploy)
-- [Testing e qualita](#testing-e-qualita)
+- [Testing e qualità](#testing-e-qualità)
 - [Estensione del progetto](#estensione-del-progetto)
+- [Licenza](#licenza)
 - [Crediti](#crediti)
 
 ## Panoramica
 
-L'applicazione e' composta da due entrypoint principali:
+L'applicazione è composta da due entrypoint principali:
 
-- `index.html`: portale pubblico consultabile dagli utenti.
-- `admin.html`: area staff protetta da login.
+- `index.html` — portale pubblico consultabile dai tifosi.
+- `admin.html` — area staff protetta da login.
 
-Lato frontend, il progetto usa React 18 con moduli ES e Vite come runtime di sviluppo e build tool. Lato backend non esiste un server applicativo dedicato: la parte remota e' delegata a Supabase tramite lettura dati, autenticazione staff e una Edge Function custom.
+Lato frontend il progetto usa **React 18** con moduli ES e **Vite** come dev server e build tool (configurazione multi-page). Non esiste un server applicativo dedicato: la parte remota è delegata a **Supabase** per lettura dati, autenticazione staff e una **Edge Function** custom (`admin-api`).
 
-## Funzionalita
+## Funzionalità
 
 ### Area pubblica
 
-La parte pubblica espone le principali informazioni del torneo:
+- **Home** adattiva allo stato del torneo: pre-torneo con hero e countdown, torneo in corso con *now card* (diretta live o prossima partita), partite del giorno, classifiche per girone, anteprima marcatori, bacheca avvisi e premi.
+- **Live** — tabellone della partita in diretta con punteggio, minuto ed eventi.
+- **Calendario** — elenco partite con filtri dinamici per fase e girone.
+- **Torneo** — pagina con tab interni: Classifica (auto-calcolata), Tabellone qualificazione ("Come ci si qualifica"), Marcatori.
+- **Squadre** — elenco filtrabile per girone, con nazione e flag (FIFA 2026).
+- **Regolamento**, **Avvisi**, **Albo d'oro** delle edizioni passate.
 
-- `Home`: hero, countdown, stato del torneo, live match in evidenza, partite del giorno, classifica, marcatori, sponsor e contenuti di contesto.
-- `Live`: tabellone della partita in diretta con punteggio, minuto, eventi e risultati rilevanti.
-- `Calendario`: elenco partite con filtri dinamici per fase e girone.
-- `Classifica`: classifiche per girone calcolate automaticamente dai risultati finali.
-- `Squadre`: elenco squadre filtrabile per girone, con nazione, flag e metadati squadra.
-- `Eventi`: timeline di eventi del torneo.
-- `Avvisi`: bacheca news e comunicazioni organizzative.
-- `Albo d'oro`: storico edizioni precedenti.
-
-Funzionalita trasversali lato pubblico:
-
-- refresh automatico dei dati ogni 30 secondi;
-- refresh on-visibility quando l'utente torna sulla tab;
-- navigazione responsive:
-  - header desktop con voci orizzontali;
-  - bottom navigation mobile con drawer "Altro";
-- striscia ticker superiore con messaggi dinamici;
-- accesso discreto all'area staff da mobile e footer.
+Funzionalità trasversali: refresh automatico dei dati ogni 30 secondi, refresh on-visibility al ritorno sulla tab, navigazione responsive (header desktop / bottom nav mobile con drawer), striscia ticker superiore, badge LIVE quando c'è una diretta.
 
 ### Area admin
 
-L'area staff e' pensata per gestire il torneo durante setup, giornata e post-partita:
+Pannello pensato per gestire il torneo durante setup, giornata e post-partita:
 
-- login staff via Supabase Edge Function;
-- dashboard iniziale con checklist operativa;
-- gestione gironi con colore e ordinamento;
-- gestione squadre con sigla, nazione, flag, capitano e giocatori;
-- gestione partite con fase, stato, campo, data, ora e punteggio;
-- bracket view per le fasi a eliminazione;
-- classifica per girone auto-calcolata;
-- gestione marcatori;
-- gestione live match con punteggio, minuto ed eventi;
-- gestione news e avvisi;
-- gestione eventi, albo d'oro e sponsor;
-- gestione impostazioni staff:
-  - cambio credenziali;
-  - lettura edizioni/categorie torneo;
-  - migrazione dati dal blob legacy al modello relazionale.
+- login staff via Edge Function, con sessione breve in `sessionStorage`;
+- selettore categoria (Senior / Over 40 / Junior…) per operare sul torneo attivo;
+- gestione gironi, squadre (con iscrizioni), partite (gironi + eliminatorie), tabellone di qualificazione;
+- **classifica per girone auto-calcolata** con tiebreak sugli scontri diretti, penalità punti e override manuale dell'ordine;
+- **live match**: timer, fasi, punteggio +/−, eventi (gol/cartellini) con undo, doppio giallo → rosso automatico;
+- gestione marcatori (liste separate gironi / eliminatorie);
+- CRUD news, eventi, albo d'oro, sponsor, ticker;
+- impostazioni: cambio credenziali, gestione edizioni/categorie, migrazione dati dal blob legacy al modello relazionale.
 
 ## Stack tecnologico
 
-- `React 18`
-- `React DOM 18`
-- `Vite`
-- `@supabase/supabase-js`
-- `Vitest`
-- `ESLint`
-- `Prettier`
-- `Netlify` per build/deploy statico
+| Ambito | Tecnologie |
+|--------|------------|
+| Frontend | React 18, React DOM, Vite 6 (multi-page), CSS mobile-first |
+| Backend | Supabase (Postgres + RLS), Edge Function Deno/TypeScript |
+| Client dati | `@supabase/supabase-js` |
+| Qualità | Vitest, ESLint, Prettier, GitHub Actions (CI) |
+| Deploy | Netlify (build statico) |
 
 ## Architettura applicativa
 
-L'architettura e' divisa in quattro livelli principali.
+Quattro livelli principali.
 
 ### 1. Entry HTML
 
-- `index.html` monta l'app pubblica caricando `src/public/app.jsx`
-- `admin.html` monta l'app admin caricando `src/admin/app.jsx`
-
-Entrambi condividono il design system base tramite `colors_and_type.css`.
+- `index.html` monta l'app pubblica (`src/public/app.jsx`).
+- `admin.html` monta l'app admin (`src/admin/app.jsx`).
+- Entrambi condividono il design system base in `colors_and_type.css`.
 
 ### 2. Layer di presentazione
 
-- `src/public/*`: schermate e shell del sito pubblico
-- `src/admin/*`: schermate e shell del pannello staff
-- `src/components.jsx`: componenti condivisi, header, footer, bottom nav, live board, strip, icone
-- `src/styles.css`: stile pubblico
-- `src/admin-styles.css`: stile admin
+- `src/public/*` — schermate e shell del sito pubblico.
+- `src/admin/*` — schermate e shell del pannello staff.
+- `src/components.jsx` — componenti condivisi (header, footer, bottom nav, live board, ticker, icone).
+- `src/styles.css` / `src/admin-styles.css` — stili pubblico e admin.
 
 ### 3. Layer dominio
 
-`src/domain.js` contiene la logica pura e riusabile:
-
-- normalizzazione del payload torneo;
-- compatibilita con il vecchio schema;
-- calcolo classifiche;
-- derivazione di partite del giorno e ticker;
-- gestione e validazione minima della sessione admin.
-
-E' il layer piu importante da testare e infatti i test automatici sono concentrati qui.
+`src/domain.js` contiene la logica pura e riusabile: normalizzazione del payload torneo, compatibilità con lo schema legacy, calcolo classifiche (con tiebreak scontri diretti), derivazione di partite del giorno e ticker, validazione della sessione admin. È il layer più coperto dai test automatici.
 
 ### 4. Layer dati
 
-`src/data.js` gestisce:
-
-- default locali dell'app;
-- caricamento dati da Supabase e fallback locale;
-- persistenza in `localStorage`;
-- autenticazione admin;
-- salvataggio remoto via `admin-api`;
-- bootstrap schema relazionale;
-- metodi CRUD admin verso la Edge Function.
+`src/data.js` (con gli helper in `src/lib/*`) gestisce default locali, caricamento dati da Supabase con fallback, persistenza in `localStorage`, autenticazione admin, salvataggio remoto e metodi CRUD verso la Edge Function.
 
 ## Struttura del progetto
 
 ```text
 .
-├── index.html
-├── admin.html
-├── colors_and_type.css
-├── netlify.toml
-├── vite.config.js
+├── index.html                  # entry sito pubblico
+├── admin.html                  # entry pannello staff
+├── vite.config.js              # config Vite multi-page
+├── netlify.toml                # config deploy statico
+├── colors_and_type.css         # design system (variabili CSS)
 ├── src/
-│   ├── components.jsx
-│   ├── styles.css
-│   ├── admin-styles.css
-│   ├── domain.js
-│   ├── data.js
+│   ├── components.jsx          # componenti pubblici condivisi
+│   ├── styles.css / admin-styles.css
+│   ├── domain.js               # logica di dominio pura (testata)
+│   ├── data.js                 # persistenza, auth, client Supabase
+│   ├── lib/                    # api, auth, http, crud, storage, session, migration
 │   ├── public/
 │   │   ├── app.jsx
-│   │   └── screens/
-│   │       ├── home.jsx
-│   │       ├── live.jsx
-│   │       ├── calendar.jsx
-│   │       ├── table.jsx
-│   │       ├── teams.jsx
-│   │       └── secondary.jsx
+│   │   └── screens/            # home, live, calendar, table, teams, scorers, secondary, registrations
 │   ├── admin/
-│   │   ├── app.jsx
-│   │   ├── auth.jsx
-│   │   ├── shared.jsx
-│   │   └── sections/
-│   │       ├── competition.jsx
-│   │       ├── live-news.jsx
-│   │       ├── content.jsx
-│   │       └── settings.jsx
+│   │   ├── app.jsx · auth.jsx · shared.jsx
+│   │   └── sections/           # dashboard, live, matches, standings, teams, gironi,
+│   │                           # scorers, bracket, news, content, settings, ...
 │   └── __tests__/
 │       └── domain.test.js
 ├── supabase/
 │   ├── admin_auth_setup.sql
 │   ├── site_data_hardening.sql
-│   └── functions/
-│       └── admin-api/
-│           └── index.ts
-└── assets/
+│   └── functions/admin-api/    # index.ts + _lib/ + handlers/ (Edge Function)
+├── docs/                       # manuale staff
+└── assets/                     # logo e locandine del torneo
 ```
 
 ## Modello dati e persistenza
 
-Il progetto oggi vive in una modalita ibrida: supporta sia il vecchio blob JSON singolo, sia un nuovo modello relazionale in Supabase.
+Il progetto vive in modalità ibrida: supporta sia il vecchio blob JSON singolo, sia un modello relazionale su Supabase.
 
-### Ordine di lettura dati
+### Ordine di lettura (`rmLoadData()`)
 
-La funzione `rmLoadData()` segue questa strategia:
+1. bootstrap relazionale via `admin-api/bootstrap`;
+2. se non popolato, tabella `public.site_data` (blob legacy);
+3. se la lettura remota fallisce, `localStorage`;
+4. in ultima istanza, i default hardcoded in `src/data.js`.
 
-1. prova il bootstrap relazionale via `admin-api/bootstrap`;
-2. se il bootstrap non e' disponibile o non e' ancora popolato, legge `public.site_data`;
-3. se la lettura remota fallisce, usa `localStorage`;
-4. se non trova nulla, usa i default hardcoded in `src/data.js`.
+### Ordine di salvataggio (`rmSaveData()`)
 
-### Ordine di salvataggio dati
-
-La funzione `rmSaveData()`:
-
-1. normalizza i dati;
-2. salva subito in `localStorage` per feedback immediato;
-3. se la pagina e' `admin.html` e la sessione e' valida, invia il payload a `admin-api/save`.
+1. normalizzazione dei dati;
+2. salvataggio immediato in `localStorage` (feedback istantaneo);
+3. se pagina admin con sessione valida, invio del payload alla Edge Function.
 
 ### Storage browser
 
-- `localStorage.rm_data_v2`: cache e fallback dati torneo
-- `localStorage.rm_team_id_map_v1`: mapping team short -> id relazionale usato in migrazione
-- `sessionStorage.rm_admin_session_v1`: sessione staff breve con token ed expiry
-
-### Schema dati applicativo
-
-Il payload principale gestito dal frontend contiene, in forma semplificata:
-
-```js
-{
-  schema_version,
-  edition,
-  tournaments,
-  teams,
-  groups,
-  standings_groups,
-  live_match,
-  matches,
-  matches_giornata,
-  scorers,
-  news,
-  events,
-  honors,
-  sponsors,
-  strip_items,
-  updated_at
-}
-```
-
-Note importanti:
-
-- `matches_today` e `strip_items` possono essere derivati a runtime.
-- il frontend mantiene alias legacy come `standings_a`, `standings_o40`, `standings_jr` per retrocompatibilita.
-- quando il bootstrap relazionale e' disponibile, il primo torneo viene esposto anche a top-level per non rompere le schermate esistenti.
+- `localStorage.rm_data_v2` — cache e fallback dati torneo;
+- `localStorage.rm_team_id_map_v1` — mapping `short → uuid` usato in migrazione;
+- `sessionStorage.rm_admin_session_v1` — sessione staff con token ed expiry.
 
 ## Database Supabase
 
-### Progetto previsto
+### Blob legacy
 
-Il progetto e' collegato al tenant Supabase:
+- `public.site_data` — riga singola `id = 1`, contenuto del sito come `jsonb`, usata come fallback compatibile.
 
-- project id: `jummgmhkapvvibicnqos`
-- region: `eu-west-1`
+### Modello relazionale (schema v3)
 
-### Modello attuale
+La Edge Function `admin-api` legge e scrive su: `editions`, `tournaments`, `groups`, `teams`, `team_registrations`, `matches`, `match_events`, `live_match_state`, `scorers`, `news`, `edition_events`, `honors`, `sponsors`, `strip_messages`, più la `standings_view` per le classifiche aggregate. Le classifiche sono calcolate lato SQL e riordinate (a pari punti) con la stessa logica di tiebreak lato server e lato client.
 
-Dal codice emerge un doppio livello di persistenza.
+### Auth staff e sicurezza
 
-#### 1. Blob legacy
+- `supabase/admin_auth_setup.sql` — crea `admin_users` / `admin_sessions`, indici, trigger `updated_at`, RLS con blocco totale per `anon`/`authenticated`.
+- `supabase/site_data_hardening.sql` — `SELECT` pubblico limitato alla riga `id = 1`, scrittura consentita solo via service role (quindi solo dalla Edge Function).
 
-Tabella:
-
-- `public.site_data`
-
-Uso:
-
-- contiene una singola riga `id = 1`;
-- salva l'intero contenuto del sito come `jsonb`;
-- resta il fallback compatibile con il vecchio frontend.
-
-Colonne minime attese:
-
-- `id bigint primary key`
-- `content jsonb`
-- `updated_at timestamptz`
-
-#### 2. Modello relazionale
-
-La Edge Function `admin-api` legge e scrive sulle seguenti entita:
-
-- `editions`: contenitore annuale del torneo
-- `tournaments`: categorie o tornei interni a una edizione
-- `groups`: gironi per torneo
-- `teams`: anagrafica squadra
-- `team_registrations`: iscrizione squadra a torneo e girone
-- `matches`: calendario e risultati
-- `match_events`: eventi minuto per minuto
-- `live_match_state`: stato della diretta
-- `scorers`: classifica marcatori
-- `news`: bacheca avvisi
-- `edition_events`: timeline eventi
-- `honors`: albo d'oro
-- `sponsors`: sponsor
-- `strip_messages`: messaggi per la striscia superiore
-- `standings_view`: vista usata dal bootstrap per leggere classifiche aggregate
-
-### Tabelle auth staff
-
-Nel repository sono presenti gli script SQL per il setup delle tabelle staff:
-
-- `public.admin_users`
-- `public.admin_sessions`
-
-Lo script `supabase/admin_auth_setup.sql` crea:
-
-- struttura tabelle;
-- indici base;
-- trigger `updated_at`;
-- RLS con blocco totale per `anon` e `authenticated`.
-
-### Sicurezza e RLS
-
-Nel repository e' presente anche `supabase/site_data_hardening.sql`, che imposta:
-
-- `SELECT` pubblico su `site_data` limitato alla riga `id = 1`;
-- blocco totale di `INSERT`, `UPDATE`, `DELETE` lato client;
-- scrittura consentita solo tramite service role, quindi via Edge Function.
-
-### Nota importante sullo schema relazionale
-
-Il repository include:
-
-- SQL per auth staff;
-- SQL di hardening per `site_data`;
-- Edge Function TypeScript che usa il modello relazionale.
-
-Non include invece, almeno in questo stato del codice, tutti gli script SQL completi per creare le tabelle relazionali principali come `editions`, `tournaments`, `matches`, `scorers`, `standings_view`, ecc. Questo significa che tali oggetti devono gia esistere nel progetto Supabase oppure vanno provisionati separatamente.
+> **Nota:** il repository include gli script SQL per auth staff e hardening, ma non tutti gli script di creazione dello schema relazionale principale (`editions`, `tournaments`, `matches`, `standings_view`, …): tali oggetti vanno provisionati sul progetto Supabase.
 
 ## Edge Function `admin-api`
 
-La funzione `supabase/functions/admin-api/index.ts` gestisce:
+`supabase/functions/admin-api/` è organizzata in `index.ts` (router), `_lib/` (db, session, bootstrap, helpers) e `handlers/` (auth, competition, content, editions, legacy).
 
-### Endpoint pubblici
+- **Pubblici:** `GET /bootstrap`, `GET /editions`
+- **Auth:** `POST /login`, `GET /me`, `POST /logout`, `POST /credentials`
+- **Legacy:** `POST /save`
+- **CRUD dominio:** edizioni, categorie, gironi, squadre, iscrizioni, partite, eventi partita, live state, marcatori, news, eventi, albo d'oro, sponsor, ticker.
 
-- `GET /bootstrap`
-- `GET /editions`
+### Sessione staff (custom, non Supabase Auth)
 
-### Endpoint auth
-
-- `POST /login`
-- `GET /me`
-- `POST /logout`
-- `POST /credentials`
-
-### Endpoint salvataggio legacy
-
-- `POST /save`
-
-Aggiorna il blob `site_data.content` dopo aver validato la sessione staff.
-
-### Endpoint CRUD dominio
-
-La funzione espone CRUD per:
-
-- edizioni;
-- categorie torneo;
-- gironi;
-- squadre;
-- registrazioni;
-- partite;
-- eventi partita;
-- live state;
-- marcatori;
-- news;
-- eventi;
-- albo d'oro;
-- sponsor;
-- messaggi striscia.
-
-### Meccanismo di sessione
-
-La sessione staff non usa Supabase Auth standard. Il flusso e' custom:
-
-1. login con `username` e `password`;
-2. verifica password hashata in `admin_users`;
-3. emissione token random;
-4. salvataggio dell'hash token in `admin_sessions`;
-5. invio token raw al browser;
-6. persistenza del token in `sessionStorage`.
+1. login con `username` + `password`;
+2. verifica dell'hash password in `admin_users`;
+3. emissione token random, salvataggio del solo **hash** del token in `admin_sessions`;
+4. invio del token raw al browser, persistenza in `sessionStorage`.
 
 ## Variabili d'ambiente
 
-### Frontend Vite
+### Frontend (Vite)
 
 Copiare `.env.example` in `.env` e valorizzare:
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_KEY=your-anon-key
+VITE_SUPABASE_KEY=your-anon-key          # chiave anon PUBBLICA (protetta da RLS)
 VITE_ADMIN_API_URL=https://your-project.supabase.co/functions/v1/admin-api
 ```
 
-Note:
+Senza queste variabili il sito mostra comunque i default locali, ma autenticazione admin e sync remoto non funzionano.
 
-- `VITE_SUPABASE_KEY` e' la chiave anon pubblica del progetto.
-- senza queste variabili il sito puo comunque mostrare i default locali, ma autenticazione admin e sync remoto non funzionano correttamente.
-
-### Variabili Edge Function
-
-La funzione `admin-api` richiede:
+### Edge Function
 
 ```bash
 SUPABASE_URL=...
-SUPABASE_SERVICE_ROLE_KEY=...
-ADMIN_SESSION_SECRET=...
+SUPABASE_SERVICE_ROLE_KEY=...            # segreto lato server — MAI nel client
+ADMIN_SESSION_SECRET=...                 # segreto per hashare i token di sessione
 ADMIN_SESSION_HOURS=12
 ADMIN_ALLOWED_ORIGIN=https://your-domain.example
 ```
 
-Significato:
-
-- `SUPABASE_URL`: URL progetto
-- `SUPABASE_SERVICE_ROLE_KEY`: service role usato per scritture protette
-- `ADMIN_SESSION_SECRET`: segreto usato per hashare i token di sessione
-- `ADMIN_SESSION_HOURS`: durata sessione admin
-- `ADMIN_ALLOWED_ORIGIN`: origin ammessa per le mutazioni CORS
+> Il file `.env` è escluso da git (`.gitignore`). Nel repository è versionato solo `.env.example` con placeholder.
 
 ## Avvio locale
 
-### Prerequisiti
-
-- Node.js 20+
-- npm
-
-### 1. Installazione dipendenze
+**Prerequisiti:** Node.js 20+, npm.
 
 ```bash
 npm install
-```
-
-### 2. Configurazione ambiente
-
-```bash
-cp .env.example .env
-```
-
-Compilare `.env` con le variabili Vite corrette.
-
-### 3. Avvio sviluppo
-
-```bash
+cp .env.example .env      # poi compilare le variabili Vite
 npm run dev
 ```
 
-Di default Vite espone il progetto in locale. Le due entrypoint da usare sono:
+Entrypoint locali:
 
-- sito pubblico: `http://localhost:5173/index.html`
-- area admin: `http://localhost:5173/admin.html`
+- sito pubblico → `http://localhost:5173/index.html`
+- area admin → `http://localhost:5173/admin.html`
 
-### 4. Requisiti per un avvio davvero completo
-
-Per una esperienza completa servono anche:
-
-- progetto Supabase attivo;
-- Edge Function `admin-api` deployata;
-- tabelle `admin_users` e `admin_sessions` create;
-- almeno un utente staff inserito;
-- schema relazionale gia presente, se si vuole usare il bootstrap v3.
-
-Se queste parti non sono disponibili:
-
-- il pubblico continuera a funzionare con dati locali/default;
-- il login admin e il salvataggio remoto non saranno disponibili.
+Per un'esperienza completa servono anche: progetto Supabase attivo, Edge Function `admin-api` deployata, tabelle `admin_users`/`admin_sessions` create con almeno un utente staff e (per il bootstrap v3) lo schema relazionale già presente. In assenza di questi, il sito pubblico continua a funzionare con dati locali/default mentre login e salvataggio remoto restano indisponibili.
 
 ## Build, preview e deploy
 
-### Build produzione
-
 ```bash
-npm run build
+npm run build     # output in dist/ (dist/index.html + dist/admin.html)
+npm run preview   # serve la build localmente
 ```
 
-Output in:
+Il file `netlify.toml` configura build (`npm run build`), publish directory (`dist`) e Node 20 → deploy statico su Netlify o piattaforme equivalenti. La pipeline **GitHub Actions** (`.github/workflows/ci.yml`) esegue lint, test e build a ogni push/PR su `main`.
 
-- `dist/`
-
-Vite costruisce entrambe le pagine:
-
-- `dist/index.html`
-- `dist/admin.html`
-
-### Preview locale buildata
+## Testing e qualità
 
 ```bash
-npm run preview
+npm run test          # Vitest (una volta)
+npm run test:watch    # watch mode
+npm run test:ui       # UI di Vitest
+npm run lint          # ESLint
+npm run format        # Prettier
 ```
 
-### Deploy
+I test coprono il layer di dominio: normalizzazione team/gironi, compatibilità schema, calcolo classifica, derivazione match del giorno e ticker, validazione sessione admin.
 
-Il progetto include `netlify.toml` con:
+## Estensione del progetto
 
-- comando build: `npm run build`
-- publish directory: `dist`
-- Node version: `20`
+Per aggiungere una nuova sezione pubblica:
 
-Questo lo rende adatto a deploy statico su Netlify o piattaforme equivalenti.
+1. creare `src/public/screens/nuova.jsx` con `export function NuovaScreen({ data }) { ... }`;
+2. registrarla in `src/public/app.jsx` (`VALID_SCREENS` + route);
+3. aggiungere la voce in `BottomNav` (`src/components.jsx`);
+4. se ha dati gestibili, aggiungere la sezione admin corrispondente.
 
-## Testing e qualita
+## Licenza
 
-Script disponibili:
+Distribuito con licenza **MIT** — vedi [`LICENSE`](./LICENSE).
 
-```bash
-npm run test
-npm run test:watch
-npm run test:ui
-npm run lint
-npm run format
-```
-
-Copertura attuale dei test:
-
-- normalizzazione team e gironi;
-- compatibilita schema;
-- calcolo classifica;
-- derivazione match del giorno e ticker;
-- validazione sessione admin.
+Il nome "Rinascita Monteforte Cup", il logo e le locandine del torneo (`assets/`, `public/assets/`) appartengono agli organizzatori e non sono coperti dalla licenza del codice.
 
 ## Crediti
 
