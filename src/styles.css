@@ -1700,7 +1700,7 @@ p, .rm-news-body, .rm-rule-p, .rm-footer-text { text-wrap: pretty; }
 /* ── Mobile fixes (audit 320–430px) ──────────────────────────── */
 /* Classifica: nomi squadra su 2 righe invece di troncati */
 .rm-team-cell { align-items: center; }
-.rm-team-cell .rm-team-name { white-space: normal; overflow-wrap: anywhere; line-height: 1.1; text-overflow: clip; }
+.rm-team-cell .rm-team-name { white-space: normal; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; line-height: 1.1; text-overflow: clip; }
 .rm-table td { white-space: nowrap; }
 .rm-table td.rm-team-col { white-space: normal; }
 /* Schermi stretti: tabella senza larghezza minima, celle più compatte */
@@ -1713,7 +1713,7 @@ p, .rm-news-body, .rm-rule-p, .rm-footer-text { text-wrap: pretty; }
   .rm-pos-badge { width: 20px; height: 20px; font-size: 12px; }
   .rm-table tr.top .rm-pts { font-size: 18px; }
   .rm-podium { gap: 6px; }
-  .rm-podium-name { font-size: 13px; overflow-wrap: anywhere; }
+  .rm-podium-name { font-size: 13px; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
   .rm-podium-step { padding-left: 4px; padding-right: 4px; }
   .rm-fx-status { width: 64px; }
   .rm-fx-teams { padding: 10px 12px; }
