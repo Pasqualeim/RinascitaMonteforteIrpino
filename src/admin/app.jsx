@@ -80,7 +80,11 @@ function AdminApp() {
     const localData = rmGetAllData();
     setData(rmMergeDefaults(rmNormalizeTournamentData({
       ...bootstrapCache,
-      match_settings:   bootstrapCache.match_settings || localData.match_settings,
+      // half_duration vive su tournaments (DB); il valore locale resta solo come fallback pre-migrazione.
+      match_settings: {
+        ...(bootstrapCache.match_settings || localData.match_settings || {}),
+        ...(tournament.half_duration ? { half_duration: tournament.half_duration } : {}),
+      },
       groups:           tournament.groups           || [],
       teams:            tournament.teams             || [],
       standings_groups: tournament.standings_groups  || [],

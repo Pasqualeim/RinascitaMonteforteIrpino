@@ -279,7 +279,9 @@ export async function buildBootstrap(editionId: string) {
       home: live.home_team ? { short: live.home_team.short, flag: live.home_team.flag, name: live.home_team.name, color: live.home_team.color } : null,
       away: live.away_team ? { short: live.away_team.short, flag: live.away_team.flag, name: live.away_team.name, color: live.away_team.color } : null,
       hs: live.home_score, as: live.away_score, minute: live.minute, phase: live.phase || null, timer_started_at: live.timer_started_at || null, pitch: live.pitch || "", events: Array.isArray(live.events) ? live.events : [],
-    } : { active: false, match_id: null, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [] };
+      // Minuti per tempo della categoria: il pubblico calcola il minuto del 2° tempo come half_duration + trascorso.
+      half_duration: t.half_duration ?? null,
+    } : { active: false, match_id: null, home: null, away: null, hs: 0, as: 0, minute: 0, pitch: "", events: [], half_duration: t.half_duration ?? null };
 
     const eventsPerMatch: Record<string, any[]> = {};
     for (const ev of allMatchEvents) {
@@ -330,6 +332,7 @@ export async function buildBootstrap(editionId: string) {
       registration_fee: t.registration_fee ?? null, min_teams: t.min_teams ?? null, max_teams: t.max_teams ?? null,
       registration_open: t.registration_open ?? null, registration_notes: t.registration_notes ?? null,
       bracket_intro: t.bracket_intro ?? null, bracket,
+      half_duration: t.half_duration ?? null,
       groups, teams,
       standings_groups: Object.values(standingsMap).sort(
         (a: any, b: any) => (groupOrder[a.id] ?? 99) - (groupOrder[b.id] ?? 99)

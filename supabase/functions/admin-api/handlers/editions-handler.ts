@@ -39,14 +39,14 @@ export async function editionsHandler(req: Request, base: string, id: string | n
     const body = await req.json().catch(() => ({}));
 
     if (method === "POST") {
-      const { edition_id, name, slug, sort_order, prize_first, prize_second, prize_third, prizes, registration_fee, min_teams, max_teams, registration_open, registration_notes } = body;
+      const { edition_id, name, slug, sort_order, prize_first, prize_second, prize_third, prizes, registration_fee, min_teams, max_teams, registration_open, registration_notes, half_duration } = body;
       if (!edition_id || !name || !slug) return ok(req, 400, { error: "edition_id, name, slug obbligatori" });
-      const { data, error } = await db.from("tournaments").insert({ edition_id, name, slug, sort_order: sort_order ?? 0, prize_first, prize_second, prize_third, prizes: prizes ?? [], registration_fee: registration_fee ?? null, min_teams: min_teams ?? null, max_teams: max_teams ?? null, registration_open: registration_open ?? null, registration_notes: registration_notes ?? null }).select().single();
+      const { data, error } = await db.from("tournaments").insert({ edition_id, name, slug, sort_order: sort_order ?? 0, prize_first, prize_second, prize_third, prizes: prizes ?? [], registration_fee: registration_fee ?? null, min_teams: min_teams ?? null, max_teams: max_teams ?? null, registration_open: registration_open ?? null, registration_notes: registration_notes ?? null, ...(half_duration != null ? { half_duration } : {}) }).select().single();
       if (error) throw error;
       return ok(req, 201, { ok: true, data });
     }
     if (method === "PUT" && id) {
-      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third","prizes","registration_fee","min_teams","max_teams","registration_open","registration_notes","bracket_intro"];
+      const allowed = ["name","slug","sort_order","prize_first","prize_second","prize_third","prizes","registration_fee","min_teams","max_teams","registration_open","registration_notes","bracket_intro","half_duration"];
       const upd: Record<string, unknown> = {};
       for (const k of allowed) { if (k in body) upd[k] = body[k]; }
       const { data, error } = await db.from("tournaments").update(upd).eq("id", id).select().single();

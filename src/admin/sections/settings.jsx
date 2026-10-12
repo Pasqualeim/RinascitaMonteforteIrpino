@@ -172,10 +172,11 @@ function CategoryEditForm({ category, onSubmit, onCancel }) {
   );
 }
 
-export function SettingsSection({ data, onSave, onRefresh, editionId }) {
+export function SettingsSection({ data, onSave, onRefresh, editionId, tournamentId }) {
   const [halfDuration, setHalfDuration] = useState(data.match_settings?.half_duration || 30);
   const [halfDirty, setHalfDirty] = useState(false);
   const [matchSaved, setMatchSaved] = useState(false);
+  const [matchSaveErr, setMatchSaveErr] = useState('');
 
   // Sync halfDuration from bootstrap only when not mid-edit
   useEffect(() => {
@@ -183,6 +184,27 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
     const v = data.match_settings?.half_duration;
     if (typeof v === 'number' && v > 0) setHalfDuration(v);
   }, [data.match_settings?.half_duration, halfDirty]);
+
+  // Durata tempo per la categoria selezionata: DB (tournaments.half_duration) così il
+  // pubblico calcola lo stesso minuto dell'admin. Il salvataggio locale resta come fallback.
+  async function saveHalfDuration() {
+    setMatchSaveErr('');
+    await onSave({ ...data, match_settings: { ...(data.match_settings || {}), half_duration: halfDuration } }, 'Impostazioni partita salvate');
+    if (tournamentId) {
+      try {
+        const res = await rmAdminUpdateTournamentCategory(tournamentId, { half_duration: halfDuration });
+        // Un admin-api non aggiornato scarta il campo senza errore: verifica che il DB l'abbia salvato.
+        if (res?.data?.half_duration !== halfDuration) throw new Error('il server non supporta ancora questo campo.');
+        await onRefresh('Durata tempo salvata per la categoria');
+      } catch (e) {
+        setMatchSaveErr('Salvata solo su questo dispositivo: il sito pubblico non la riceverà. ' + (e?.message || ''));
+        return;
+      }
+    }
+    setHalfDirty(false);
+    setMatchSaved(true);
+    setTimeout(() => setMatchSaved(false), 2000);
+  }
   const [editions, setEditions] = useState([]);
   const [editionsLoading, setEditionsLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -377,12 +399,8 @@ export function SettingsSection({ data, onSave, onRefresh, editionId }) {
               </p>
             </div>
             {matchSaved && <div style={{ fontSize: 13, color: 'var(--brand-green)' }}>Salvato ✓</div>}
-            <button className="adm-btn adm-btn-sm" type="button" onClick={() => {
-              onSave({ ...data, match_settings: { ...(data.match_settings || {}), half_duration: halfDuration } }, 'Impostazioni partita salvate');
-              setHalfDirty(false);
-              setMatchSaved(true);
-              setTimeout(() => setMatchSaved(false), 2000);
-            }}>Salva</button>
+            {matchSaveErr && <div style={{ fontSize: 13, color: 'var(--danger, #FF3D3D)' }}>{matchSaveErr}</div>}
+            <button className="adm-btn adm-btn-sm" type="button" onClick={saveHalfDuration}>Salva</button>
           </div>
         </div>
       </div>

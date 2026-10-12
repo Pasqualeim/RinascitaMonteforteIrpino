@@ -115,7 +115,7 @@ dist/                   → Output build (non committare)
 | Albo d'oro | CRUD edizioni passate |
 | Sponsor | CRUD sponsor con tag |
 | Striscia | Messaggi ticker verde in cima al sito |
-| Settings | Cambio username/password, reset dati, gestione edizioni+categorie, date edizione (kickoff/inizio/fine), migrazione DB |
+| Settings | Cambio username/password, reset dati, gestione edizioni+categorie, date edizione (kickoff/inizio/fine), minuti per tempo (salvati su `tournaments.half_duration` della categoria selezionata), migrazione DB |
 
 ## Flusso dati (Supabase relazionale + localStorage fallback)
 
@@ -151,7 +151,7 @@ Migrazione dati (una-tantum, da Settings admin):
 | Tabella | FK principale | Scopo |
 |---------|---------------|-------|
 | `editions` | — | Container annuale (es. "Rinascita Cup 2026") |
-| `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…) |
+| `tournaments` | `edition_id` | Categorie nell'edizione (Senior, Over 40, Junior…). Col. `half_duration` smallint nullable = minuti per tempo della categoria (null → 30), esposta nel bootstrap su `tournament.half_duration` e `live_match.half_duration` (il pubblico ci calcola il minuto del 2° tempo) |
 | `groups` | `tournament_id` | Gironi dentro una categoria (col. `qualify_count` smallint default 2 = squadre che passano il turno) |
 | `knockout_ties` | `tournament_id` | Tabellone posizionale (solo display pubblico "Come ci si qualifica"): `round`, `sort_order`, `home_label`/`away_label` (es. "Prima del Girone A"). Le partite KE **vere** stanno in `matches` (phase=KO). Colonne match (`home_team_id`/`status`/`home_score`/`note`…) presenti ma **deprecate/non usate**. Intro su `tournaments.bracket_intro` |
 | `teams` | — | Registry squadre globale (riutilizzabile tra edizioni) |
