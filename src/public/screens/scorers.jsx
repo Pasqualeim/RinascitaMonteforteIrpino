@@ -74,7 +74,7 @@ export function ScorersScreen({ data, tournament, embedded }) {
 
         {searching && filtered.length === 0
           ? <EmptyState icon="🔍" title="Nessun giocatore trovato" sub={`Nessun risultato per «${query.trim()}». Controlla il nome.`} />
-          : <TopScorers list={filtered}/>}
+          : <TopScorers list={filtered} podium={!searching}/>}
     </>
   );
 

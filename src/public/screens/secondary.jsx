@@ -257,7 +257,7 @@ export function HonorsScreen({ data }) {
             <div style={{ fontSize: 11, color: 'var(--brand-green)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
               Edizione selezionata
             </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: '#fff', marginBottom: 4 }}>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 22, color: 'var(--fg-1)', marginBottom: 4 }}>
               {selectedEditionMeta.name}
             </div>
             <div style={{ fontSize: 13, color: 'var(--fg-3)' }}>

@@ -114,7 +114,7 @@ export function TableScreen({ data, tournament, onNav, initialTab }) {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 14px' }}>
                           {ties.map((t, i) => {
-                            const boxStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 8px', borderRadius: 8, border: `1px solid ${accent}`, background: isFinal ? 'rgba(245,197,24,0.06)' : 'rgba(0,230,118,0.06)', fontSize: 13, fontWeight: 600, color: '#fff', minHeight: 38 };
+                            const boxStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '10px 8px', borderRadius: 8, border: `1px solid ${accent}`, background: isFinal ? 'rgba(245,197,24,0.06)' : 'rgba(0,230,118,0.06)', fontSize: 13, fontWeight: 600, color: 'var(--fg-1)', minHeight: 38 };
                             return (
                               <div key={t.id || i} style={{ display: 'grid', gridTemplateColumns: ties.length > 1 ? '22px 1fr auto 1fr' : '1fr auto 1fr', alignItems: 'stretch', gap: 8 }}>
                                 {ties.length > 1 && (
@@ -157,7 +157,7 @@ export function TableScreen({ data, tournament, onNav, initialTab }) {
                         return (
                           <div key={m.id || i} style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border-card)' : 'none' }}>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{home.flag || ''} {home.name || home.short || 'TBD'}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>{home.flag || ''} {home.name || home.short || 'TBD'}</div>
                             </div>
                             <div style={{ textAlign: 'center', minWidth: 54 }}>
                               {isDone ? (
@@ -167,7 +167,7 @@ export function TableScreen({ data, tournament, onNav, initialTab }) {
                               )}
                             </div>
                             <div>
-                              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{away.flag || ''} {away.name || away.short || 'TBD'}</div>
+                              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--fg-1)' }}>{away.flag || ''} {away.name || away.short || 'TBD'}</div>
                             </div>
                           </div>
                         );

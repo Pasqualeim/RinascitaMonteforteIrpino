@@ -38,7 +38,7 @@ function RosterModal({ team, onClose }) {
           </div>
           <button
             onClick={onClose}
-            style={{ marginLeft: 'auto', background: '#1a1a1a', border: 0, color: 'var(--fg-2)', fontSize: 18, width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+            style={{ marginLeft: 'auto', background: 'var(--bg-raised)', border: 0, color: 'var(--fg-2)', fontSize: 18, width: 40, height: 40, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
           >✕</button>
         </div>
         <div className="rm-roster-body">

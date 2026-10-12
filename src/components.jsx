@@ -94,7 +94,7 @@ function BottomNav({ current, onNav, hasLive }) {
 
   const more = [
     { id: 'scorers',       label: 'Marcatori',    icon: BallIcon },
-    { id: 'events',        label: 'Regolamento',  icon: NewspaperIcon },
+    { id: 'events',        label: 'Regolamento',  icon: ClipboardIcon },
     { id: 'news',          label: 'Avvisi',       icon: BellIcon },
     { id: 'honors',        label: "Albo d'oro",   icon: StarIcon },
     { id: '_staff', label: 'Area Staff 🔐', icon: null, isAdmin: true },
@@ -136,7 +136,7 @@ function BottomNav({ current, onNav, hasLive }) {
       )}
       <nav className="rm-bottom-nav">
         {primary.map(item => (
-          <button key={item.id} className={`rm-bn-item ${current === item.id ? 'on' : ''}`} onClick={() => onNav(item.id)}>
+          <button key={item.id} className={`rm-bn-item ${current === item.id && !drawerOpen ? 'on' : ''}`} onClick={() => onNav(item.id)}>
             {item.live && hasLive && <span className="rm-live-dot"/>}
             <item.icon size={22}/>
             <span>{item.label}</span>
@@ -178,7 +178,7 @@ function Countdown({ to, label }) {
       <div className="rm-countdown">
         <span className="rm-eyebrow">Torneo in corso · Estate 2026</span>
         <div className="rm-cd-row" style={{ justifyContent: 'flex-start' }}>
-          <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px,5vw,30px)', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--brand-green)' }}>In campo! ⚽</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(20px,5vw,30px)', fontWeight: 800, letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--brand-green)' }}>In campo! ⚽</span>
         </div>
       </div>
     );
@@ -255,6 +255,8 @@ function fmtMatchDate(raw) {
 }
 
 // ── Match row ─────────────────────────────────────────────────────────────
+// Layout "fixture" stile app sportiva: colonna stato/orario a sinistra,
+// squadre impilate con punteggio allineato a destra, vincente in evidenza.
 function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, events, onClick, hideDate, tag, tagVariant }) {
   const isTbd = !home || !away;
   if (isTbd && !date && !time) return null;
@@ -264,47 +266,42 @@ function MatchRow({ home, away, hs, as: as_, date, time, status, pitch, minute, 
   const homeTeam = home || tbdTeam;
   const awayTeam = away || tbdTeam;
   const clickable = !!onClick && !isTbd;
+  const hasScore = hs != null && as_ != null;
+  const homeWin = done && hasScore && hs > as_;
+  const awayWin = done && hasScore && as_ > hs;
+  const side = (team, score, win, lose) => (
+    <div className={`rm-fx-team${win ? ' win' : ''}${lose ? ' lose' : ''}`}>
+      <span className="rm-fx-flag" style={!team.flag ? { color: team.color || 'var(--brand-green)' } : undefined}>{team.flag || team.short}</span>
+      <span className="rm-fx-name">{team.name}</span>
+      {hasScore && <span className="rm-fx-score">{score}</span>}
+    </div>
+  );
   return (
     <div
-      className={`rm-match ${live ? 'live' : ''} ${done ? 'done' : ''}${isTbd ? ' tbd' : ''}${clickable ? ' clickable' : ''}`}
+      className={`rm-fx${live ? ' live' : ''}${done ? ' done' : ''}${isTbd ? ' tbd' : ''}${clickable ? ' clickable' : ''}${tagVariant === 'ko' ? ' ko' : ''}`}
       onClick={clickable ? onClick : undefined}
-      style={clickable ? { cursor: 'pointer' } : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={clickable ? (e => { if (e.key === 'Enter') onClick(); }) : undefined}
     >
-      <div className="rm-match-time">
+      <div className="rm-fx-status">
         {live ? (
-          <span className="rm-live-tag"><span className="dot"></span>LIVE · {minute}'</span>
+          <><span className="rm-fx-live"><span className="dot"/>Live</span><b>{minute}'</b></>
         ) : done ? (
-          <>
-            {!hideDate && <span className="date">{fmtMatchDate(date)}</span>}
-            <span className="rm-ft">FT</span>
-          </>
+          <><b className="rm-fx-ft">FT</b>{!hideDate && <span>{fmtMatchDate(date)}</span>}</>
         ) : (
-          <>
-            {!hideDate && <span className="date">{fmtMatchDate(date)}</span>}
-            <span className="time">{time || (isTbd ? 'Orario TBD' : '')}</span>
-          </>
+          <><b>{time || 'TBD'}</b>{!hideDate && <span>{fmtMatchDate(date)}</span>}</>
         )}
+      </div>
+      <div className="rm-fx-teams">
         {tag && (
           <span className={`rm-match-tag${tagVariant === 'ko' ? ' rm-match-tag--ko' : ''}`}>
             {tagVariant === 'ko' && <TrophyIcon size={10}/>}
             {tag}
           </span>
         )}
-      </div>
-      <div className="rm-match-team rm-match-team--home">
-        <span className="rm-team-name">{homeTeam.name}</span>
-        <span className="rm-crest" style={{ borderColor: homeTeam.color || 'var(--brand-green)', color: homeTeam.color || 'var(--brand-green)', fontSize: homeTeam.flag ? 18 : undefined }}>
-          {homeTeam.flag || homeTeam.short}
-        </span>
-      </div>
-      <div className="rm-match-score">
-        {hs != null ? <span>{hs}<i>–</i>{as_}</span> : <span className="rm-vs">VS</span>}
-      </div>
-      <div className="rm-match-team rm-match-team--away">
-        <span className="rm-crest" style={{ borderColor: awayTeam.color || 'var(--brand-green)', color: awayTeam.color || 'var(--brand-green)', fontSize: awayTeam.flag ? 18 : undefined }}>
-          {awayTeam.flag || awayTeam.short}
-        </span>
-        <span className="rm-team-name">{awayTeam.name}</span>
+        {side(homeTeam, hs, homeWin, awayWin)}
+        {side(awayTeam, as_, awayWin, homeWin)}
       </div>
     </div>
   );
@@ -427,7 +424,7 @@ function StandingsTable({ rows, group, updatedLabel, qualifyCount = 2 }) {
                 </tr>
               )}
               <tr className={i < qc ? 'top' : ''}>
-                <td className="pos">{i + 1}</td>
+                <td className="pos"><span className="rm-pos-badge">{i + 1}</span></td>
                 <td className="rm-team-col"><div className="rm-team-cell"><span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{r.flag || '🏳️'}</span><span className="rm-team-name">{r.name}</span>{r.pen > 0 && <span title={`${r.pen} ${r.pen === 1 ? 'punto' : 'punti'} di penalizzazione`} style={{ flexShrink: 0, marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#FF6B6B', background: 'rgba(255,61,61,0.12)', borderRadius: 4, padding: '1px 5px' }}>−{r.pen}</span>}</div></td>
                 <td>{r.g}</td><td>{r.v}</td><td>{r.n}</td><td>{r.p}</td>
                 <td>{(() => { const dr = r.gd ?? ((r.gf ?? 0) - (r.gs ?? 0)); return dr > 0 ? `+${dr}` : dr; })()}</td>
@@ -466,7 +463,8 @@ function TeamCard({ team, onClick }) {
 }
 
 // ── Top scorers ───────────────────────────────────────────────────────────
-function TopScorers({ list }) {
+// Con `podium` i primi 3 (posizioni reali 1-2-3) diventano un podio, il resto lista.
+function TopScorers({ list, podium }) {
   if (!list?.length) return (
     <div className="rm-empty">
       <div className="rm-empty-icon">⚽</div>
@@ -474,19 +472,42 @@ function TopScorers({ list }) {
       <div className="rm-empty-sub">I marcatori verranno aggiornati dallo staff.</div>
     </div>
   );
+  const usePodium = podium && list.length >= 3 && (list[0]._pos ?? 1) === 1;
+  const top = usePodium ? list.slice(0, 3) : [];
+  const rest = usePodium ? list.slice(3) : list;
   return (
-    <div className="rm-scorers">
-      {list.map((s, i) => (
-        <div key={s.id || i} className="rm-scorer">
-          <div className="rm-scorer-pos">{s._pos ?? i + 1}</div>
-          <div style={{ flex: 1 }}>
-            <div className="rm-scorer-name">{s.name}</div>
-            <div className="rm-scorer-team">{s.flag || ''} {s.team || s.short}</div>
-          </div>
-          <div className="rm-scorer-goals"><BallIcon size={15}/>{s.goals}</div>
+    <>
+      {usePodium && (
+        <div className="rm-podium">
+          {[top[1], top[0], top[2]].map((s, k) => {
+            const place = k === 1 ? 1 : k === 0 ? 2 : 3;
+            return (
+              <div key={s.id || place} className={`rm-podium-step p${place}`}>
+                <span className="rm-podium-pos">{place}</span>
+                <span className="rm-podium-flag">{s.flag || '⚽'}</span>
+                <span className="rm-podium-name">{s.name}</span>
+                <span className="rm-podium-team">{s.team || s.short}</span>
+                <span className="rm-podium-goals">{s.goals} <small>gol</small></span>
+              </div>
+            );
+          })}
         </div>
-      ))}
-    </div>
+      )}
+      {rest.length > 0 && (
+        <div className="rm-scorers">
+          {rest.map((s, i) => (
+            <div key={s.id || i} className="rm-scorer">
+              <div className="rm-scorer-pos">{s._pos ?? i + 1 + top.length}</div>
+              <div style={{ flex: 1 }}>
+                <div className="rm-scorer-name">{s.name}</div>
+                <div className="rm-scorer-team">{s.flag || ''} {s.team || s.short}</div>
+              </div>
+              <div className="rm-scorer-goals"><BallIcon size={15}/>{s.goals}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -740,10 +761,10 @@ function MatchDetailModal({ match, onClose, teams = [] }) {
         ) : (
         <>
         <div className="rm-modal-meta">
-          {date && <span className="rm-modal-meta-item"><CalIcon size={12}/> {date}</span>}
+          {date && <span className="rm-modal-meta-item"><CalIcon size={12}/> {fmtMatchDate(date)}</span>}
           {time && <span className="rm-modal-meta-item"><ClockIcon size={12}/> {time}</span>}
           {done && <span className="rm-modal-meta-item" style={{ color: 'var(--brand-green)' }}>FT</span>}
-          {live && <span className="rm-modal-meta-item" style={{ color: '#ff4444' }}>🔴 LIVE</span>}
+          {live && <span className="rm-modal-meta-item" style={{ color: 'var(--danger)' }}>🔴 LIVE</span>}
         </div>
 
         {(done || live || events.length > 0) && (

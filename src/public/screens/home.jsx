@@ -136,20 +136,24 @@ function ChampionBanner({ finale, third, onClick }) {
     : null;
   return (
     <button type="button" className="rm-champion" onClick={onClick}>
+      <span className="rm-champion-rays" aria-hidden="true"/>
       {winner ? (
         <>
-          <div className="rm-champion-eyebrow">🏆 Campione del torneo</div>
+          <div className="rm-champion-eyebrow"><TrophyIcon size={14}/> Campione del torneo</div>
           <div className="rm-champion-flag">{winner.flag || winner.short}</div>
           <div className="rm-champion-name">{winner.name}</div>
         </>
       ) : (
-        <div className="rm-champion-eyebrow">🏆 Finale conclusa</div>
+        <div className="rm-champion-eyebrow"><TrophyIcon size={14}/> Finale conclusa</div>
       )}
-      <div className="rm-champion-score">
-        Finale · {home?.name || home?.short} {hs}–{as_} {away?.name || away?.short}
+      <div className="rm-champion-board" aria-label={`Finale: ${home?.name} ${hs}–${as_} ${away?.name}`}>
+        <span className="rm-cb-label">Finale</span>
+        <span className={`rm-cb-team${winner === home ? ' win' : ''}`} title={home?.name}>{home?.flag} {home?.short || home?.name}</span>
+        <span className="rm-cb-score">{hs}<i>–</i>{as_}</span>
+        <span className={`rm-cb-team${winner === away ? ' win' : ''}`} title={away?.name}>{away?.short || away?.name} {away?.flag}</span>
       </div>
       {thirdWinner && (
-        <div className="rm-champion-third">3° posto: {thirdWinner.flag || ''} {thirdWinner.name}</div>
+        <div className="rm-champion-third">3° posto · {thirdWinner.flag || ''} {thirdWinner.name}</div>
       )}
     </button>
   );
@@ -288,8 +292,25 @@ export function HomeScreen({ onNav, data, tournament }) {
         </section>
       ) : (
         <section className="rm-masthead">
-          <h1 className="rm-masthead-title">Rinascita <span className="accent">Monteforte</span></h1>
-          <p className="rm-masthead-sub">{editionName} · {editionPeriod}</p>
+          <div className="rm-banner">
+            <svg className="rm-banner-pitch" viewBox="0 0 400 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+              <rect x="10" y="10" width="380" height="200" rx="4"/>
+              <line x1="200" y1="10" x2="200" y2="210"/>
+              <circle cx="200" cy="110" r="38"/>
+              <rect x="10" y="60" width="52" height="100"/>
+              <rect x="338" y="60" width="52" height="100"/>
+            </svg>
+            <img className="rm-banner-logo" src="assets/logo-rinascita-monteforte.jpg" alt=""/>
+            <div className="rm-banner-body">
+              <span className="rm-banner-kicker">{editionName}</span>
+              <h1 className="rm-masthead-title">Rinascita <span className="accent">Monteforte</span> Cup</h1>
+              <div className="rm-banner-chips">
+                <span className="rm-chip"><CalIcon size={13}/> {editionPeriod}</span>
+                {teams.length > 0 && <span className="rm-chip"><UsersIcon size={13}/> {teams.length} squadre</span>}
+                {groups.length > 0 && <span className="rm-chip">{groups.length} gironi</span>}
+              </div>
+            </div>
+          </div>
         </section>
       )}
 
@@ -301,20 +322,11 @@ export function HomeScreen({ onNav, data, tournament }) {
 
       {groupPhaseOver && !finaleIsToday && !finaleDone && (
         <section className="rm-section" style={{ paddingTop: 0 }}>
-          <button
-            type="button"
-            onClick={() => onNav('calendar')}
-            style={{
-              width: '100%', textAlign: 'left', cursor: 'pointer',
-              background: 'rgba(0,230,118,0.06)', border: '1px solid var(--border-card)',
-              borderRadius: 12, padding: '14px 16px', color: '#fff',
-              display: 'flex', alignItems: 'center', gap: 12,
-            }}
-          >
-            <span style={{ fontSize: 22, lineHeight: 1 }}>🏆</span>
+          <button type="button" className="rm-phase-banner" onClick={() => onNav('calendar')}>
+            <span className="rm-phase-banner-icon"><TrophyIcon size={18}/></span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14, fontWeight: 700 }}>Fase a gironi conclusa</span>
-              <span style={{ display: 'block', fontSize: 12, color: 'var(--fg-3)', marginTop: 2 }}>Si va {nextPhaseLabel} — scopri il calendario</span>
+              <b>Fase a gironi conclusa</b>
+              <span>Si va {nextPhaseLabel} — scopri il calendario</span>
             </span>
             <ArrowIcon size={15}/>
           </button>
@@ -392,10 +404,10 @@ export function HomeScreen({ onNav, data, tournament }) {
           </div>
           {scorers.length > 5 ? (
             <div className="rm-scorers-peek" onClick={() => onNav('scorers')} title="Vedi tutti i marcatori">
-              <TopScorers list={scorers.slice(0, 5)}/>
+              <TopScorers list={scorers.slice(0, 5)} podium/>
             </div>
           ) : (
-            <TopScorers list={scorers}/>
+            <TopScorers list={scorers} podium/>
           )}
         </section>
       )}
@@ -444,30 +456,31 @@ export function HomeScreen({ onNav, data, tournament }) {
                   {(tournaments.length > 1) && (
                     <div className="rm-eyebrow" style={{ marginBottom: 12 }}>{t.name}</div>
                   )}
-                  <div className="rm-prize-row">
-                    {prizes.map((p, i) => {
-                      const amount = Number(p.amount) || 0;
-                      const isMoney = amount > 0;
-                      const cls = isMoney ? `rm-prize${i === 0 ? ' gold' : ''}` : 'rm-prize rm-prize--honor';
-                      return (
-                        <div key={i} className={cls}>
-                          {isMoney ? (
-                            <>
-                              <TrophyIcon size={i === 0 ? 36 : 28}/>
-                              {p.label && <div className="rm-prize-place">{p.label}</div>}
-                              <div className="rm-prize-amt">{amount.toLocaleString('it-IT')}€</div>
-                            </>
-                          ) : (
-                            <>
-                              <StarIcon size={24}/>
-                              <div className="rm-prize-place">Premio d'onore</div>
-                              <div className="rm-prize-honor-name">{p.label}</div>
-                            </>
-                          )}
+                  {(() => {
+                    const money = prizes.filter(p => Number(p.amount) > 0);
+                    const honors = prizes.filter(p => !(Number(p.amount) > 0));
+                    return (
+                      <>
+                        <div className="rm-prize-row">
+                          {money.map((p, i) => (
+                            <div key={i} className={`rm-prize${i === 0 ? ' gold' : ''}`}>
+                              <TrophyIcon size={i === 0 ? 30 : 22}/>
+                              <div>
+                                {p.label && <div className="rm-prize-place">{p.label}</div>}
+                                <div className="rm-prize-amt">{Number(p.amount).toLocaleString('it-IT')}€</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      );
-                    })}
-                  </div>
+                        {honors.length > 0 && (
+                          <div className="rm-honor-chips">
+                            <span className="rm-honor-chips-label">Premi d'onore</span>
+                            {honors.map((p, i) => <span key={i} className="rm-chip rm-chip--honor"><StarIcon size={13}/> {p.label}</span>)}
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               );
             })}
