@@ -90,14 +90,18 @@ Pubblico (rmLoadData, ogni 30s):
   → localStorage rm_data_v2 (fallback)
   → DEFAULT_* hardcoded (fallback finale)
 
-Admin salva → rmSaveData() → localStorage (immediato)
-                           → POST /admin-api/save (blob legacy)
-             Live dual-write → PUT /admin-api/live (relazionale)
+Admin CRUD → rmAdminDomain.* (src/lib/crud.js) → endpoint relazionali admin-api
+             → onRefresh() ricarica dal bootstrap
+Live dual-write → PUT /admin-api/live (relazionale) + rmSaveData() blob
+Blob legacy (rmSaveData → POST /admin-api/save) resta solo per live e impostazioni locali
 ```
 
-**Nota D-01:** post-migrazione, CRUD admin (matches/teams/groups/news) scrive solo blob.
-Il pubblico legge da bootstrap relazionale → modifiche non visibili finché non si ri-migra.
-Unica eccezione: live ha dual-write automatico.
+**Nota D-01 — RISOLTA (17/05/2026, commit `589080c`):** in origine il CRUD admin
+(matches/teams/groups/news) scriveva solo nel blob, quindi le modifiche non erano visibili
+sul pubblico. Dal commit `589080c` tutte le sezioni admin scrivono via `rmAdminDomain`
+sulle tabelle relazionali e il pubblico le vede al refresh successivo (≤30s).
+Ultimo dato rimasto solo-locale era `match_settings.half_duration`: ora salvato su
+`tournaments.half_duration` (vedi migrazione `tournament_half_duration`).
 
 ## Sistema multi-agente
 
