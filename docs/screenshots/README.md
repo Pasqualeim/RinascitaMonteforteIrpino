@@ -1,15 +1,14 @@
 # Screenshot per il README
 
-- **`demo.gif`** — walkthrough animato del sito pubblico (Home → Torneo → Calendario → Squadre), usato nella sezione *Anteprima* del README principale.
+Immagini usate nella sezione *Anteprima* del README principale, catturate dal sito in produzione con i dati reali dell'edizione 2026.
 
-## Aggiungere screenshot statici (opzionale)
+| File | Contenuto |
+|------|-----------|
+| `mobile-home.jpg` | Home su mobile (390 px): banner edizione e campione del torneo |
+| `mobile-calendario.jpg` | Calendario, partite già giocate in stile fixture |
+| `mobile-torneo.jpg` | Torneo → Classifica del girone con squadre qualificate |
+| `mobile-marcatori.jpg` | Marcatori: podio dei primi tre e classifica |
+| `desktop-home.jpg` | Home su desktop (1440 px) |
+| `demo.gif` | Walkthrough animato del **design precedente** (non più usato nel README) |
 
-Se vuoi affiancare immagini statiche alla GIF, trascina qui i PNG e referenziali nel README:
-
-| File suggerito | Cosa catturare |
-|----------------|----------------|
-| `home.png` | Home pubblica (hero / campione / marcatori) |
-| `torneo.png` | Pagina "Torneo" → tab Classifica |
-| `admin.png` | Pannello staff (dashboard o live match) |
-
-Accorgimenti: vista desktop ≥ 900px, **evita il footer** (contiene i contatti telefonici degli organizzatori), niente credenziali/token visibili negli screenshot admin.
+Accorgimenti per nuovi screenshot: inquadra solo la parte visibile dello schermo, **evita il footer** (contiene i contatti telefonici degli organizzatori), niente credenziali o token visibili negli screenshot admin.

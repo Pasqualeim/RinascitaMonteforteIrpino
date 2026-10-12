@@ -14,15 +14,21 @@ Il progetto pubblica in tempo quasi reale calendario, risultati, classifiche, li
 
 ## Anteprima
 
-![Walkthrough del sito Rinascita Monteforte Cup](docs/screenshots/demo.gif)
+Il sito pubblico è progettato **mobile-first**: la maggior parte dei tifosi lo consulta dal telefono a bordo campo.
 
-> Sito pubblico in azione: **Home** (campione del torneo e capocannonieri) → **Torneo** (classifiche per girone) → **Calendario** → **Squadre**.
+| Home | Calendario | Torneo | Marcatori |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/mobile-home.jpg" alt="Home: banner edizione e campione del torneo" width="200"> | <img src="docs/screenshots/mobile-calendario.jpg" alt="Calendario: partite giocate in stile fixture" width="200"> | <img src="docs/screenshots/mobile-torneo.jpg" alt="Torneo: classifica del girone con qualificate" width="200"> | <img src="docs/screenshots/mobile-marcatori.jpg" alt="Marcatori: podio dei primi tre e classifica" width="200"> |
+
+<img src="docs/screenshots/desktop-home.jpg" alt="Home del sito su desktop" width="820">
+
 > 🔗 Provalo dal vivo su **[rinascitamonteforteirpino.netlify.app](https://rinascitamonteforteirpino.netlify.app)**.
 
 ## Indice
 
 - [Panoramica](#panoramica)
 - [Funzionalità](#funzionalità)
+- [Design e UI](#design-e-ui)
 - [Stack tecnologico](#stack-tecnologico)
 - [Architettura applicativa](#architettura-applicativa)
 - [Struttura del progetto](#struttura-del-progetto)
@@ -50,14 +56,15 @@ Lato frontend il progetto usa **React 18** con moduli ES e **Vite** come dev ser
 
 ### Area pubblica
 
-- **Home** adattiva allo stato del torneo: pre-torneo con hero e countdown, torneo in corso con *now card* (diretta live o prossima partita), partite del giorno, classifiche per girone, anteprima marcatori, bacheca avvisi e premi.
+- **Home** adattiva allo stato del torneo: pre-torneo con hero e countdown; a torneo in corso banner dell'edizione e *now card* (diretta live o prossima partita); il giorno della finale hero oro "Finalissima" e, a fischio finale, **banner del campione** con il risultato; poi partite del giorno, classifiche per girone, podio marcatori, bacheca avvisi e premi.
 - **Live** — tabellone della partita in diretta con punteggio, minuto ed eventi.
-- **Calendario** — elenco partite con filtri dinamici per fase e girone.
-- **Torneo** — pagina con tab interni: Classifica (auto-calcolata), Tabellone qualificazione ("Come ci si qualifica"), Marcatori.
-- **Squadre** — elenco filtrabile per girone, con nazione e flag (FIFA 2026).
+- **Calendario** — partite raggruppate per data in stile *fixture* (stato/orario a sinistra, squadre impilate, vincente in evidenza), filtri per fase e girone, ricerca per squadra, switch "Prossime / Già giocate".
+- **Torneo** — pagina con tab interni: Classifica (auto-calcolata, qualificate evidenziate), Tabellone qualificazione ("Come ci si qualifica"), Marcatori.
+- **Marcatori** — podio dei primi tre e classifica completa, con ricerca; liste separate eliminatorie (ufficiale) e gironi.
+- **Squadre** — elenco filtrabile per girone, con nazione e flag (FIFA 2026) e rosa in dettaglio.
 - **Regolamento**, **Avvisi**, **Albo d'oro** delle edizioni passate.
 
-Funzionalità trasversali: refresh automatico dei dati ogni 30 secondi, refresh on-visibility al ritorno sulla tab, navigazione responsive (header desktop / bottom nav mobile con drawer), striscia ticker superiore, badge LIVE quando c'è una diretta.
+Funzionalità trasversali: refresh automatico dei dati ogni 30 secondi, refresh on-visibility al ritorno sulla tab, dettaglio partita con cronaca e rose, navigazione responsive (header desktop / bottom nav flottante su mobile con drawer "Altro"), striscia ticker superiore, badge LIVE quando c'è una diretta.
 
 ### Area admin
 
@@ -72,11 +79,28 @@ Pannello pensato per gestire il torneo durante setup, giornata e post-partita:
 - CRUD news, eventi, albo d'oro, sponsor, ticker;
 - impostazioni: cambio credenziali, gestione edizioni/categorie, migrazione dati dal blob legacy al modello relazionale.
 
+## Design e UI
+
+Il design del sito pubblico è definito da un livello di token in testa a `src/styles.css`, caricato **solo** dal sito pubblico: il pannello admin continua a usare `colors_and_type.css` senza modifiche.
+
+| Elemento | Scelta |
+|----------|--------|
+| Sfondo | nero caldo `#0B0D0C` con superfici a livelli (`--bg-surface`, `--bg-raised`, `--bg-hover`) al posto dei bordi marcati |
+| Colori | verde brand `#2BD67B` e oro trofeo `#E8B931`, desaturati rispetto al logo per non affaticare la lettura |
+| Tipografia | **Barlow Condensed** per titoli, squadre e punteggi; **Geist** per i testi; cifre tabellari su risultati e classifiche |
+| Componenti | partite in stile fixture, podio marcatori, banner campione, chip informativi, controlli segmentati uniformi |
+
+Accorgimenti di qualità:
+
+- **mobile-first** e verificato a 320, 360, 390 e 430 px: nessun elemento tagliato o fuori schermo, nomi lunghi su più righe con sillabazione italiana;
+- target touch di almeno 40 px, focus ring visibile per la tastiera, rispetto di `prefers-reduced-motion`;
+- su desktop (≥ 900 px) layout a contenitore centrato e partite su due colonne.
+
 ## Stack tecnologico
 
 | Ambito | Tecnologie |
 |--------|------------|
-| Frontend | React 18, React DOM, Vite 6 (multi-page), CSS mobile-first |
+| Frontend | React 18, React DOM, Vite 6 (multi-page), CSS mobile-first (font Barlow Condensed + Geist) |
 | Backend | Supabase (Postgres + RLS), Edge Function Deno/TypeScript |
 | Client dati | `@supabase/supabase-js` |
 | Qualità | Vitest, ESLint, Prettier, GitHub Actions (CI) |
@@ -90,14 +114,14 @@ Quattro livelli principali.
 
 - `index.html` monta l'app pubblica (`src/public/app.jsx`).
 - `admin.html` monta l'app admin (`src/admin/app.jsx`).
-- Entrambi condividono il design system base in `colors_and_type.css`.
+- Entrambi condividono il design system base in `colors_and_type.css`; il sito pubblico lo ridefinisce con i propri token in `src/styles.css`.
 
 ### 2. Layer di presentazione
 
 - `src/public/*` — schermate e shell del sito pubblico.
 - `src/admin/*` — schermate e shell del pannello staff.
 - `src/components.jsx` — componenti condivisi (header, footer, bottom nav, live board, ticker, icone).
-- `src/styles.css` / `src/admin-styles.css` — stili pubblico e admin.
+- `src/styles.css` / `src/admin-styles.css` — stili pubblico (token tema + componenti) e admin.
 
 ### 3. Layer dominio
 
@@ -135,7 +159,7 @@ Quattro livelli principali.
 │   ├── admin_auth_setup.sql
 │   ├── site_data_hardening.sql
 │   └── functions/admin-api/    # index.ts + _lib/ + handlers/ (Edge Function)
-├── docs/                       # manuale staff
+├── docs/                       # manuale staff + screenshot del README
 └── assets/                     # logo e locandine del torneo
 ```
 
@@ -170,7 +194,7 @@ Il progetto vive in modalità ibrida: supporta sia il vecchio blob JSON singolo,
 
 ### Modello relazionale (schema v3)
 
-La Edge Function `admin-api` legge e scrive su: `editions`, `tournaments`, `groups`, `teams`, `team_registrations`, `matches`, `match_events`, `live_match_state`, `scorers`, `news`, `edition_events`, `honors`, `sponsors`, `strip_messages`, più la `standings_view` per le classifiche aggregate. Le classifiche sono calcolate lato SQL e riordinate (a pari punti) con la stessa logica di tiebreak lato server e lato client.
+La Edge Function `admin-api` legge e scrive su: `editions`, `tournaments`, `groups`, `knockout_ties`, `teams`, `team_registrations`, `matches`, `match_events`, `live_match_state`, `scorers`, `news`, `edition_events`, `honors`, `sponsors`, `strip_messages`, più la `standings_view` per le classifiche aggregate. Le classifiche sono calcolate lato SQL e riordinate (a pari punti) con la stessa logica di tiebreak lato server e lato client.
 
 ### Auth staff e sicurezza
 
@@ -186,7 +210,7 @@ La Edge Function `admin-api` legge e scrive su: `editions`, `tournaments`, `grou
 - **Pubblici:** `GET /bootstrap`, `GET /editions`
 - **Auth:** `POST /login`, `GET /me`, `POST /logout`, `POST /credentials`
 - **Legacy:** `POST /save`
-- **CRUD dominio:** edizioni, categorie, gironi, squadre, iscrizioni, partite, eventi partita, live state, marcatori, news, eventi, albo d'oro, sponsor, ticker.
+- **CRUD dominio:** edizioni, categorie, gironi, tabellone qualificazione, squadre, iscrizioni, partite, eventi partita, live state, marcatori, news, eventi, albo d'oro, sponsor, ticker.
 
 ### Sessione staff (custom, non Supabase Auth)
 
