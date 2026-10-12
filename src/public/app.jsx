@@ -56,9 +56,14 @@ function App() {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [screen]);
 
-  // Cat-bar resta sticky ma si rimpicciolisce dopo un po' di scroll
+  // Cat-bar resta sticky ma si rimpicciolisce dopo un po' di scroll.
+  // Isteresi (entra >64, esce <=16): niente sfarfallio attorno alla soglia.
+  // setState con stesso valore non ri-renderizza, quindi niente throttle.
   useEffect(() => {
-    const onScroll = () => setCatCompact(window.scrollY > 48);
+    const onScroll = () => {
+      const y = window.scrollY;
+      setCatCompact(prev => (prev ? y > 16 : y > 64));
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);

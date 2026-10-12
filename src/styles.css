@@ -126,19 +126,24 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-header-live .dot { width: 6px; height: 6px; border-radius: 999px; background: #fff; animation: pulse 1.2s infinite; }
 /* ── Category bar (segmented switch) ────────────────────────── */
 .rm-cat-bar {
+  --cat-h: 58px;          /* altezza piena */
+  --cat-h-compact: 46px;  /* altezza dopo lo scroll */
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  padding: 6px 12px;
+  box-sizing: border-box;
+  height: var(--cat-h);
+  margin-bottom: 0;
+  padding: 0 12px;
   background: var(--bg-glass);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 56px;
   z-index: 29;
-  transition: padding 220ms ease, gap 220ms ease, background 220ms ease;
+  /* height + margin-bottom animano insieme e sommano sempre a --cat-h:
+     il contenuto sotto non si sposta mai (niente salto né loop con lo scroll) */
+  transition: height 240ms var(--ease-out, ease), margin-bottom 240ms var(--ease-out, ease);
 }
 .rm-cat-label {
   font-family: var(--font-display); font-weight: 700;
@@ -162,7 +167,8 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  transition: padding 220ms ease;
+  transform-origin: center;
+  transition: transform 240ms var(--ease-out, ease);
 }
 .rm-cat-switch::-webkit-scrollbar { display: none; }
 
@@ -221,26 +227,18 @@ img, svg, video, canvas { max-width: 100%; height: auto; }
 .rm-cat-hint-seg.live  { color: var(--danger-soft); }
 
 /* Stato compatto (dopo scroll): tag più piccolo, riga nascosta per restare snello */
-.rm-cat-bar.compact .rm-cat-tag { font-size: 9px; padding: 2px 5px; margin-left: 5px; }
 .rm-cat-bar.compact .rm-cat-hint { display: none; }
 
 @media (prefers-reduced-motion: reduce) { .rm-cat-dot.live, .rm-cat-tag.live { animation: none; } }
 
-/* Stato compatto: dopo lo scroll resta visibile ma occupa meno spazio */
+/* Stato compatto: barra più bassa, switch scalato via transform (GPU, niente reflow) */
 .rm-cat-bar.compact {
-  gap: 0;
-  padding-top: 5px;
-  padding-bottom: 5px;
-  background: var(--bg-glass);
+  height: var(--cat-h-compact);
+  margin-bottom: calc(var(--cat-h) - var(--cat-h-compact));
 }
-.rm-cat-bar.compact .rm-cat-label {
-  max-width: 0;
-  opacity: 0;
-}
-.rm-cat-bar.compact .rm-cat-switch { padding: 2px; }
-.rm-cat-bar.compact .rm-cat-pill {
-  padding: 5px 16px;
-  font-size: 13px;
+.rm-cat-bar.compact .rm-cat-switch { transform: scale(0.84); }
+@media (prefers-reduced-motion: reduce) {
+  .rm-cat-bar, .rm-cat-switch { transition: none; }
 }
 
 .rm-logo { display: flex; align-items: center; gap: 10px; }
